@@ -1,0 +1,22 @@
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/jobsdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+server:
+  port: 8080
+ingestion:
+  fixedDelayMs: 3600000
+  initialDelayMs: 10000
+  pageSize: 200
