@@ -14,20 +14,20 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
 function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean, onConfirm: () => void, onCancel: () => void, params: Record<string, any> }) {
   if (!visible) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-        <button className="absolute top-2 right-2 text-gray-400" onClick={onCancel}>×</button>
-        <h2 className="text-xl font-bold mb-2">创建订阅提醒</h2>
-        <p className="mb-4 text-gray-600">创建一个订阅，第一时间收到最新职位推送。你可以在个人中心管理订阅。</p>
-        <div className="border rounded p-3 mb-4">
-          <div className="font-semibold">搜索条件：</div>
+    <div className="fixed inset-0 bg-brand-900/20 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="relative bg-white/95 rounded-2xl shadow-glow border border-brand-100 p-6 w-full max-w-md">
+        <button className="absolute top-3 right-3 text-brand-300 hover:text-brand-500" onClick={onCancel}>×</button>
+        <h2 className="text-xl font-bold text-brand-800 mb-2">创建订阅提醒</h2>
+        <p className="mb-4 text-brand-500">创建一个订阅，第一时间收到最新职位推送。你可以在个人中心管理订阅。</p>
+        <div className="border border-brand-100 rounded-xl p-4 mb-5 bg-brand-50/80">
+          <div className="font-semibold text-brand-700">搜索条件：</div>
           <div>关键词：{params.q || '不限'}</div>
           <div>公司：{params.company || '不限'}</div>
           <div>地点：{params.location || '不限'}</div>
           <div>级别：{params.level || '不限'}</div>
         </div>
         <div className="flex gap-3 justify-end">
-          <button className="btn" onClick={onCancel}>取消</button>
+          <button className="btn btn-ghost" onClick={onCancel}>取消</button>
           <button className="btn btn-primary" onClick={onConfirm}>确认订阅</button>
         </div>
       </div>
@@ -44,16 +44,16 @@ function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
 }) {
   if (!visible) return null;
   return (
-    <div className="w-full max-w-xs shadow-lg p-6 relative bg-white rounded-lg">
-      <button className="absolute top-4 right-4 text-gray-400" onClick={onClose}>×</button>
-      <h2 className="text-lg font-bold mb-4">筛选职位</h2>
+    <div className="w-full max-w-xs shadow-glow p-6 relative bg-white/95 rounded-2xl border border-brand-100">
+      <button className="absolute top-4 right-4 text-brand-300 hover:text-brand-500" onClick={onClose}>×</button>
+      <h2 className="text-lg font-bold mb-4 text-brand-800">筛选职位</h2>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">公司</label>
+          <label className="block text-sm font-medium mb-1 text-brand-600">公司</label>
           <input className="input w-full" value={filters.company} onChange={e => setFilters({ ...filters, company: e.target.value })} placeholder="公司" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">级别</label>
+          <label className="block text-sm font-medium mb-1 text-brand-600">级别</label>
           <select className="select w-full" value={filters.level} onChange={e => setFilters({ ...filters, level: e.target.value })}>
             <option value="">不限</option>
             <option value="Junior">Junior</option>
@@ -64,7 +64,7 @@ function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">远程</label>
+          <label className="block text-sm font-medium mb-1 text-brand-600">远程</label>
           <select className="select w-full" value={filters.remote} onChange={e => setFilters({ ...filters, remote: e.target.value })}>
             <option value="">不限</option>
             <option value="true">远程</option>
@@ -72,11 +72,11 @@ function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">薪资下限</label>
+          <label className="block text-sm font-medium mb-1 text-brand-600">薪资下限</label>
           <input className="input w-full" type="number" value={filters.salaryMin} onChange={e => setFilters({ ...filters, salaryMin: e.target.value })} placeholder="最低薪资" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">发布日期</label>
+          <label className="block text-sm font-medium mb-1 text-brand-600">发布日期</label>
           <select className="select w-full" value={filters.datePosted} onChange={e => setFilters({ ...filters, datePosted: e.target.value })}>
             <option value="">不限</option>
             <option value="1">1天内</option>
@@ -87,7 +87,7 @@ function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
         </div>
       </div>
       <div className="mt-6 flex gap-3 justify-end">
-        <button className="btn" onClick={onClose}>取消</button>
+        <button className="btn btn-ghost" onClick={onClose}>取消</button>
         <button className="btn btn-primary" onClick={onApply}>应用</button>
       </div>
     </div>
@@ -96,20 +96,20 @@ function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
 
 function JobDetail({ job }: { job: any }) {
   if (!job) return (
-    <div className="flex items-center justify-center h-full text-gray-400 text-lg">请选择左侧职位查看详情</div>
+    <div className="flex items-center justify-center h-full text-brand-300 text-lg">请选择左侧职位查看详情</div>
   );
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-2">{job.title}</h2>
-      <div className="text-gray-600 mb-2">{job.company} · {job.location} {job.level ? `· ${job.level}` : ''}</div>
-      <div className="mb-2 text-xs text-gray-500">{new Date(job.postedAt).toLocaleDateString()}</div>
+      <h2 className="text-2xl font-bold mb-2 text-brand-800">{job.title}</h2>
+      <div className="text-brand-500 mb-2">{job.company} · {job.location} {job.level ? `· ${job.level}` : ''}</div>
+      <div className="mb-2 text-xs text-brand-400">{new Date(job.postedAt).toLocaleDateString()}</div>
       <div className="mb-4">
-        <span className="font-semibold">标签：</span>
-        {(job.tags ?? []).map((t: string) => <span key={t} className="badge border-gray-300 bg-gray-50 mr-1">{t}</span>)}
+        <span className="font-semibold text-brand-700">标签：</span>
+        {(job.tags ?? []).map((t: string) => <span key={t} className="badge mr-1">{t}</span>)}
       </div>
       <div className="mb-4">
-        <span className="font-semibold">描述：</span>
-        <div className="mt-1 whitespace-pre-line text-sm">{job.description || '无详细描述'}</div>
+        <span className="font-semibold text-brand-700">描述：</span>
+        <div className="mt-1 whitespace-pre-line text-sm text-brand-600">{job.description || '无详细描述'}</div>
       </div>
       {/* 可扩展更多详情字段 */}
     </div>
@@ -131,12 +131,12 @@ function TopSearchBar({ q, setQ, location, setLocation, onSearch, onReset, onSho
   setFilters: (f: any) => void;
 }) {
   return (
-    <div className="sticky top-0 z-20 w-full bg-white shadow-sm border-b">
+    <div className="sticky top-0 z-20 w-full bg-white/80 backdrop-blur border-b border-brand-100 shadow-glow">
       <div className="max-w-7xl mx-auto flex items-center gap-4 px-6 py-4">
         <form className="flex flex-1 gap-3 items-center" onSubmit={onSearch}>
           <input className="input flex-1" placeholder="关键词 (如: backend, Java)" value={q} onChange={e => setQ(e.target.value)} />
           <input className="input flex-1" placeholder="地点" value={location} onChange={e => setLocation(e.target.value)} />
-          <button className="btn" type="button" onClick={onReset}>重置</button>
+          <button className="btn btn-ghost" type="button" onClick={onReset}>重置</button>
           <button className="btn btn-primary" type="submit">搜索</button>
         </form>
         <div className="relative inline-block">
@@ -145,7 +145,7 @@ function TopSearchBar({ q, setQ, location, setLocation, onSearch, onReset, onSho
             筛选
           </button>
           {showFilterDrawer && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, width: 360, boxShadow: '0 4px 24px rgba(0,0,0,0.12)', background: '#fff', borderRadius: 8, marginTop: 8 }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, width: 360, boxShadow: '0 20px 40px rgba(245, 77, 146, 0.25)', background: 'transparent', borderRadius: 16, marginTop: 12, border: 'none', backdropFilter: 'blur(12px)' }}>
               <FilterDrawer
                 visible={showFilterDrawer}
                 onClose={() => setShowFilterDrawer(false)}
@@ -245,23 +245,23 @@ export default function Page() {
         filters={filters}
         setFilters={setFilters}
       />
-      <div className="flex gap-6 h-[calc(100vh-64px)] pt-2">
+      <div className="flex gap-6 h-[calc(100vh-64px)] pt-6 px-6">
         {/* 左侧列表区 */}
-        <div className="flex-1 min-w-[340px] max-w-[480px] overflow-y-auto border-r bg-white">
-          <section className="space-y-3 p-4">
+        <div className="flex-1 min-w-[340px] max-w-[480px] overflow-y-auto border border-brand-100 rounded-3xl bg-white/70 backdrop-blur">
+          <section className="space-y-3 p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm text-gray-600">
+              <h2 className="text-sm text-brand-500">
                 {isLoading ? 'Loading...' : `${data?.total ?? 0} results`}
                 {isFetching && !isLoading ? ' · refreshing' : ''}
               </h2>
-              <div className="text-xs text-gray-500">Page {data?.page ?? page}</div>
+              <div className="text-xs text-brand-400">Page {data?.page ?? page}</div>
             </div>
-            {isError && <div className="card p-4 text-red-600">Error: {(error as Error).message}</div>}
+            {isError && <div className="card p-4 text-brand-700">Error: {(error as Error).message}</div>}
             <div className="grid gap-3">
               {(data?.items ?? []).map((job) => (
                 <div
                   key={job.id}
-                  className={`cursor-pointer rounded border transition ${selectedJob?.id === job.id ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:border-gray-300'}`}
+                  className={`cursor-pointer rounded-2xl border transition ${selectedJob?.id === job.id ? 'border-brand-500 bg-brand-100/80 shadow-glow' : 'border-transparent hover:border-brand-200/80 bg-white/60'}`}
                   onClick={() => setSelectedJob(job)}
                 >
                   <JobCard job={job} />
@@ -269,17 +269,17 @@ export default function Page() {
               ))}
             </div>
             <div className="flex items-center justify-between pt-2">
-              <button className="btn" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <button className="btn btn-outline" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                 Previous
               </button>
-              <button className="btn" disabled={((data?.page ?? 1) * (data?.size ?? size)) >= (data?.total ?? 0)} onClick={() => setPage((p) => p + 1)}>
+              <button className="btn btn-outline" disabled={((data?.page ?? 1) * (data?.size ?? size)) >= (data?.total ?? 0)} onClick={() => setPage((p) => p + 1)}>
                 Next
               </button>
             </div>
           </section>
         </div>
         {/* 右侧详情区 */}
-        <div className="flex-[2] min-w-[400px] max-w-[800px] h-full overflow-y-auto bg-white">
+        <div className="flex-[2] min-w-[400px] max-w-[800px] h-full overflow-y-auto border border-brand-100 rounded-3xl bg-white/80 backdrop-blur shadow-glow">
           <JobDetail job={selectedJob} />
         </div>
         {/* 弹窗和抽屉组件 */}

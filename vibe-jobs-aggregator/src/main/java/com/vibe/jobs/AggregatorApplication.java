@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class AggregatorApplication {
     public static void main(String[] args) {
+        System.out.println(System.getProperty("java.version"));
         SpringApplication.run(AggregatorApplication.class, args);
     }
 }

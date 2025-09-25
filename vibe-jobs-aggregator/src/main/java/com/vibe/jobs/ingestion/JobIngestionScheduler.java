@@ -1,4 +1,3 @@
-
 package com.vibe.jobs.ingestion;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobService;
@@ -18,7 +17,12 @@ public class JobIngestionScheduler {
     private List<SourceClient> sources(){
         return Arrays.asList(
             new MockCareersApiSource("Acme"),
-            new GreenhouseSourceClient("stripe") // <-- real careers API example
+            new ArbeitnowSourceClient(),
+            new GreenhouseSourceClient("stripe"),
+            new StandardCareersApiSourceClient(
+                "Microsoft",
+                "https://careers.microsoft.com/api"
+            )
         );
     }
 

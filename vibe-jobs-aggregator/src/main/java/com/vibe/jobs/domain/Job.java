@@ -1,4 +1,3 @@
-
 package com.vibe.jobs.domain;
 
 import jakarta.persistence.*;
