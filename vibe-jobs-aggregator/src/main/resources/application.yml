@@ -23,35 +23,30 @@ ingestion:
   mode: companies
   companies:
     - Stripe
-    - Ramp
     - Coupang
     - The Trade Desk
+    - Ramp
+    - Deloitte
+    - Datadog
   recentDays: 7
   sources:
-    - id: greenhouse-stripe
+    - id: greenhouse
       type: greenhouse
       enabled: true
       runOnStartup: true
       options:
-        slug: stripe
-    - id: greenhouse-datadog
-      type: greenhouse
-      enabled: false
-      runOnStartup: true
-      options:
-        slug: datadog
-    - id: lever-ramp
+        slug: "{{slug}}"
+    - id: lever
       type: lever
       enabled: true
       runOnStartup: true
       options:
-        company: ramp
-    - id: workday-deloitte
+        company: "{{slug}}"
+    - id: workday
       type: workday
       enabled: true
       runOnStartup: true
       options:
-        company: Deloitte
-        baseUrl: https://deloitte.wd1.myworkdayjobs.com
-        tenant: deloitte
-        site: DELOITTEJOBS
+        baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
+        tenant: "{{slug}}"
+        site: "{{slugUpper}}"

@@ -21,35 +21,30 @@ ingestion:
   companies:
     - Stripe
     - Ramp
+    - Deloitte
+    - Datadog
   recentDays: 7
   sources:
-    - id: greenhouse-stripe
+    - id: greenhouse
       type: greenhouse
       enabled: true
       runOnStartup: true
       options:
-        slug: stripe
-    - id: greenhouse-datadog
-      type: greenhouse
-      enabled: false
-      runOnStartup: true
-      options:
-        slug: datadog
-    - id: lever-ramp
+        slug: "{{slug}}"
+    - id: lever
       type: lever
       enabled: true
       runOnStartup: true
       options:
-        company: ramp
-    - id: workday-deloitte
+        company: "{{slug}}"
+    - id: workday
       type: workday
       enabled: true
       runOnStartup: true
       options:
-        company: Deloitte
-        baseUrl: https://deloitte.wd1.myworkdayjobs.com
-        tenant: deloitte
-        site: DELOITTEJOBS
+        baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
+        tenant: "{{slug}}"
+        site: "{{slugUpper}}"
 ```
 
 - Set `enabled: false` to skip a connector entirely.
@@ -59,7 +54,8 @@ ingestion:
   - `companies`: only ingest jobs whose `company` matches the configured `companies` list.
   - `recent`: ignore the company list and only ingest roles whose `postedAt` is within the last `recentDays` (defaults to 7).
 - `recentDays` is used when `mode=recent`.
-- Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner). Add multiple entries per provider to pull several companies.
+- Companies define provider-specific overrides under `sources`. Each enabled provider spawns one client per company; placeholders like `{{company}}`, `{{slug}}`, `{{slugUpper}}` are resolved automatically.
+- Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner).
 
 ## Running locally
 ```

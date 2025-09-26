@@ -42,6 +42,7 @@ public class JobIngestionScheduler {
         for (SourceRegistry.ConfiguredSource configuredSource : sources) {
             SourceClient sourceClient = configuredSource.client();
             String sourceName = sourceClient.sourceName();
+            String companyName = configuredSource.company();
             try {
                 int page = 1;
                 while (true) {
@@ -52,14 +53,20 @@ public class JobIngestionScheduler {
                     List<Job> filtered = jobFilter.apply(items);
                     filtered.forEach(jobService::upsert);
                     if (filtered.isEmpty()) {
-                        log.debug("All jobs filtered out for source {} on page {}", sourceName, page);
+                        log.debug("All jobs filtered out for source {} ({}) on page {}", sourceName, companyName, page);
                     }
                     page++;
                 }
-                log.info("Ingestion completed for source {}", sourceName);
+                log.info("Ingestion completed for source {} ({})", sourceName, companyName);
             } catch (Exception e) {
-                log.warn("Ingestion failed for source {}: {}", sourceName, e.getMessage());
-                log.debug("Ingestion failure details", e);
+                String message = e.getMessage();
+                if (message != null && message.contains("403")) {
+                    log.info("Skip source {} ({}) due to 403 response", sourceName, companyName);
+                    log.debug("Expected failure details", e);
+                } else {
+                    log.warn("Ingestion failed for source {} ({}): {}", sourceName, companyName, message);
+                    log.debug("Ingestion failure details", e);
+                }
             }
         }
     }
