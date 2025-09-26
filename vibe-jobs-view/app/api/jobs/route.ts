@@ -1,14 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const MOCK = [
-  { id: '1', title: 'Senior Backend Engineer (Java)', company: 'Acme Global', location: 'Tokyo, JP', level: 'Senior',
-    postedAt: new Date(Date.now() - 1000*60*60*24*2).toISOString(), tags: ['Java', 'Spring Boot', 'Microservices'], url: 'https://careers.example.com/jobs/1' },
-  { id: '2', title: 'Staff Software Engineer - Payments', company: 'Globex', location: 'Singapore, SG', level: 'Staff',
-    postedAt: new Date(Date.now() - 1000*60*60*24*7).toISOString(), tags: ['Distributed Systems', 'Kubernetes', 'MySQL'], url: 'https://careers.example.com/jobs/2' },
-  { id: '3', title: 'Senior Platform Engineer', company: 'Initech', location: 'Shanghai, CN', level: 'Senior',
-    postedAt: new Date(Date.now() - 1000*60*60*24*12).toISOString(), tags: ['Infra', 'Observability', 'SRE'], url: 'https://careers.example.com/jobs/3' }
-];
+import { MOCK_JOBS } from './mock-data';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -33,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const filtered = MOCK.filter(j =>
+  const filtered = MOCK_JOBS.filter(j =>
     (!q || [j.title, (j.tags ?? []).join(' ')].join(' ').toLowerCase().includes(q)) &&
     (!company || j.company.toLowerCase().includes(company)) &&
     (!location || j.location.toLowerCase().includes(location)) &&

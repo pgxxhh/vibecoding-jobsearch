@@ -10,6 +10,14 @@ export type Job = {
   url: string;
   description?: string;
 };
+export type JobDetail = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  postedAt: string;
+  description: string;
+};
 export type JobsQuery = {
   q?: string;
   location?: string;

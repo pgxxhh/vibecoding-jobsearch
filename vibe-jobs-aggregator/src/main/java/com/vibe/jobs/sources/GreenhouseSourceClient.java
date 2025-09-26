@@ -35,7 +35,7 @@ public class GreenhouseSourceClient implements SourceClient {
     }
 
     @Override
-    public List<Job> fetchPage(int page, int size) throws Exception {
+    public List<FetchedJob> fetchPage(int page, int size) throws Exception {
         int perPage = Math.max(1, Math.min(size, 50));
         int pageNumber = Math.max(page, 1);
 
@@ -103,7 +103,7 @@ public class GreenhouseSourceClient implements SourceClient {
         }
     }
 
-    private Job mapJob(Map<String, Object> summary, Map<String, Object> detail) {
+    private FetchedJob mapJob(Map<String, Object> summary, Map<String, Object> detail) {
         Map<String, Object> data = detail != null ? detail : summary;
         if (data == null) {
             return null;
@@ -116,7 +116,7 @@ public class GreenhouseSourceClient implements SourceClient {
         Instant postedAt = extractPostedAt(data, summary);
         Set<String> tags = extractTags(data, summary);
 
-        return Job.builder()
+        Job job = Job.builder()
                 .source(sourceName())
                 .externalId(id.isEmpty() ? title : id)
                 .title(title)
@@ -126,6 +126,8 @@ public class GreenhouseSourceClient implements SourceClient {
                 .url(url)
                 .tags(tags)
                 .build();
+        String content = extractContent(data, summary);
+        return new FetchedJob(job, content);
     }
 
     private String extractLocation(Map<String, Object> detail, Map<String, Object> summary) {
@@ -174,6 +176,26 @@ public class GreenhouseSourceClient implements SourceClient {
         addTags(tags, summary.get("departments"));
         addTags(tags, detail.get("offices"));
         return tags;
+    }
+
+    private String extractContent(Map<String, Object> detail, Map<String, Object> summary) {
+        String content = string(detail.get("content"));
+        if (!content.isEmpty()) {
+            return content;
+        }
+        content = string(detail.get("body"));
+        if (!content.isEmpty()) {
+            return content;
+        }
+        content = string(detail.get("description"));
+        if (!content.isEmpty()) {
+            return content;
+        }
+        content = string(summary.get("content"));
+        if (!content.isEmpty()) {
+            return content;
+        }
+        return string(summary.get("body"));
     }
 
     private void addTags(Set<String> tags, Object value) {

@@ -20,6 +20,7 @@ ingestion:
   fixedDelayMs: 3600000
   initialDelayMs: 10000
   pageSize: 20
+  concurrency: 4
   mode: companies
   companies:
     - Stripe

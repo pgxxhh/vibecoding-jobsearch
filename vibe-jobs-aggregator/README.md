@@ -17,6 +17,7 @@ ingestion:
   fixedDelayMs: 3600000
   initialDelayMs: 10000
   pageSize: 20
+  concurrency: 4
   mode: companies # or recent
   companies:
     - Stripe
@@ -55,6 +56,7 @@ ingestion:
   - `recent`: ignore the company list and only ingest roles whose `postedAt` is within the last `recentDays` (defaults to 7).
 - `recentDays` is used when `mode=recent`.
 - Companies define provider-specific overrides under `sources`. Each enabled provider spawns one client per company; placeholders like `{{company}}`, `{{slug}}`, `{{slugUpper}}` are resolved automatically.
+- `concurrency` controls how many provider/company tasks run in parallel (default 4).
 - Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner).
 
 ## Running locally
@@ -68,3 +70,4 @@ mvn spring-boot:run
 - Greenhouse does not return `postedAt`; we stamp the current time. Extend `GreenhouseSourceClient` if you need more metadata.
 - Lever timestamps are provided in epoch milliseconds and are normalised to `Instant`.
 - Workday endpoints vary by tenant/site; ensure `baseUrl`, `tenant`, and `site` values match the organisation you are integrating.
+- Job descriptions are stored in the `job_details` table and exposed via `GET /jobs/{id}/detail` so the frontend can lazy-load content.

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import JobCardNew from '@/components/JobCardNew';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
-import type { Job, JobsResponse } from '@/lib/types';
+import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
@@ -11,6 +11,20 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const res = await fetch('/api/jobs?' + qs.toString(), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch jobs');
   return res.json();
+}
+
+async function fetchJobDetail(id: string): Promise<JobDetailData> {
+  const res = await fetch(`/api/jobs/${id}/detail`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch job detail');
+  const detail = await res.json();
+  return {
+    id: String(detail.id ?? id),
+    title: detail.title ?? '',
+    company: detail.company ?? '',
+    location: detail.location ?? '',
+    postedAt: detail.postedAt ?? '',
+    description: detail.description ?? '',
+  };
 }
 
 function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean; onConfirm: () => void; onCancel: () => void; params: Record<string, any> }) {
@@ -147,8 +161,21 @@ function FilterDrawer({
   );
 }
 
-function JobDetail({ job }: { job: Job | null }) {
+function JobDetailPanel({
+  job,
+  isLoading,
+  isError,
+  isRefreshing,
+  onRetry,
+}: {
+  job: Job | null;
+  isLoading: boolean;
+  isError: boolean;
+  isRefreshing: boolean;
+  onRetry: () => void;
+}) {
   const { t } = useI18n();
+
   if (!job) {
     return (
       <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center">
@@ -169,7 +196,17 @@ function JobDetail({ job }: { job: Job | null }) {
           {job.company} · {job.location}
           {job.level ? ` · ${job.level}` : ''}
         </div>
-        {date && <div className="text-xs text-gray-400" suppressHydrationWarning>{date}</div>}
+        {date && (
+          <div className="flex items-center gap-2 text-xs text-gray-400" suppressHydrationWarning>
+            <span>{date}</span>
+            {isRefreshing && !isLoading && <span>{t('jobDetail.refreshing')}</span>}
+          </div>
+        )}
+        {!date && isRefreshing && !isLoading && (
+          <div className="text-xs text-gray-400" role="status">
+            {t('jobDetail.refreshing')}
+          </div>
+        )}
       </div>
       {job.tags && job.tags.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -182,14 +219,35 @@ function JobDetail({ job }: { job: Job | null }) {
       )}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-700">{t('jobDetail.description')}</h3>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
-          {job.description || t('jobDetail.noDescription')}
-        </p>
+        {isError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
+            <p>{t('jobDetail.error')}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+              {t('actions.retry')}
+            </Button>
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
+        ) : (
+          <div className="mb-4">
+            <span className="font-semibold text-black">描述：</span>
+            <div className="mt-1 text-sm text-black">
+              {job.description
+                ? <div dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(job.description) }} />
+                : '无详细描述'}
+            </div>
+          </div>
+        )}
       </div>
       <Button
         variant="outline"
-        onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}
+        onClick={() => job.url && window.open(job.url, '_blank', 'noopener,noreferrer')}
         className="shadow-none"
+        disabled={!job.url}
       >
         {t('jobDetail.viewOriginal')}
       </Button>
@@ -278,6 +336,29 @@ function HeroSection({
   );
 }
 
+function decodeHTMLEntities(text: string): string {
+  if (!text) return '';
+  if (typeof window !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  }
+  // SSR fallback: 常见实体解码
+  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+}
+
+function stripHtmlTags(html: string): string {
+  if (!html) return '';
+  // 浏览器环境下用 DOM 解析
+  if (typeof window !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  }
+  // SSR fallback: 用正则去除标签
+  return html.replace(/<[^>]+>/g, '');
+}
+
 export default function Page() {
   const { t } = useI18n();
   const [q, setQ] = useState('');
@@ -304,6 +385,36 @@ export default function Page() {
   const currentPage = data?.page ?? page;
   const pageSize = data?.size ?? size;
   const isSearching = isLoading || isFetching;
+
+  const selectedJobId = selectedJob?.id ?? null;
+  const {
+    data: selectedJobDetail,
+    isLoading: isDetailLoading,
+    isFetching: isDetailFetching,
+    isError: isDetailError,
+    refetch: refetchJobDetail,
+  } = useQuery({
+    queryKey: ['job-detail', selectedJobId],
+    queryFn: () => {
+      if (!selectedJobId) throw new Error('Missing job id');
+      return fetchJobDetail(selectedJobId);
+    },
+    enabled: Boolean(selectedJobId),
+    staleTime: 60_000,
+  });
+
+  const combinedSelectedJob = useMemo<Job | null>(() => {
+    if (!selectedJob) return null;
+    if (selectedJobDetail && selectedJobDetail.id === selectedJob.id) {
+      return { ...selectedJob, ...selectedJobDetail };
+    }
+    return selectedJob;
+  }, [selectedJob, selectedJobDetail]);
+
+  const detailHasData = Boolean(selectedJobDetail || combinedSelectedJob?.description);
+  const detailLoading = isDetailLoading && !detailHasData;
+  const detailRefreshing = isDetailFetching && !detailLoading;
+  const detailError = Boolean(selectedJobId) && isDetailError;
 
   useEffect(() => {
     setSelectedJob((current) => {
@@ -450,7 +561,13 @@ export default function Page() {
         </Card>
 
         <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-y-auto">
-          <JobDetail job={selectedJob} />
+          <JobDetailPanel
+            job={combinedSelectedJob}
+            isLoading={detailLoading}
+            isError={detailError}
+            isRefreshing={detailRefreshing}
+            onRetry={() => refetchJobDetail()}
+          />
         </Card>
       </div>
 

@@ -75,7 +75,7 @@ public class StandardCareersApiSourceClient implements SourceClient {
     }
 
     @Override
-    public List<Job> fetchPage(int page, int size) throws Exception {
+    public List<FetchedJob> fetchPage(int page, int size) throws Exception {
         Map<String, Object> response = client.get()
                 .uri(uriBuilder -> {
                     if (!jobsPath.isEmpty()) {
@@ -110,7 +110,7 @@ public class StandardCareersApiSourceClient implements SourceClient {
                     tags.add(String.valueOf(tag));
                 }
             }
-            return Job.builder()
+            Job job = Job.builder()
                     .source(sourceName())
                     .externalId(externalId)
                     .title(title)
@@ -120,6 +120,27 @@ public class StandardCareersApiSourceClient implements SourceClient {
                     .url(url)
                     .tags(tags)
                     .build();
+            String content = extractContent(j);
+            return new FetchedJob(job, content);
         }).collect(Collectors.toList());
+    }
+
+    private String extractContent(Map<String, Object> payload) {
+        if (payload == null) {
+            return "";
+        }
+        Object description = payload.get("description");
+        if (description instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        description = payload.get("content");
+        if (description instanceof String s2 && !s2.isBlank()) {
+            return s2;
+        }
+        description = payload.get("body");
+        if (description instanceof String s3 && !s3.isBlank()) {
+            return s3;
+        }
+        return "";
     }
 }
