@@ -5,20 +5,10 @@
 
 :root { color-scheme: light; }
 
+html, body { min-height: 100%; }
+
 body {
-  @apply bg-brand-50 text-brand-900;
-  background-image: linear-gradient(135deg, rgba(255, 232, 240, 0.85), rgba(245, 77, 146, 0.25));
-  background-attachment: fixed;
+  @apply text-slate-900 bg-transparent;
 }
 
-.container { @apply max-w-6xl mx-auto px-4; }
-.card { @apply bg-white/90 backdrop-blur rounded-2xl shadow-glow border border-brand-100; }
-.btn {
-  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 border text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-brand-300/60 active:scale-[.98];
-}
-.btn-primary { @apply bg-brand-500 text-white border-brand-500 hover:bg-brand-600; }
-.btn-outline { @apply border-brand-400 text-brand-600 bg-white/40 hover:bg-brand-100; }
-.btn-ghost { @apply border-transparent text-brand-600 bg-transparent hover:bg-brand-100; }
-.input { @apply w-full rounded-xl border border-brand-200/70 bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300/60 placeholder:text-brand-300; }
-.select { @apply w-full rounded-xl border border-brand-200/70 px-3 py-2 bg-white/80 focus:outline-none focus:ring-2 focus:ring-brand-300/60; }
-.badge { @apply inline-flex items-center rounded-full border px-2 py-0.5 text-xs border-brand-200 bg-brand-100 text-brand-600; }
+.container { @apply mx-auto w-full max-w-7xl px-6; }

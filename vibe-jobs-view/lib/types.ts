@@ -8,6 +8,7 @@ export type Job = {
   postedAt: string;
   tags?: string[];
   url: string;
+  description?: string;
 };
 export type JobsQuery = {
   q?: string;

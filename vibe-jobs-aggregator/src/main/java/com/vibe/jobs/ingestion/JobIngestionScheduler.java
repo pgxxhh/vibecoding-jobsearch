@@ -1,43 +1,66 @@
 package com.vibe.jobs.ingestion;
+
+import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobService;
-import com.vibe.jobs.sources.*;
+import com.vibe.jobs.sources.SourceClient;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import java.util.Arrays;
-import java.util.List;
-@Slf4j @Component
-public class JobIngestionScheduler {
-    private final JobService jobService;
-    @Value("${ingestion.pageSize:100}") private int pageSize;
-    public JobIngestionScheduler(JobService jobService){ this.jobService = jobService; }
 
-    private List<SourceClient> sources(){
-        return Arrays.asList(
-            new MockCareersApiSource("Acme"),
-            new ArbeitnowSourceClient(),
-            new GreenhouseSourceClient("stripe"),
-            new StandardCareersApiSourceClient(
-                "Microsoft",
-                "https://careers.microsoft.com/api"
-            )
-        );
+import java.util.List;
+
+@Slf4j
+@Component
+public class JobIngestionScheduler {
+
+    private final JobService jobService;
+    private final IngestionProperties ingestionProperties;
+    private final SourceRegistry sourceRegistry;
+    private final JobIngestionFilter jobFilter;
+
+    public JobIngestionScheduler(JobService jobService,
+                                 IngestionProperties ingestionProperties,
+                                 SourceRegistry sourceRegistry,
+                                 JobIngestionFilter jobFilter) {
+        this.jobService = jobService;
+        this.ingestionProperties = ingestionProperties;
+        this.sourceRegistry = sourceRegistry;
+        this.jobFilter = jobFilter;
     }
 
     @Scheduled(fixedDelayString = "${ingestion.fixedDelayMs:3600000}", initialDelayString = "${ingestion.initialDelayMs:10000}")
-    public void runIngestion(){
-        for(SourceClient s: sources()){
-            try{
-                int page=1;
-                while(true){
-                    var items = s.fetchPage(page, pageSize);
-                    if(items==null || items.isEmpty()) break;
-                    for(Job j: items) jobService.upsert(j);
+    public void runIngestion() {
+        List<SourceRegistry.ConfiguredSource> sources = sourceRegistry.getScheduledSources();
+        if (sources.isEmpty()) {
+            log.info("No ingestion sources configured; skipping scheduled run");
+            return;
+        }
+
+        int pageSize = Math.max(1, ingestionProperties.getPageSize());
+
+        for (SourceRegistry.ConfiguredSource configuredSource : sources) {
+            SourceClient sourceClient = configuredSource.client();
+            String sourceName = sourceClient.sourceName();
+            try {
+                int page = 1;
+                while (true) {
+                    List<Job> items = sourceClient.fetchPage(page, pageSize);
+                    if (items == null || items.isEmpty()) {
+                        break;
+                    }
+                    List<Job> filtered = jobFilter.apply(items);
+                    filtered.forEach(jobService::upsert);
+                    if (filtered.isEmpty()) {
+                        log.debug("All jobs filtered out for source {} on page {}", sourceName, page);
+                    }
                     page++;
                 }
-            }catch(Exception e){ /* log omitted */ }
+                log.info("Ingestion completed for source {}", sourceName);
+            } catch (Exception e) {
+                log.warn("Ingestion failed for source {}: {}", sourceName, e.getMessage());
+                log.debug("Ingestion failure details", e);
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import JobCard from '@/components/JobCard';
-import type { JobsResponse } from '@/lib/types';
-import { useMemo, useRef, useState } from 'react';
+import JobCardNew from '@/components/JobCardNew';
+import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
+import { useI18n } from '@/lib/i18n';
+import type { Job, JobsResponse } from '@/lib/types';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(Object.entries(params).filter(([,v]) => v !== '' && v !== undefined) as any);
@@ -11,164 +13,273 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   return res.json();
 }
 
-function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean, onConfirm: () => void, onCancel: () => void, params: Record<string, any> }) {
+function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean; onConfirm: () => void; onCancel: () => void; params: Record<string, any> }) {
+  const { t } = useI18n();
   if (!visible) return null;
+
+  const formatValue = (value: string | number | undefined) => ((value ?? '') === '' ? t('forms.any') : value);
+
   return (
-    <div className="fixed inset-0 bg-brand-900/20 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-      <div className="relative bg-white/95 rounded-2xl shadow-glow border border-brand-100 p-6 w-full max-w-md">
-        <button className="absolute top-3 right-3 text-brand-300 hover:text-brand-500" onClick={onCancel}>×</button>
-        <h2 className="text-xl font-bold text-brand-800 mb-2">创建订阅提醒</h2>
-        <p className="mb-4 text-brand-500">创建一个订阅，第一时间收到最新职位推送。你可以在个人中心管理订阅。</p>
-        <div className="border border-brand-100 rounded-xl p-4 mb-5 bg-brand-50/80">
-          <div className="font-semibold text-brand-700">搜索条件：</div>
-          <div>关键词：{params.q || '不限'}</div>
-          <div>公司：{params.company || '不限'}</div>
-          <div>地点：{params.location || '不限'}</div>
-          <div>级别：{params.level || '不限'}</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
+      <Card className="relative w-full max-w-lg border-white/60 bg-white/95 p-8 shadow-brand-lg">
+        <button
+          className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
+          onClick={onCancel}
+          aria-label={t('actions.cancel')}
+        >
+          ×
+        </button>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-slate-900">{t('subscription.title')}</h2>
+            <p className="text-sm text-gray-600">{t('subscription.description')}</p>
+          </div>
+          <div className="rounded-2xl border border-black/5 bg-gray-50/80 p-5 text-sm leading-relaxed text-gray-700">
+            <div className="font-medium text-gray-900">{t('subscription.conditionsLabel')}</div>
+            <div>{t('subscription.keyword', { value: formatValue(params.q) })}</div>
+            <div>{t('subscription.company', { value: formatValue(params.company) })}</div>
+            <div>{t('subscription.location', { value: formatValue(params.location) })}</div>
+            <div>{t('subscription.level', { value: formatValue(params.level) })}</div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={onCancel}>
+              {t('actions.cancel')}
+            </Button>
+            <Button onClick={onConfirm}>{t('actions.confirmSubscription')}</Button>
+          </div>
         </div>
-        <div className="flex gap-3 justify-end">
-          <button className="btn btn-ghost" onClick={onCancel}>取消</button>
-          <button className="btn btn-primary" onClick={onConfirm}>确认订阅</button>
-        </div>
-      </div>
+      </Card>
     </div>
   );
 }
 
-function FilterDrawer({ visible, onClose, filters, setFilters, onApply }: {
-  visible: boolean,
-  onClose: () => void,
-  filters: any,
-  setFilters: (f: any) => void,
-  onApply: () => void
+function FilterDrawer({
+  visible,
+  onClose,
+  filters,
+  setFilters,
+  onApply,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  filters: any;
+  setFilters: (f: any) => void;
+  onApply: () => void;
 }) {
+  const { t } = useI18n();
   if (!visible) return null;
   return (
-    <div className="w-full max-w-xs shadow-glow p-6 relative bg-white/95 rounded-2xl border border-brand-100">
-      <button className="absolute top-4 right-4 text-brand-300 hover:text-brand-500" onClick={onClose}>×</button>
-      <h2 className="text-lg font-bold mb-4 text-brand-800">筛选职位</h2>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1 text-brand-600">公司</label>
-          <input className="input w-full" value={filters.company} onChange={e => setFilters({ ...filters, company: e.target.value })} placeholder="公司" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 backdrop-blur-sm px-4">
+      <Card className="relative w-full max-w-md border-white/60 bg-white/95 p-6 shadow-brand-lg">
+        <button
+          className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
+          onClick={onClose}
+          aria-label={t('filters.cancel')}
+        >
+          ×
+        </button>
+        <h2 className="mb-5 text-lg font-semibold text-slate-900">{t('filters.title')}</h2>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.company')}</label>
+            <Input
+              value={filters.company}
+              onChange={(event) => setFilters({ ...filters, company: event.target.value })}
+              placeholder={t('filters.company')}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.level')}</label>
+            <Select
+              value={filters.level}
+              onChange={(event) => setFilters({ ...filters, level: event.target.value })}
+            >
+              <option value="">{t('forms.any')}</option>
+              <option value="Junior">{t('jobLevels.junior')}</option>
+              <option value="Mid">{t('jobLevels.mid')}</option>
+              <option value="Senior">{t('jobLevels.senior')}</option>
+              <option value="Staff">{t('jobLevels.staff')}</option>
+              <option value="Principal">{t('jobLevels.principal')}</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.remote')}</label>
+            <Select
+              value={filters.remote}
+              onChange={(event) => setFilters({ ...filters, remote: event.target.value })}
+            >
+              <option value="">{t('forms.any')}</option>
+              <option value="true">{t('filters.remote.true')}</option>
+              <option value="false">{t('filters.remote.false')}</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.salaryMin')}</label>
+            <Input
+              type="number"
+              value={filters.salaryMin}
+              onChange={(event) => setFilters({ ...filters, salaryMin: event.target.value })}
+              placeholder={t('filters.salaryPlaceholder')}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.datePosted')}</label>
+            <Select
+              value={filters.datePosted}
+              onChange={(event) => setFilters({ ...filters, datePosted: event.target.value })}
+            >
+              <option value="">{t('forms.any')}</option>
+              <option value="1">{t('filters.dateOptions.1')}</option>
+              <option value="3">{t('filters.dateOptions.3')}</option>
+              <option value="7">{t('filters.dateOptions.7')}</option>
+              <option value="30">{t('filters.dateOptions.30')}</option>
+            </Select>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1 text-brand-600">级别</label>
-          <select className="select w-full" value={filters.level} onChange={e => setFilters({ ...filters, level: e.target.value })}>
-            <option value="">不限</option>
-            <option value="Junior">Junior</option>
-            <option value="Mid">Mid</option>
-            <option value="Senior">Senior</option>
-            <option value="Staff">Staff</option>
-            <option value="Principal">Principal</option>
-          </select>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose}>
+            {t('filters.cancel')}
+          </Button>
+          <Button onClick={onApply}>{t('filters.apply')}</Button>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1 text-brand-600">远程</label>
-          <select className="select w-full" value={filters.remote} onChange={e => setFilters({ ...filters, remote: e.target.value })}>
-            <option value="">不限</option>
-            <option value="true">远程</option>
-            <option value="false">非远程</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1 text-brand-600">薪资下限</label>
-          <input className="input w-full" type="number" value={filters.salaryMin} onChange={e => setFilters({ ...filters, salaryMin: e.target.value })} placeholder="最低薪资" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1 text-brand-600">发布日期</label>
-          <select className="select w-full" value={filters.datePosted} onChange={e => setFilters({ ...filters, datePosted: e.target.value })}>
-            <option value="">不限</option>
-            <option value="1">1天内</option>
-            <option value="3">3天内</option>
-            <option value="7">7天内</option>
-            <option value="30">30天内</option>
-          </select>
-        </div>
-      </div>
-      <div className="mt-6 flex gap-3 justify-end">
-        <button className="btn btn-ghost" onClick={onClose}>取消</button>
-        <button className="btn btn-primary" onClick={onApply}>应用</button>
-      </div>
+      </Card>
     </div>
   );
 }
 
-function JobDetail({ job }: { job: any }) {
-  if (!job) return (
-    <div className="flex items-center justify-center h-full text-brand-300 text-lg">请选择左侧职位查看详情</div>
-  );
+function JobDetail({ job }: { job: Job | null }) {
+  const { t } = useI18n();
+  if (!job) {
+    return (
+      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center">
+        <img src="/assets/orb-purple.svg" alt="" className="h-16 w-16 opacity-30" />
+        <p className="max-w-xs text-sm text-gray-400">{t('jobDetail.empty')}</p>
+      </div>
+    );
+  }
+
+  const posted = new Date(job.postedAt);
+  const date = Number.isNaN(posted.getTime()) ? '' : posted.toLocaleDateString();
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-2 text-brand-800">{job.title}</h2>
-      <div className="text-brand-500 mb-2">{job.company} · {job.location} {job.level ? `· ${job.level}` : ''}</div>
-      <div className="mb-2 text-xs text-brand-400">{new Date(job.postedAt).toLocaleDateString()}</div>
-      <div className="mb-4">
-        <span className="font-semibold text-brand-700">标签：</span>
-        {(job.tags ?? []).map((t: string) => <span key={t} className="badge mr-1">{t}</span>)}
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold text-slate-900">{job.title}</h2>
+        <div className="text-sm text-gray-600">
+          {job.company} · {job.location}
+          {job.level ? ` · ${job.level}` : ''}
+        </div>
+        {date && <div className="text-xs text-gray-400" suppressHydrationWarning>{date}</div>}
       </div>
-      <div className="mb-4">
-        <span className="font-semibold text-brand-700">描述：</span>
-        <div className="mt-1 whitespace-pre-line text-sm text-brand-600">{job.description || '无详细描述'}</div>
+      {job.tags && job.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {job.tags.map((tag: string) => (
+            <Badge key={tag} tone="muted">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700">{t('jobDetail.description')}</h3>
+        <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">
+          {job.description || t('jobDetail.noDescription')}
+        </p>
       </div>
-      {/* 可扩展更多详情字段 */}
+      <Button
+        variant="outline"
+        onClick={() => window.open(job.url, '_blank', 'noopener,noreferrer')}
+        className="shadow-none"
+      >
+        {t('jobDetail.viewOriginal')}
+      </Button>
     </div>
   );
 }
 
-function TopSearchBar({ q, setQ, location, setLocation, onSearch, onReset, onShowFilter, onShowSubscription, showFilterDrawer, setShowFilterDrawer, filters, setFilters }: {
+function HeroSection({
+  q,
+  setQ,
+  location,
+  setLocation,
+  onSearch,
+  onReset,
+  onShowFilter,
+  onShowSubscription,
+  activeFilterCount,
+  isSearching,
+}: {
   q: string;
   setQ: (v: string) => void;
   location: string;
   setLocation: (v: string) => void;
-  onSearch: (e: React.FormEvent) => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
   onReset: () => void;
   onShowFilter: () => void;
   onShowSubscription: () => void;
-  showFilterDrawer: boolean;
-  setShowFilterDrawer: (v: boolean) => void;
-  filters: any;
-  setFilters: (f: any) => void;
+  activeFilterCount: number;
+  isSearching: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
-    <div className="sticky top-0 z-20 w-full bg-white/80 backdrop-blur border-b border-brand-100 shadow-glow">
-      <div className="max-w-7xl mx-auto flex items-center gap-4 px-6 py-4">
-        <form className="flex flex-1 gap-3 items-center" onSubmit={onSearch}>
-          <input className="input flex-1" placeholder="关键词 (如: backend, Java)" value={q} onChange={e => setQ(e.target.value)} />
-          <input className="input flex-1" placeholder="地点" value={location} onChange={e => setLocation(e.target.value)} />
-          <button className="btn btn-ghost" type="button" onClick={onReset}>重置</button>
-          <button className="btn btn-primary" type="submit">搜索</button>
-        </form>
-        <div className="relative inline-block">
-          <button className="btn btn-outline flex items-center gap-1" type="button" onClick={onShowFilter}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="15" y2="8"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-            筛选
-          </button>
-          {showFilterDrawer && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 1000, width: 360, boxShadow: '0 20px 40px rgba(245, 77, 146, 0.25)', background: 'transparent', borderRadius: 16, marginTop: 12, border: 'none', backdropFilter: 'blur(12px)' }}>
-              <FilterDrawer
-                visible={showFilterDrawer}
-                onClose={() => setShowFilterDrawer(false)}
-                filters={filters}
-                setFilters={setFilters}
-                onApply={() => setShowFilterDrawer(false)}
+    <section className="relative overflow-hidden rounded-[2.75rem] border border-white/50 bg-white/80 p-8 shadow-brand-lg backdrop-blur">
+      <img src="/assets/orb-rose.svg" alt="" className="pointer-events-none absolute -left-20 top-[-40%] h-96 w-96 opacity-40" />
+      <img src="/assets/orb-purple.svg" alt="" className="pointer-events-none absolute -right-16 bottom-[-30%] h-96 w-96 opacity-30" />
+      <div className="relative grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-5">
+          <Badge tone="brand" className="w-fit">
+            {t('hero.badge')}
+          </Badge>
+          <div className="space-y-4">
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              {t('hero.title')}
+            </h1>
+            <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
+          </div>
+        </div>
+        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">
+          <form className="flex flex-col gap-4" onSubmit={onSearch}>
+            <div className="grid gap-3">
+              <Input
+                placeholder={t('search.keywordPlaceholder')}
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+              />
+              <Input
+                placeholder={t('search.locationPlaceholder')}
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
               />
             </div>
-          )}
-        </div>
-        <button className="flex items-center gap-2 btn btn-outline" type="button" onClick={onShowSubscription}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="icon-bell" style={{display: 'inline', verticalAlign: 'middle'}}>
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          创建订阅提醒
-        </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" disabled={isSearching}>
+                {isSearching ? t('search.loading') : t('actions.search')}
+              </Button>
+              <Button variant="outline" type="button" onClick={onReset}>
+                {t('actions.reset')}
+              </Button>
+              <Button variant="ghost" type="button" onClick={onShowFilter} className="flex items-center gap-2">
+                {t('filters.open')}
+                {activeFilterCount > 0 && (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+              <Button variant="ghost" type="button" onClick={onShowSubscription}>
+                {t('actions.createSubscription')}
+              </Button>
+            </div>
+          </form>
+        </Card>
       </div>
-    </div>
+    </section>
   );
 }
 
 export default function Page() {
+  const { t } = useI18n();
   const [q, setQ] = useState('');
   const [location, setLocation] = useState('');
   const [page, setPage] = useState(1);
@@ -179,17 +290,46 @@ export default function Page() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const hasPromptedSubscription = useRef(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const params = useMemo(() => ({ q, location, page, size, ...filters }), [q, location, page, size, filters]);
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['jobs', params],
     queryFn: () => fetchJobs(params),
     keepPreviousData: true,
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const jobs = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const currentPage = data?.page ?? page;
+  const pageSize = data?.size ?? size;
+  const isSearching = isLoading || isFetching;
+
+  useEffect(() => {
+    setSelectedJob((current) => {
+      if (!jobs.length) return null;
+      if (current && jobs.some((item) => item.id === current.id)) {
+        return current;
+      }
+      return jobs[0];
+    });
+  }, [jobs]);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter((value) => value !== '' && value !== undefined).length,
+    [filters],
+  );
+
+  const handleReset = () => {
+    setQ('');
+    setLocation('');
+    setFilters({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
+    setPage(1);
+    setSelectedJob(null);
+  };
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setPage(1);
     if (!hasPromptedSubscription.current) {
       setShowSubscriptionModal(true);
@@ -229,68 +369,105 @@ export default function Page() {
     refetch();
   };
 
+  const skeletonPlaceholders = Array.from({ length: 4 });
+
   return (
-    <div className="w-full h-full">
-      <TopSearchBar
+    <div className="space-y-10 pb-16">
+      <HeroSection
         q={q}
         setQ={setQ}
         location={location}
         setLocation={setLocation}
         onSearch={handleSearch}
-        onReset={() => { setQ(''); setLocation(''); setPage(1); setFilters({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' }); }}
+        onReset={handleReset}
         onShowFilter={() => setShowFilterDrawer(true)}
         onShowSubscription={handleManualSubscription}
-        showFilterDrawer={showFilterDrawer}
-        setShowFilterDrawer={setShowFilterDrawer}
+        activeFilterCount={activeFilterCount}
+        isSearching={isSearching}
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+        <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-500">
+              {isLoading ? t('search.loading') : t('search.results', { count: total })}
+              {isFetching && !isLoading ? ` · ${t('search.refreshing')}` : ''}
+            </p>
+            <span className="text-xs text-gray-400">{t('search.page', { page: currentPage })}</span>
+          </div>
+          <div className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]">
+            {isError && (
+              <Card className="border-dashed border-red-200 bg-red-50/70 p-4 text-sm text-red-600">
+                {t('errors.fetchJobs')}
+              </Card>
+            )}
+            {isLoading &&
+              skeletonPlaceholders.map((_, index) => (
+                <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white/70 p-4">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="mt-3 h-3 w-1/2" />
+                  <div className="mt-4 flex gap-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </Card>
+              ))}
+            {!isLoading && !isError &&
+              jobs.map((job) => {
+                const active = selectedJob?.id === job.id;
+                return (
+                  <div key={job.id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
+                    <JobCardNew
+                      job={job}
+                      className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
+                    />
+                  </div>
+                );
+              })}
+            {!isLoading && !isError && jobs.length === 0 && (
+              <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-black/10 bg-white/70 text-sm text-gray-400">
+                {t('search.results', { count: 0 })}
+              </div>
+            )}
+          </div>
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+              disabled={currentPage <= 1 || isLoading || isFetching}
+            >
+              {t('actions.previous')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPage((previous) => previous + 1)}
+              disabled={currentPage * pageSize >= total || isLoading || isFetching}
+            >
+              {t('actions.next')}
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-y-auto">
+          <JobDetail job={selectedJob} />
+        </Card>
+      </div>
+
+      <SubscriptionModal
+        visible={showSubscriptionModal}
+        onConfirm={handleConfirmSubscription}
+        onCancel={handleCancelSubscription}
+        params={params}
+      />
+
+      <FilterDrawer
+        visible={showFilterDrawer}
+        onClose={() => setShowFilterDrawer(false)}
         filters={filters}
         setFilters={setFilters}
+        onApply={handleApplyFilters}
       />
-      <div className="flex gap-6 h-[calc(100vh-64px)] pt-6 px-6">
-        {/* 左侧列表区 */}
-        <div className="flex-1 min-w-[340px] max-w-[480px] overflow-y-auto border border-brand-100 rounded-3xl bg-white/70 backdrop-blur">
-          <section className="space-y-3 p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm text-brand-500">
-                {isLoading ? 'Loading...' : `${data?.total ?? 0} results`}
-                {isFetching && !isLoading ? ' · refreshing' : ''}
-              </h2>
-              <div className="text-xs text-brand-400">Page {data?.page ?? page}</div>
-            </div>
-            {isError && <div className="card p-4 text-brand-700">Error: {(error as Error).message}</div>}
-            <div className="grid gap-3">
-              {(data?.items ?? []).map((job) => (
-                <div
-                  key={job.id}
-                  className={`cursor-pointer rounded-2xl border transition ${selectedJob?.id === job.id ? 'border-brand-500 bg-brand-100/80 shadow-glow' : 'border-transparent hover:border-brand-200/80 bg-white/60'}`}
-                  onClick={() => setSelectedJob(job)}
-                >
-                  <JobCard job={job} />
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between pt-2">
-              <button className="btn btn-outline" disabled={(data?.page ?? 1) <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                Previous
-              </button>
-              <button className="btn btn-outline" disabled={((data?.page ?? 1) * (data?.size ?? size)) >= (data?.total ?? 0)} onClick={() => setPage((p) => p + 1)}>
-                Next
-              </button>
-            </div>
-          </section>
-        </div>
-        {/* 右侧详情区 */}
-        <div className="flex-[2] min-w-[400px] max-w-[800px] h-full overflow-y-auto border border-brand-100 rounded-3xl bg-white/80 backdrop-blur shadow-glow">
-          <JobDetail job={selectedJob} />
-        </div>
-        {/* 弹窗和抽屉组件 */}
-        <SubscriptionModal
-          visible={showSubscriptionModal}
-          onConfirm={handleConfirmSubscription}
-          onCancel={handleCancelSubscription}
-          params={params}
-        />
-        {/* FilterDrawer 已在 TopSearchBar 绝对定位弹窗中渲染，这里不再重复渲染 */}
-      </div>
     </div>
   );
 }

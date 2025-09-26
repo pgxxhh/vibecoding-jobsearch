@@ -19,4 +19,39 @@ server:
 ingestion:
   fixedDelayMs: 3600000
   initialDelayMs: 10000
-  pageSize: 200
+  pageSize: 20
+  mode: companies
+  companies:
+    - Stripe
+    - Ramp
+    - Coupang
+    - The Trade Desk
+  recentDays: 7
+  sources:
+    - id: greenhouse-stripe
+      type: greenhouse
+      enabled: true
+      runOnStartup: true
+      options:
+        slug: stripe
+    - id: greenhouse-datadog
+      type: greenhouse
+      enabled: false
+      runOnStartup: true
+      options:
+        slug: datadog
+    - id: lever-ramp
+      type: lever
+      enabled: true
+      runOnStartup: true
+      options:
+        company: ramp
+    - id: workday-deloitte
+      type: workday
+      enabled: true
+      runOnStartup: true
+      options:
+        company: Deloitte
+        baseUrl: https://deloitte.wd1.myworkdayjobs.com
+        tenant: deloitte
+        site: DELOITTEJOBS

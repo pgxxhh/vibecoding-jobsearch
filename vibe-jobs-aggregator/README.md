@@ -1,18 +1,74 @@
+# Vibe Jobs Aggregator — Configurable Sources
 
-# Vibe Jobs Aggregator — Greenhouse Example Included
+Spring Boot service that ingests external job boards on a schedule and upserts them into the local database.
 
-Adds a real careers API connector: **Greenhouse** (`GreenhouseSourceClient`).
+## Supported data sources
+- **Greenhouse** — `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs`
+- **Lever** — `https://api.lever.co/v0/postings/{company}?mode=json`
+- **Workday** — `https://{tenant-domain}/wday/cxs/{tenant}/{site}/jobs`
 
-## Run
+Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
+
+## Configuration
+Edit `src/main/resources/application.yml` under the `ingestion` section:
+
+```yaml
+ingestion:
+  fixedDelayMs: 3600000
+  initialDelayMs: 10000
+  pageSize: 20
+  mode: companies # or recent
+  companies:
+    - Stripe
+    - Ramp
+  recentDays: 7
+  sources:
+    - id: greenhouse-stripe
+      type: greenhouse
+      enabled: true
+      runOnStartup: true
+      options:
+        slug: stripe
+    - id: greenhouse-datadog
+      type: greenhouse
+      enabled: false
+      runOnStartup: true
+      options:
+        slug: datadog
+    - id: lever-ramp
+      type: lever
+      enabled: true
+      runOnStartup: true
+      options:
+        company: ramp
+    - id: workday-deloitte
+      type: workday
+      enabled: true
+      runOnStartup: true
+      options:
+        company: Deloitte
+        baseUrl: https://deloitte.wd1.myworkdayjobs.com
+        tenant: deloitte
+        site: DELOITTEJOBS
+```
+
+- Set `enabled: false` to skip a connector entirely.
+- `runOnStartup: false` keeps the source scheduled but excludes it from the startup runner.
+- `pageSize` controls the maximum page size passed to paginated connectors.
+- `mode`
+  - `companies`: only ingest jobs whose `company` matches the configured `companies` list.
+  - `recent`: ignore the company list and only ingest roles whose `postedAt` is within the last `recentDays` (defaults to 7).
+- `recentDays` is used when `mode=recent`.
+- Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner). Add multiple entries per provider to pull several companies.
+
+## Running locally
 ```
 mvn spring-boot:run
 ```
-Scheduler starts 10s after boot and pulls from:
-- MockCareersApiSource("Acme")
-- GreenhouseSourceClient("stripe")
 
-Replace `"stripe"` with other Greenhouse board slugs when needed.
+`CareersApiStartupRunner` logs the number of jobs fetched from each source marked `runOnStartup=true`. The `JobIngestionScheduler` reuses the same configuration for recurring updates.
 
 ## Notes
-- The example endpoint `GET https://boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true` does not provide a posted time; we set `postedAt=now()`. You can enrich by calling the job detail endpoint for `updated_at` if needed.
-- Results are upserted by `(source, externalId)` and exposed via `GET /jobs` to match your Next.js frontend.
+- Greenhouse does not return `postedAt`; we stamp the current time. Extend `GreenhouseSourceClient` if you need more metadata.
+- Lever timestamps are provided in epoch milliseconds and are normalised to `Instant`.
+- Workday endpoints vary by tenant/site; ensure `baseUrl`, `tenant`, and `site` values match the organisation you are integrating.

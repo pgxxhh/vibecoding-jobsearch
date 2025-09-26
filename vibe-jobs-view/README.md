@@ -1,5 +1,5 @@
 
-# Vibe Jobs — Minimal Template (Next.js + Tailwind + React Query)
+# Elaine Jobs — Minimal Template (Next.js + Tailwind + React Query)
 
 A tiny starter for a jobs site: filters + list + pagination, with an API route
 that either proxies to your Java backend or serves mock data.
