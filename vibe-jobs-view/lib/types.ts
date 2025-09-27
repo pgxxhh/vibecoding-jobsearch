@@ -8,7 +8,7 @@ export type Job = {
   postedAt: string;
   tags?: string[];
   url: string;
-  description?: string;
+  content?: string;
 };
 export type JobDetail = {
   id: string;
@@ -16,7 +16,7 @@ export type JobDetail = {
   company: string;
   location: string;
   postedAt: string;
-  description: string;
+  content: string;
 };
 export type JobsQuery = {
   q?: string;

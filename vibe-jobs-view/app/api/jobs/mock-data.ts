@@ -10,6 +10,8 @@ export const MOCK_JOBS = [
     url: 'https://careers.example.com/jobs/1',
     description:
       'We are looking for a Senior Backend Engineer with strong Java and Spring Boot experience to build scalable microservices.',
+    content:
+      'We are looking for a Senior Backend Engineer with strong Java and Spring Boot experience to build scalable microservices.',
   },
   {
     id: '2',
@@ -22,6 +24,8 @@ export const MOCK_JOBS = [
     url: 'https://careers.example.com/jobs/2',
     description:
       'Lead the design of our next-generation payment processing platform and mentor a team of engineers.',
+    content:
+      'Lead the design of our next-generation payment processing platform and mentor a team of engineers.',
   },
   {
     id: '3',
@@ -33,5 +37,6 @@ export const MOCK_JOBS = [
     tags: ['Infra', 'Observability', 'SRE'],
     url: 'https://careers.example.com/jobs/3',
     description: 'Help us evolve our platform infrastructure with a focus on reliability and scalability.',
+    content: 'Help us evolve our platform infrastructure with a focus on reliability and scalability.',
   },
 ];

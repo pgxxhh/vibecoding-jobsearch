@@ -1,6 +1,6 @@
 
 import Card from './ui/Card'; import Badge from './ui/Badge'; import Link from 'next/link';
-export type Job={id:string;title:string;company:string;location:string;level?:string;postedAt:string;tags?:string[];url:string;description?:string;};
+export type Job={id:string;title:string;company:string;location:string;level?:string;postedAt:string;tags?:string[];url:string;content?:string;};
 export default function JobCardNew({job}:{job:Job}){
   const posted=new Date(job.postedAt); const date=isNaN(posted.getTime())?'':posted.toLocaleDateString();
   return <Card className="p-4 hover:shadow-brand-lg transition transform will-change-auto">

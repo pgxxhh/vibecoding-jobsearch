@@ -25,7 +25,7 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
     company: detail.company ?? '',
     location: detail.location ?? '',
     postedAt: detail.postedAt ?? '',
-    description: detail.description ?? '',
+    content: detail.content ?? detail.description ?? '',
   };
 }
 
@@ -278,8 +278,8 @@ function JobDetailPanel({
           <div className="mb-4">
             <span className="font-semibold text-black">描述：</span>
             <div className="mt-1 text-sm text-black">
-              {job.description
-                ? <div dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(job.description) }} />
+              {job.content
+                ? <div dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(job.content) }} />
                 : '无详细描述'}
             </div>
           </div>
@@ -456,7 +456,7 @@ export default function Page() {
     return {
       ...selectedJob,
       ...jobDetail,
-      description: jobDetail.description ?? selectedJob.description,
+      content: jobDetail.content ?? selectedJob.content,
     };
   }, [selectedJob, jobDetail]);
 

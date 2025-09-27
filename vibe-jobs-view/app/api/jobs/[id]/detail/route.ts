@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
     try {
       const json = JSON.parse(text);
+      const content = json.content ?? json.description ?? '';
       return NextResponse.json(
         {
           id: String(json.id ?? id),
@@ -31,7 +32,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
           company: json.company ?? '',
           location: json.location ?? '',
           postedAt: json.postedAt ?? '',
-          description: json.content ?? '',
+          content,
+          description: content,
         },
         { status: res.status },
       );
@@ -45,12 +47,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Job not found' }, { status: 404 });
   }
 
+  const content = job.content ?? job.description ?? '';
   return NextResponse.json({
     id: job.id,
     title: job.title,
     company: job.company,
     location: job.location,
     postedAt: job.postedAt,
-    description: job.description ?? '',
+    content,
+    description: content,
   });
 }
