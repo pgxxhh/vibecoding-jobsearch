@@ -33,7 +33,6 @@ export async function GET(_req: NextRequest, { params }: Params) {
           location: json.location ?? '',
           postedAt: json.postedAt ?? '',
           content,
-          description: content,
         },
         { status: res.status },
       );
@@ -55,6 +54,5 @@ export async function GET(_req: NextRequest, { params }: Params) {
     location: job.location,
     postedAt: job.postedAt,
     content,
-    description: content,
   });
 }

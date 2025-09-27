@@ -8,8 +8,6 @@ export const MOCK_JOBS = [
     postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
     tags: ['Java', 'Spring Boot', 'Microservices'],
     url: 'https://careers.example.com/jobs/1',
-    description:
-      'We are looking for a Senior Backend Engineer with strong Java and Spring Boot experience to build scalable microservices.',
     content:
       'We are looking for a Senior Backend Engineer with strong Java and Spring Boot experience to build scalable microservices.',
   },
@@ -22,8 +20,6 @@ export const MOCK_JOBS = [
     postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
     tags: ['Distributed Systems', 'Kubernetes', 'MySQL'],
     url: 'https://careers.example.com/jobs/2',
-    description:
-      'Lead the design of our next-generation payment processing platform and mentor a team of engineers.',
     content:
       'Lead the design of our next-generation payment processing platform and mentor a team of engineers.',
   },
@@ -36,7 +32,6 @@ export const MOCK_JOBS = [
     postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
     tags: ['Infra', 'Observability', 'SRE'],
     url: 'https://careers.example.com/jobs/3',
-    description: 'Help us evolve our platform infrastructure with a focus on reliability and scalability.',
     content: 'Help us evolve our platform infrastructure with a focus on reliability and scalability.',
   },
 ];

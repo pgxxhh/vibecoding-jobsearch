@@ -25,7 +25,7 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
     company: detail.company ?? '',
     location: detail.location ?? '',
     postedAt: detail.postedAt ?? '',
-    content: detail.content ?? detail.description ?? '',
+    content: detail.content ?? '',
   };
 }
 
