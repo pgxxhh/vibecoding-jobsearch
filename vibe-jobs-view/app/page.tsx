@@ -87,10 +87,10 @@ function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: 
           </div>
           <div className="rounded-2xl border border-black/5 bg-gray-50/80 p-5 text-sm leading-relaxed text-gray-700">
             <div className="font-medium text-gray-900">{t('subscription.conditionsLabel')}</div>
-            <div>{t('subscription.keyword', { value: formatValue(params.q) })}</div>
-            <div>{t('subscription.company', { value: formatValue(params.company) })}</div>
-            <div>{t('subscription.location', { value: formatValue(params.location) })}</div>
-            <div>{t('subscription.level', { value: formatValue(params.level) })}</div>
+            <div>{t('subscription.keyword', { value: formatValue(params.q ?? '') })}</div>
+            <div>{t('subscription.company', { value: formatValue(params.company ?? '') })}</div>
+            <div>{t('subscription.location', { value: formatValue(params.location ?? '') })}</div>
+            <div>{t('subscription.level', { value: formatValue(params.level ?? '') })}</div>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={onCancel}>
