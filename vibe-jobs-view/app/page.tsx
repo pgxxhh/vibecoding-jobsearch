@@ -7,7 +7,9 @@ import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
-  const qs = new URLSearchParams(Object.entries(params).filter(([,v]) => v !== '' && v !== undefined) as any);
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== '' && v !== undefined && v !== null) as any,
+  );
   const res = await fetch('/api/jobs?' + qs.toString(), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch jobs');
   return res.json();
@@ -363,91 +365,115 @@ export default function Page() {
   const { t } = useI18n();
   const [q, setQ] = useState('');
   const [location, setLocation] = useState('');
-  const [page, setPage] = useState(1);
-  const size = 10;
-  // 筛选弹窗相关状态
-  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [filters, setFilters] = useState({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const hasPromptedSubscription = useRef(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  const params = useMemo(() => ({ q, location, page, size, ...filters }), [q, location, page, size, filters]);
-  const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['jobs', params],
-    queryFn: () => fetchJobs(params),
-    keepPreviousData: true,
-  });
+  // 列表数据和分页状态
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const jobs = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const currentPage = data?.page ?? page;
-  const pageSize = data?.size ?? size;
-  const isSearching = isLoading || isFetching;
+  // 列表区域ref
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const selectedJobId = selectedJob?.id ?? null;
-  const {
-    data: selectedJobDetail,
-    isLoading: isDetailLoading,
-    isFetching: isDetailFetching,
-    isError: isDetailError,
-    refetch: refetchJobDetail,
-  } = useQuery({
-    queryKey: ['job-detail', selectedJobId],
-    queryFn: () => {
-      if (!selectedJobId) throw new Error('Missing job id');
-      return fetchJobDetail(selectedJobId);
-    },
-    enabled: Boolean(selectedJobId),
-    staleTime: 60_000,
-  });
-
-  const combinedSelectedJob = useMemo<Job | null>(() => {
-    if (!selectedJob) return null;
-    if (selectedJobDetail && selectedJobDetail.id === selectedJob.id) {
-      return { ...selectedJob, ...selectedJobDetail };
-    }
-    return selectedJob;
-  }, [selectedJob, selectedJobDetail]);
-
-  const detailHasData = Boolean(selectedJobDetail || combinedSelectedJob?.description);
-  const detailLoading = isDetailLoading && !detailHasData;
-  const detailRefreshing = isDetailFetching && !detailLoading;
-  const detailError = Boolean(selectedJobId) && isDetailError;
-
-  useEffect(() => {
-    setSelectedJob((current) => {
-      if (!jobs.length) return null;
-      if (current && jobs.some((item) => item.id === current.id)) {
-        return current;
-      }
-      return jobs[0];
-    });
-  }, [jobs]);
-
+  // 过滤计数
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter((value) => value !== '' && value !== undefined).length,
     [filters],
   );
 
+  const subscriptionParams = useMemo(
+    () => ({
+      q,
+      location,
+      ...filters,
+    }),
+    [q, location, filters],
+  );
+
+  const selectedJobId = selectedJob?.id;
+
+  const {
+    data: jobDetail,
+    isLoading: isDetailLoading,
+    isError: isDetailError,
+    isFetching: isDetailFetching,
+    refetch: refetchJobDetail,
+  } = useQuery<JobDetailData>({
+    queryKey: ['job-detail', selectedJobId],
+    queryFn: () => fetchJobDetail(selectedJobId as string),
+    enabled: !!selectedJobId,
+  });
+
+  const combinedSelectedJob = useMemo<Job | null>(() => {
+    if (!selectedJob) return null;
+    if (!jobDetail) return selectedJob;
+    return {
+      ...selectedJob,
+      ...jobDetail,
+      description: jobDetail.description ?? selectedJob.description,
+    };
+  }, [selectedJob, jobDetail]);
+
+  // 加载数据
+  const loadJobs = async (cursor?: string, reset = false) => {
+    setLoading(true);
+    try {
+      const params: Record<string, any> = { q, location, size: 10, ...filters };
+      if (cursor) params.cursor = cursor;
+      const res = await fetchJobs(params);
+      setJobs(prev => reset ? (res.items ?? []) : [...prev, ...(res.items ?? [])]);
+      setNextCursor(res.nextCursor ?? null);
+      setHasMore(!!res.nextCursor);
+      // 自动选中第一个
+      if (reset && res.items && res.items.length > 0) setSelectedJob(res.items[0]);
+    } catch (e) {
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 首次和筛选/搜索时重置列表
+  useEffect(() => {
+    loadJobs(undefined, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, location, filters]);
+
+  // 滚动加载
+  const handleScroll = () => {
+    const el = listRef.current;
+    if (!el || loading || !hasMore || !nextCursor) return;
+    const threshold = 50;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
+      // 只追加，不重置
+      loadJobs(nextCursor, false);
+    }
+  };
+
+  const skeletonPlaceholders = Array.from({ length: 4 });
+  const isInitialLoading = loading && jobs.length === 0;
+
+  // 搜索/重置/筛选
   const handleReset = () => {
     setQ('');
     setLocation('');
     setFilters({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
-    setPage(1);
-    setSelectedJob(null);
   };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPage(1);
     if (!hasPromptedSubscription.current) {
       setShowSubscriptionModal(true);
       setSubscriptionTrigger('search');
       hasPromptedSubscription.current = true;
     } else {
-      refetch();
+      loadJobs(undefined, true);
     }
   };
 
@@ -459,28 +485,24 @@ export default function Page() {
   const handleConfirmSubscription = async () => {
     setShowSubscriptionModal(false);
     setSubscriptionTrigger(null);
-    // 调用订阅接口
     await fetch('/api/subscription', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify(subscriptionParams),
     });
-    refetch();
+    loadJobs(undefined, true);
   };
 
   const handleCancelSubscription = () => {
     setShowSubscriptionModal(false);
     setSubscriptionTrigger(null);
-    if (subscriptionTrigger === 'search') refetch();
+    if (subscriptionTrigger === 'search') loadJobs(undefined, true);
   };
 
   const handleApplyFilters = () => {
     setShowFilterDrawer(false);
-    setPage(1);
-    refetch();
+    loadJobs(undefined, true);
   };
-
-  const skeletonPlaceholders = Array.from({ length: 4 });
 
   return (
     <div className="space-y-10 pb-16">
@@ -494,25 +516,20 @@ export default function Page() {
         onShowFilter={() => setShowFilterDrawer(true)}
         onShowSubscription={handleManualSubscription}
         activeFilterCount={activeFilterCount}
-        isSearching={isSearching}
+        isSearching={loading}
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-gray-500">
-              {isLoading ? t('search.loading') : t('search.results', { count: total })}
-              {isFetching && !isLoading ? ` · ${t('search.refreshing')}` : ''}
-            </p>
-            <span className="text-xs text-gray-400">{t('search.page', { page: currentPage })}</span>
+            {/* 已移除列表结果数量显示 */}
           </div>
-          <div className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]">
-            {isError && (
-              <Card className="border-dashed border-red-200 bg-red-50/70 p-4 text-sm text-red-600">
-                {t('errors.fetchJobs')}
-              </Card>
-            )}
-            {isLoading &&
+          <div
+            className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]"
+            ref={listRef}
+            onScroll={handleScroll}
+          >
+            {isInitialLoading &&
               skeletonPlaceholders.map((_, index) => (
                 <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white/70 p-4">
                   <Skeleton className="h-4 w-3/4" />
@@ -524,48 +541,40 @@ export default function Page() {
                   </div>
                 </Card>
               ))}
-            {!isLoading && !isError &&
-              jobs.map((job) => {
-                const active = selectedJob?.id === job.id;
-                return (
-                  <div key={job.id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
-                    <JobCardNew
-                      job={job}
-                      className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
-                    />
-                  </div>
-                );
-              })}
-            {!isLoading && !isError && jobs.length === 0 && (
+            {jobs.map((job) => {
+              const active = selectedJob?.id === job.id;
+              return (
+                <div key={job.id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
+                  <JobCardNew
+                    job={job}
+                    className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
+                  />
+                </div>
+              );
+            })}
+            {!isInitialLoading && jobs.length === 0 && (
               <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-black/10 bg-white/70 text-sm text-gray-400">
                 {t('search.results', { count: 0 })}
               </div>
             )}
-          </div>
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setPage((previous) => Math.max(1, previous - 1))}
-              disabled={currentPage <= 1 || isLoading || isFetching}
-            >
-              {t('actions.previous')}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPage((previous) => previous + 1)}
-              disabled={currentPage * pageSize >= total || isLoading || isFetching}
-            >
-              {t('actions.next')}
-            </Button>
+            {/* 加载更多按钮已移除，滚动到底部自动加载 */}
+            {loading && jobs.length > 0 && (
+              <div className="flex justify-center mt-6">
+                <Skeleton className="h-8 w-32" />
+              </div>
+            )}
+            {!hasMore && jobs.length > 0 && (
+              <div className="text-center text-gray-400 mt-4">没有更多数据了</div>
+            )}
           </div>
         </Card>
 
         <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-y-auto">
           <JobDetailPanel
             job={combinedSelectedJob}
-            isLoading={detailLoading}
-            isError={detailError}
-            isRefreshing={detailRefreshing}
+            isLoading={isDetailLoading}
+            isError={isDetailError}
+            isRefreshing={isDetailFetching}
             onRetry={() => refetchJobDetail()}
           />
         </Card>
@@ -575,7 +584,7 @@ export default function Page() {
         visible={showSubscriptionModal}
         onConfirm={handleConfirmSubscription}
         onCancel={handleCancelSubscription}
-        params={params}
+        params={subscriptionParams}
       />
 
       <FilterDrawer

@@ -4,6 +4,7 @@ import java.util.List;
 public record JobsResponse(
         List<JobDto> items,
         long total,
-        int page,
+        String nextCursor,
+        boolean hasMore,
         int size
 ) {}

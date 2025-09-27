@@ -23,12 +23,13 @@ export type JobsQuery = {
   location?: string;
   company?: string;
   level?: string;
-  page?: number;
   size?: number;
+  cursor?: string | null;
 };
 export type JobsResponse = {
   items: Job[];
   total: number;
-  page: number;
+  nextCursor: string | null;
+  hasMore: boolean;
   size: number;
 };
