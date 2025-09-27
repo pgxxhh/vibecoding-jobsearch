@@ -1,6 +1,6 @@
 'use client';
-import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
+import JobDetail from '@/components/JobDetail';
 import JobCardNew from '@/components/JobCardNew';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
 import { useI18n } from '@/lib/i18n';
@@ -32,11 +32,6 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
 
 const PAGE_SIZE = 10;
 const MAX_FILTER_PAGINATION_FETCHES = 5;
-
-const JobDetailClient = dynamic<{ job: Job | null; fallback?: string }>(
-  () => import('./JobDetailClient'),
-  { ssr: false },
-);
 
 function computeDateCutoff(daysValue: string): number | null {
   const days = Number(daysValue);
@@ -209,102 +204,6 @@ function FilterDrawer({
   );
 }
 
-function JobDetailPanel({
-  job,
-  isLoading,
-  isError,
-  isRefreshing,
-  onRetry,
-}: {
-  job: Job | null;
-  isLoading: boolean;
-  isError: boolean;
-  isRefreshing: boolean;
-  onRetry: () => void;
-}) {
-  const { t } = useI18n();
-
-  if (!job) {
-    return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center">
-        <img src="/assets/orb-purple.svg" alt="" className="h-16 w-16 opacity-30" />
-        <p className="max-w-xs text-sm text-gray-400">{t('jobDetail.empty')}</p>
-      </div>
-    );
-  }
-
-  const posted = new Date(job.postedAt);
-  const date = Number.isNaN(posted.getTime()) ? '' : posted.toLocaleDateString();
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold text-slate-900">{job.title}</h2>
-        <div className="text-sm text-gray-600">
-          {job.company} · {job.location}
-          {job.level ? ` · ${job.level}` : ''}
-        </div>
-        {date && (
-          <div className="flex items-center gap-2 text-xs text-gray-400" suppressHydrationWarning>
-            <span>{date}</span>
-            {isRefreshing && !isLoading && <span>{t('jobDetail.refreshing')}</span>}
-          </div>
-        )}
-        {!date && isRefreshing && !isLoading && (
-          <div className="text-xs text-gray-400" role="status">
-            {t('jobDetail.refreshing')}
-          </div>
-        )}
-      </div>
-      {job.tags && job.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {job.tags.map((tag: string) => (
-            <Badge key={tag} tone="muted">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">{t('jobDetail.description')}</h3>
-        {isError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
-            <p>{t('jobDetail.error')}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
-              {t('actions.retry')}
-            </Button>
-          </div>
-        ) : isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-            <Skeleton className="h-3 w-3/5" />
-          </div>
-        ) : (
-          <div className="mb-4">
-            <span className="font-semibold text-black">描述：</span>
-            <div className="mt-1 text-sm text-black">
-              {job.content ? (
-                <JobDetailClient job={job} fallback={t('jobDetail.noDescription')} />
-              ) : (
-                t('jobDetail.noDescription')
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-      <Button
-        variant="outline"
-        onClick={() => job.url && window.open(job.url, '_blank', 'noopener,noreferrer')}
-        className="shadow-none"
-        disabled={!job.url}
-      >
-        {t('jobDetail.viewOriginal')}
-      </Button>
-    </div>
-  );
-}
-
 function HeroSection({
   q,
   setQ,
@@ -396,6 +295,19 @@ export default function Page() {
   const hasPromptedSubscription = useRef(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+
+  const jobDetailLabels = useMemo(
+    () => ({
+      empty: t('jobDetail.empty'),
+      description: t('jobDetail.description'),
+      noDescription: t('jobDetail.noDescription'),
+      error: t('jobDetail.error'),
+      retry: t('actions.retry'),
+      refreshing: t('jobDetail.refreshing'),
+      viewOriginal: t('jobDetail.viewOriginal'),
+    }),
+    [t],
+  );
 
   // 列表数据和分页状态
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -654,12 +566,13 @@ export default function Page() {
         </Card>
 
         <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-y-auto">
-          <JobDetailPanel
+          <JobDetail
             job={combinedSelectedJob}
             isLoading={isDetailLoading}
             isError={isDetailError}
             isRefreshing={isDetailFetching}
             onRetry={() => refetchJobDetail()}
+            labels={jobDetailLabels}
           />
         </Card>
       </div>
