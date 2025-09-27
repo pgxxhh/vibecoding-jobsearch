@@ -16,6 +16,8 @@ spring:
       enabled: true
 server:
   port: 8080
+  servlet:
+    context-path: /api
 ingestion:
   fixedDelayMs: 3600000
   initialDelayMs: 10000
