@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import JobCardNew from '@/components/JobCardNew';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
@@ -31,6 +32,11 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
 
 const PAGE_SIZE = 10;
 const MAX_FILTER_PAGINATION_FETCHES = 5;
+
+const JobDetailClient = dynamic<{ job: Job | null; fallback?: string }>(
+  () => import('./JobDetailClient'),
+  { ssr: false },
+);
 
 function computeDateCutoff(daysValue: string): number | null {
   const days = Number(daysValue);
@@ -278,9 +284,11 @@ function JobDetailPanel({
           <div className="mb-4">
             <span className="font-semibold text-black">描述：</span>
             <div className="mt-1 text-sm text-black">
-              {job.content
-                ? <div dangerouslySetInnerHTML={{ __html: decodeHTMLEntities(job.content) }} />
-                : '无详细描述'}
+              {job.content ? (
+                <JobDetailClient job={job} fallback={t('jobDetail.noDescription')} />
+              ) : (
+                t('jobDetail.noDescription')
+              )}
             </div>
           </div>
         )}
@@ -376,29 +384,6 @@ function HeroSection({
       </div>
     </section>
   );
-}
-
-function decodeHTMLEntities(text: string): string {
-  if (!text) return '';
-  if (typeof window !== 'undefined') {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = text;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  }
-  // SSR fallback: 常见实体解码
-  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-}
-
-function stripHtmlTags(html: string): string {
-  if (!html) return '';
-  // 浏览器环境下用 DOM 解析
-  if (typeof window !== 'undefined') {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  }
-  // SSR fallback: 用正则去除标签
-  return html.replace(/<[^>]+>/g, '');
 }
 
 export default function Page() {
