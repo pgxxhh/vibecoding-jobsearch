@@ -1,0 +1,15 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900">
+  <defs>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="90"/></filter>
+    <radialGradient id="r1" cx="0.8" cy="0.1" r="0.6">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.25"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="r2" cx="0.1" cy="0.1" r="0.7">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.18"/><stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="#fdfcff"/>
+  <circle cx="1200" cy="40" r="500" fill="url(#r1)" filter="url(#blur)"/>
+  <circle cx="100" cy="100" r="450" fill="url(#r2)" filter="url(#blur)"/>
+</svg>

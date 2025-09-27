@@ -1,0 +1,18 @@
+:root{
+  --bg: 340 100% 99%; /* 粉色背景 */
+  --card: 340 100% 98%; /* 粉色卡片 */
+  --text: 340 60% 30%; /* 粉色文字 */
+}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(245,77,146,.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(245,77,146,.10), transparent 60%),
+    hsl(var(--bg));
+  color:hsl(var(--text));
+}
+.vj-container{max-width:1120px;margin:0 auto;padding:0 1rem;}
+.vj-card{background:hsl(var(--card));border:1px solid rgba(245,77,146,.06);border-radius:20px;box-shadow:0 10px 40px rgba(245,77,146,.08);}
+.vj-hr{height:1px;background:linear-gradient(90deg,transparent,rgba(245,77,146,.06),transparent)}
+.vj-badge{display:inline-flex;align-items:center;gap:.375rem;padding:.125rem .5rem;border-radius:999px;border:1px solid rgba(245,77,146,.08);background:#fff0f6;font-size:.75rem}
+.vj-muted{color:#e13b7c}
