@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  caddy:
+    image: caddy:2
+    restart: always
+    ports: ["80:80","443:443"]
+    environment: [ "DOMAIN=${DOMAIN}", "EMAIL=${EMAIL}" ]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [ frontend, backend ]
+
+  backend:
+    build:
+      context: ./vibe-jobs-aggregator           # ← 后端源码真实目录
+      dockerfile: ../docker/backend.Dockerfile   # ← 使用根目录的 Dockerfile
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - DB_URL=${DB_URL}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+    expose: ["8080"]
+    volumes:
+      - h2data:/data                             # H2 文件持久化卷
+
+  frontend:
+    build:
+      context: ./vibe-jobs-view                 # ← 前端源码真实目录
+      dockerfile: ../docker/frontend.Dockerfile
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_BASE=/api
+      - PORT=3000
+    expose: ["3000"]
+    depends_on: [ backend ]
+
+volumes:
+  caddy-data:
+  caddy-config:
+  h2data:

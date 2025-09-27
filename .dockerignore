@@ -1,0 +1,4 @@
+.git
+**/node_modules
+vibe-jobs-aggregator/target
+vibe-jobs-view/.next
