@@ -68,7 +68,12 @@ function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: 
   const { t } = useI18n();
   if (!visible) return null;
 
-  const formatValue = (value: string | number | undefined) => ((value ?? '') === '' ? t('forms.any') : value);
+  const formatValue = (value: string | number | undefined): string | number => {
+    if (value === undefined || value === '') {
+      return t('forms.any');
+    }
+    return value;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
