@@ -4,12 +4,21 @@ import { MOCK_JOBS } from '../../mock-data';
 
 type Params = { params: { id: string } };
 
+function buildBackendUrl(base: string, path: string) {
+  const url = new URL(base);
+  const basePath = url.pathname.replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const prefix = basePath.endsWith('/api') ? basePath : `${basePath}/api`;
+  url.pathname = `${prefix}${normalizedPath}`;
+  return url;
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = params;
   const base = process.env.BACKEND_BASE_URL;
 
   if (base) {
-    const upstream = new URL(`/jobs/${id}/detail`, base);
+    const upstream = buildBackendUrl(base, `/jobs/${id}/detail`);
     const res = await fetch(upstream, { headers: { accept: 'application/json' } });
     const text = await res.text();
 

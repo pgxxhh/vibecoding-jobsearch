@@ -29,6 +29,15 @@ function encodeCursor(postedAt: string, id: string): string | null {
   return Buffer.from(`${postedAtMillis}:${numericId}`, 'utf8').toString('base64url');
 }
 
+function buildBackendUrl(base: string, path: string) {
+  const url = new URL(base);
+  const basePath = url.pathname.replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const prefix = basePath.endsWith('/api') ? basePath : `${basePath}/api`;
+  url.pathname = `${prefix}${normalizedPath}`;
+  return url;
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const q = url.searchParams.get('q')?.toLowerCase() ?? '';
@@ -57,7 +66,7 @@ export async function GET(req: NextRequest) {
 
   const base = process.env.BACKEND_BASE_URL;
   if (base) {
-    const upstream = new URL('/jobs', base);
+    const upstream = buildBackendUrl(base, '/jobs');
     for (const [k, v] of url.searchParams.entries()) upstream.searchParams.set(k, v);
     const r = await fetch(upstream, { headers: { accept: 'application/json' } });
     const text = await r.text();

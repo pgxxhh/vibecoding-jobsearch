@@ -16,11 +16,11 @@ pnpm dev # http://localhost:3000
 ```
 
 ## Connect to your Java backend
-Set `BACKEND_BASE_URL` so `/api/jobs` will proxy to `<BACKEND_BASE_URL>/jobs`:
+Set `BACKEND_BASE_URL` so `/api/jobs` will proxy to your backend's `/api/jobs` endpoint:
 ```bash
 BACKEND_BASE_URL="http://localhost:8080" pnpm dev
 ```
-Your `/jobs` endpoint should accept query params like: `q, company, location, level, page, size` and return:
+Your `/api/jobs` endpoint should accept query params like: `q, company, location, level, page, size` and return:
 ```json
 {
   "items": [ { "id": "...", "title": "...", "company": "...", "location": "...", "level": "Senior", "postedAt": "ISO", "tags": ["Java"], "url": "..." } ],
