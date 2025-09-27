@@ -37,6 +37,16 @@ export async function GET(req: NextRequest) {
   const level = url.searchParams.get('level')?.toLowerCase() ?? '';
   const cursorParam = url.searchParams.get('cursor');
   const cursor = decodeCursor(cursorParam);
+  const datePostedRaw = url.searchParams.get('datePosted');
+
+  let datePostedCutoff: number | null = null;
+  if (datePostedRaw) {
+    const days = Number(datePostedRaw);
+    if (Number.isFinite(days) && days > 0) {
+      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      datePostedCutoff = Math.max(0, Math.floor(cutoff));
+    }
+  }
 
   const sizeParam = Number(url.searchParams.get('size') ?? '10');
   const size = Math.max(1, Math.min(Number.isFinite(sizeParam) ? sizeParam : 10, 100));
@@ -63,7 +73,8 @@ export async function GET(req: NextRequest) {
     (!q || [j.title, (j.tags ?? []).join(' ')].join(' ').toLowerCase().includes(q)) &&
     (!company || j.company.toLowerCase().includes(company)) &&
     (!location || j.location.toLowerCase().includes(location)) &&
-    (!level || (j.level ?? '').toLowerCase() === level)
+    (!level || (j.level ?? '').toLowerCase() === level) &&
+    (!datePostedCutoff || new Date(j.postedAt).getTime() >= datePostedCutoff)
   );
 
   const sorted = [...filtered].sort((a, b) => {

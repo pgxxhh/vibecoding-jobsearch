@@ -14,6 +14,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.stream.Collectors;
@@ -37,12 +39,20 @@ public class JobController {
                              @RequestParam(value = "company", required = false) String company,
                              @RequestParam(value = "location", required = false) String location,
                              @RequestParam(value = "level", required = false) String level,
+                             @RequestParam(value = "datePosted", required = false) Integer datePosted,
                              @RequestParam(value = "cursor", required = false) String cursor,
                              @RequestParam(value = "size", defaultValue = "10") int size) {
         if (size < 1) size = DEFAULT_SIZE;
         size = Math.min(size, MAX_SIZE);
 
         var cursorPosition = decodeCursor(cursor);
+
+        Instant postedAfter = null;
+        if (datePosted != null && datePosted > 0) {
+            int days = Math.max(datePosted, 1);
+            LocalDate referenceDate = LocalDate.now(ZoneOffset.UTC).minusDays(days - 1L);
+            postedAfter = referenceDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+        }
 
         Pageable pageable = PageRequest.of(
                 0,
@@ -55,6 +65,7 @@ public class JobController {
                 emptyToNull(company),
                 emptyToNull(location),
                 emptyToNull(level),
+                postedAfter,
                 cursorPosition != null ? cursorPosition.postedAt() : null,
                 cursorPosition != null ? cursorPosition.id() : null,
                 pageable
@@ -74,7 +85,7 @@ public class JobController {
         }
 
         var items = jobs.stream().map(com.vibe.jobs.web.JobMapper::toDto).collect(Collectors.toList());
-        long total = repo.countSearch(emptyToNull(q), emptyToNull(company), emptyToNull(location), emptyToNull(level));
+        long total = repo.countSearch(emptyToNull(q), emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter);
         return new JobsResponse(items, total, nextCursor, hasMore, size);
     }
 

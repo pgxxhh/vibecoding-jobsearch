@@ -21,6 +21,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
         and (:company is null or lower(j.company) like lower(concat('%',:company,'%')))
         and (:location is null or lower(j.location) like lower(concat('%',:location,'%')))
         and (:level is null or lower(j.level) = lower(:level))
+        and (:postedAfter is null or j.postedAt >= :postedAfter)
         and (
             :cursorPostedAt is null or
             j.postedAt < :cursorPostedAt or
@@ -31,6 +32,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                           @Param("company") String company,
                           @Param("location") String location,
                           @Param("level") String level,
+                          @Param("postedAfter") Instant postedAfter,
                           @Param("cursorPostedAt") Instant cursorPostedAt,
                           @Param("cursorId") Long cursorId,
                           Pageable pageable);
@@ -43,9 +45,11 @@ public interface JobRepository extends JpaRepository<Job, Long> {
         and (:company is null or lower(j.company) like lower(concat('%',:company,'%')))
         and (:location is null or lower(j.location) like lower(concat('%',:location,'%')))
         and (:level is null or lower(j.level) = lower(:level))
+        and (:postedAfter is null or j.postedAt >= :postedAfter)
         """)
     long countSearch(@Param("q") String q,
                      @Param("company") String company,
                      @Param("location") String location,
-                     @Param("level") String level);
+                     @Param("level") String level,
+                     @Param("postedAfter") Instant postedAfter);
 }

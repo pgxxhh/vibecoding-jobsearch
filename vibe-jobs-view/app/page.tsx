@@ -29,6 +29,41 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
   };
 }
 
+const PAGE_SIZE = 10;
+const MAX_FILTER_PAGINATION_FETCHES = 5;
+
+function computeDateCutoff(daysValue: string): number | null {
+  const days = Number(daysValue);
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return Date.now() - days * 24 * 60 * 60 * 1000;
+}
+
+function filterJobsByDate(items: Job[], cutoff: number | null): Job[] {
+  if (!cutoff) return items;
+  return items.filter(item => {
+    const postedAtMillis = new Date(item.postedAt).getTime();
+    return Number.isFinite(postedAtMillis) && postedAtMillis >= cutoff;
+  });
+}
+
+function encodeCursorValue(postedAt: string, id: string | number): string | null {
+  const postedAtMillis = new Date(postedAt).getTime();
+  const numericId = Number(id);
+  if (!Number.isFinite(postedAtMillis) || !Number.isFinite(numericId)) {
+    return null;
+  }
+  const payload = `${postedAtMillis}:${numericId}`;
+  if (typeof window === 'undefined' || typeof window.btoa !== 'function') {
+    return null;
+  }
+  try {
+    const base64 = window.btoa(payload);
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch {
+    return null;
+  }
+}
+
 function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean; onConfirm: () => void; onCancel: () => void; params: Record<string, any> }) {
   const { t } = useI18n();
   if (!visible) return null;
@@ -424,14 +459,73 @@ export default function Page() {
   const loadJobs = async (cursor?: string, reset = false) => {
     setLoading(true);
     try {
-      const params: Record<string, any> = { q, location, size: 10, ...filters };
-      if (cursor) params.cursor = cursor;
-      const res = await fetchJobs(params);
-      setJobs(prev => reset ? (res.items ?? []) : [...prev, ...(res.items ?? [])]);
-      setNextCursor(res.nextCursor ?? null);
-      setHasMore(!!res.nextCursor);
+      const baseParams: Record<string, any> = { q, location, size: PAGE_SIZE, ...filters };
+      const cutoff = computeDateCutoff(filters.datePosted);
+      const isDateFilterActive = cutoff !== null;
+      const maxFetches = isDateFilterActive ? MAX_FILTER_PAGINATION_FETCHES : 1;
+
+      let currentCursor = cursor ?? null;
+      let fetchCount = 0;
+      let lastResponse: JobsResponse | null = null;
+      const aggregated: Job[] = [];
+
+      while (fetchCount < maxFetches) {
+        const paramsForFetch: Record<string, any> = { ...baseParams };
+        if (currentCursor) paramsForFetch.cursor = currentCursor;
+
+        const response = await fetchJobs(paramsForFetch);
+        lastResponse = response;
+        fetchCount += 1;
+
+        const rawItems = response.items ?? [];
+        const filteredItems = isDateFilterActive ? filterJobsByDate(rawItems, cutoff) : rawItems;
+        aggregated.push(...filteredItems);
+
+        currentCursor = response.nextCursor ?? null;
+
+        const shouldContinue =
+          isDateFilterActive &&
+          aggregated.length < PAGE_SIZE &&
+          Boolean(currentCursor) &&
+          fetchCount < maxFetches;
+
+        if (!shouldContinue) {
+          break;
+        }
+      }
+
+      const pageItems = aggregated.slice(0, PAGE_SIZE);
+      let nextCursorValue: string | null = null;
+      let hasMore = false;
+
+      if (isDateFilterActive) {
+        const moreFilteredAvailable = aggregated.length > PAGE_SIZE || Boolean(currentCursor);
+        if (moreFilteredAvailable) {
+          if (pageItems.length > 0) {
+            const lastItem = pageItems[pageItems.length - 1];
+            const encoded = encodeCursorValue(lastItem.postedAt, lastItem.id);
+            if (encoded) {
+              nextCursorValue = encoded;
+              hasMore = true;
+            } else if (currentCursor) {
+              nextCursorValue = currentCursor;
+              hasMore = true;
+            }
+          } else if (currentCursor) {
+            nextCursorValue = currentCursor;
+            hasMore = true;
+          }
+        }
+      } else {
+        nextCursorValue = lastResponse?.nextCursor ?? null;
+        hasMore = Boolean(lastResponse?.nextCursor);
+      }
+
+      setJobs(prev => (reset ? pageItems : [...prev, ...pageItems]));
+      setNextCursor(nextCursorValue);
+      setHasMore(hasMore);
       // 自动选中第一个
-      if (reset && res.items && res.items.length > 0) setSelectedJob(res.items[0]);
+      if (reset && pageItems.length > 0) setSelectedJob(pageItems[0]);
     } catch (e) {
       setHasMore(false);
     } finally {
