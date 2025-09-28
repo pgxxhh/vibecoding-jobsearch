@@ -17,9 +17,14 @@ function resolveBackendBase(): string | null {
     return runtimeBase.trim();
   }
 
-  const publicBase = process.env['NEXT_PUBLIC_BACKEND_BASE'];
-  if (publicBase) {
-    const trimmed = publicBase.trim();
+  const candidates = [
+    process.env['NEXT_PUBLIC_BACKEND_BASE'],
+    process.env['NEXT_PUBLIC_API_BASE'],
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const trimmed = candidate.trim();
     if (trimmed && /^(https?:)?\/\//.test(trimmed)) {
       return trimmed;
     }
