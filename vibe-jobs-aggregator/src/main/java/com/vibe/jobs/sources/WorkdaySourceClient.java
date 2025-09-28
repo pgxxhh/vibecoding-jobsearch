@@ -287,47 +287,56 @@ public class WorkdaySourceClient implements SourceClient {
     private Map<String, Object> executeRequest(int limit, int offset, Map<String, Object> payload) {
         String site = activeSite.get();
         String path = buildPath(site);
+        String fallbackPath = path;
 
         try {
             return postJson(path, payload);
         } catch (WebClientResponseException ex) {
             int status = ex.getStatusCode() != null ? ex.getStatusCode().value() : -1;
+            WebClientResponseException failure = ex;
+            boolean minimalRetried = false;
 
             // 422：用最小 payload 再试，不带 facets/sortOrder
             if (status == 422) {
+                minimalRetried = true;
                 log.warn("Workday 422 for {}/{} -> retry with minimal payload", tenant, site);
                 Map<String, Object> minimal = minimalPayload(limit, offset);
                 try {
                     return postJson(path, minimal);
                 } catch (WebClientResponseException ex2) {
-                    log.warn("POST minimal still failed ({}), fallback GET. body={}",
+                    failure = ex2;
+                    status = ex2.getStatusCode() != null ? ex2.getStatusCode().value() : -1;
+                    log.warn("POST minimal still failed ({}), will attempt alternate recovery. body={}",
                             ex2.getStatusCode(), safeBody(ex2));
                 }
             }
 
-            // 404：site 可能写错；自动尝试常见 site 并切换
-            if (status == 404) {
+            // 404：site 可能写错；或者在 400/422（minimal 重试后）时也尝试探测常见 site 并切换
+            if (status == 404 || (minimalRetried && (status == 400 || status == 422))) {
                 String found = tryDiscoverSite(limit, offset);
                 if (found != null) {
                     activeSite.set(found);
                     String newPath = buildPath(found);
-                    log.warn("Workday site '{}' invalid, auto-switched to '{}'", site, found);
+                    fallbackPath = newPath;
+                    log.warn("Workday site '{}' failed with {} -> auto-switched to '{}'", site, status, found);
                     // 切换后用原 payload 再发一次
                     try {
                         return postJson(newPath, payload);
                     } catch (WebClientResponseException ex3) {
+                        failure = ex3;
+                        status = ex3.getStatusCode() != null ? ex3.getStatusCode().value() : -1;
                         log.warn("POST after site switch failed ({}), body={}", ex3.getStatusCode(), safeBody(ex3));
                     }
                 }
             }
 
-            if (shouldFallback(ex.getStatusCode())) {
-                log.debug("POST failed ({}), fallback GET for {}", ex.getStatusCode(), path);
-                return getJson(path, limit, offset);
+            if (shouldFallback(failure.getStatusCode())) {
+                log.debug("POST failed ({}), fallback GET for {}", failure.getStatusCode(), fallbackPath);
+                return getJson(fallbackPath, limit, offset);
             }
 
-            log.error("Workday request failed {} body={}", ex.getStatusCode(), safeBody(ex));
-            throw ex;
+            log.error("Workday request failed {} body={}", failure.getStatusCode(), safeBody(failure));
+            throw failure;
         }
     }
 
