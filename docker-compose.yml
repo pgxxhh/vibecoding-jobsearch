@@ -33,7 +33,7 @@ services:
       dockerfile: ../docker/frontend.Dockerfile
     restart: always
     environment:
-      - NEXT_PUBLIC_BACKEND_BASE=/backend-api
+      - NEXT_PUBLIC_BACKEND_BASE=/api
       - PORT=3000
     expose: ["3000"]
     depends_on: [ backend ]
