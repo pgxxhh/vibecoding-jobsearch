@@ -14,6 +14,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +76,8 @@ public class WorkdaySourceClient implements SourceClient {
                 .defaultHeader("X-Requested-With", "XMLHttpRequest")     // 避免部分租户反爬
                 .filter(sessionCookies())
                 .build();
+
+        seedBrowserCookies();
     }
 
     @Override
@@ -398,29 +402,57 @@ public class WorkdaySourceClient implements SourceClient {
     /** 预热：GET 一次拿 cookie/CSRF；使用当前 activeSite */
     private void ensureSession() {
         if (initialized.compareAndSet(false, true)) {
-            String path = buildPath(activeSite.get());
-            try {
-                client.get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path(path)
-                                .queryParam("limit", 1)
-                                .queryParam("offset", 0)
-                                .build())
-                        .accept(MediaType.APPLICATION_JSON)
-                        .retrieve()
-                        .toBodilessEntity()
-                        .onErrorResume(WebClientResponseException.class, ex -> {
-                            log.debug("Warm-up GET ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
-                            return Mono.empty();
-                        })
-                        .onErrorResume(t -> {
-                            log.debug("Warm-up GET ignored: {}", t.toString());
-                            return Mono.empty();
-                        })
-                        .block();
-            } catch (Exception e) {
-                log.debug("Warm-up GET threw but continues: {}", e.toString());
-            }
+            String site = activeSite.get();
+            warmUpLandingPage(site);
+            warmUpApiSession(site);
+        }
+    }
+
+    private void warmUpLandingPage(String site) {
+        String landing = landingPath(site);
+        try {
+            client.get()
+                    .uri(landing)
+                    .accept(MediaType.TEXT_HTML)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .onErrorResume(WebClientResponseException.class, ex -> {
+                        log.debug("Landing warm-up ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
+                        return Mono.empty();
+                    })
+                    .onErrorResume(t -> {
+                        log.debug("Landing warm-up ignored: {}", t.toString());
+                        return Mono.empty();
+                    })
+                    .block();
+        } catch (Exception e) {
+            log.debug("Landing warm-up threw but continues: {}", e.toString());
+        }
+    }
+
+    private void warmUpApiSession(String site) {
+        String path = buildPath(site);
+        try {
+            client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path(path)
+                            .queryParam("limit", 1)
+                            .queryParam("offset", 0)
+                            .build())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .onErrorResume(WebClientResponseException.class, ex -> {
+                        log.debug("Warm-up GET ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
+                        return Mono.empty();
+                    })
+                    .onErrorResume(t -> {
+                        log.debug("Warm-up GET ignored: {}", t.toString());
+                        return Mono.empty();
+                    })
+                    .block();
+        } catch (Exception e) {
+            log.debug("Warm-up GET threw but continues: {}", e.toString());
         }
     }
 
@@ -448,5 +480,31 @@ public class WorkdaySourceClient implements SourceClient {
             }
         });
         return Mono.empty();
+    }
+
+    private void seedBrowserCookies() {
+        cookieStore.putIfAbsent("wd-browser-id", UUID.randomUUID().toString());
+        cookieStore.putIfAbsent("timezoneOffset", computeTimezoneOffsetCookie());
+    }
+
+    private String computeTimezoneOffsetCookie() {
+        try {
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
+            int minutes = now.getOffset().getTotalSeconds() / 60;
+            return Integer.toString(minutes);
+        } catch (Exception e) {
+            return "0";
+        }
+    }
+
+    private String landingPath(String site) {
+        String s = site == null ? "" : site.trim();
+        if (s.isEmpty()) {
+            return "/";
+        }
+        if (s.startsWith("/")) {
+            return s;
+        }
+        return "/" + s;
     }
 }
