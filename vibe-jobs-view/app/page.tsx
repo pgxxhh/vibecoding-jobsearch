@@ -7,17 +7,19 @@ import { useI18n } from '@/lib/i18n';
 import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE ?? '/api';
+
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== '' && v !== undefined && v !== null) as any,
   );
-  const res = await fetch('/api/jobs?' + qs.toString(), { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/jobs?` + qs.toString(), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch jobs');
   return res.json();
 }
 
 async function fetchJobDetail(id: string): Promise<JobDetailData> {
-  const res = await fetch(`/api/jobs/${id}/detail`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/jobs/${id}/detail`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch job detail');
   const detail = await res.json();
   return {
@@ -481,7 +483,7 @@ export default function Page() {
   const handleConfirmSubscription = async () => {
     setShowSubscriptionModal(false);
     setSubscriptionTrigger(null);
-    await fetch('/api/subscription', {
+    await fetch(`${API_BASE}/subscription`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(subscriptionParams),
