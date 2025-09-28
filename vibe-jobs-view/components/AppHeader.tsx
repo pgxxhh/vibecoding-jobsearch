@@ -1,6 +1,7 @@
 'use client';
 
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import Link from 'next/link';
 
 export default function AppHeader() {
   return (
@@ -14,6 +15,12 @@ export default function AppHeader() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-pink-200 transition hover:from-pink-400 hover:to-purple-400 sm:inline"
+          >
+            登录 / 注册
+          </Link>
           <LanguageSwitcher />
         </div>
       </div>
