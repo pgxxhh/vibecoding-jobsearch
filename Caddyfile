@@ -5,8 +5,17 @@
 {$DOMAIN} {
     encode zstd gzip
 
-    @api path /api* /actuator* /swagger-ui* /v3/*
-    reverse_proxy @api backend:8080
+    @backend_api path /backend-api/*
+    handle @backend_api {
+        uri strip_prefix /backend-api
+        reverse_proxy backend:8080
+    }
+
+    @backend_extra path /actuator* /swagger-ui* /v3/*
+    reverse_proxy @backend_extra backend:8080
+
+    @frontend_api path /api*
+    reverse_proxy @frontend_api frontend:3000
 
     reverse_proxy frontend:3000
 }
