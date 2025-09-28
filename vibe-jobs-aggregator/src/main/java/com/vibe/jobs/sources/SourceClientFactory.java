@@ -1,6 +1,5 @@
 package com.vibe.jobs.sources;
 
-import com.vibe.jobs.config.IngestionProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
@@ -31,7 +30,6 @@ public class SourceClientFactory {
                     require(opts, "apiUrl"),
                     opts.getOrDefault("jobsPath", "/jobs")
             );
-            case "mock" -> new MockCareersApiSource(opts.getOrDefault("company", "Mock"));
             default -> throw new IllegalArgumentException("Unsupported source type: " + type);
         };
     }
