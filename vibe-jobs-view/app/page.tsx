@@ -7,7 +7,10 @@ import { useI18n } from '@/lib/i18n';
 import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_BASE ?? '/api';
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_BASE ??
+  process.env.NEXT_PUBLIC_API_BASE ??
+  '/api';
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(

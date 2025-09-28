@@ -1,13 +1,13 @@
 
 spring:
   datasource:
-    url: jdbc:h2:file:./data/jobsdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE
-    username: sa
-    password: ""
-    driver-class-name: org.h2.Driver
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:h2:file:./data/jobsdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:sa}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
         format_sql: true
@@ -15,9 +15,9 @@ spring:
     console:
       enabled: true
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
-    context-path: /api
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
 ingestion:
   fixedDelayMs: 3600000
   initialDelayMs: 10000
