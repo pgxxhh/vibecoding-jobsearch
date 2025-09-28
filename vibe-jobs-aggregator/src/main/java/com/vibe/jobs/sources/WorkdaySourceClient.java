@@ -51,6 +51,7 @@ public class WorkdaySourceClient implements SourceClient {
     private final AtomicReference<String> activeSite;
 
     private final WebClient client;
+    private final AtomicReference<String> lastAppliedReferer = new AtomicReference<>();
 
     private final Map<String, String> cookieStore = new ConcurrentHashMap<>();
     private final AtomicReference<String> csrfToken = new AtomicReference<>();
@@ -70,8 +71,6 @@ public class WorkdaySourceClient implements SourceClient {
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .defaultHeader(HttpHeaders.USER_AGENT, desktopUserAgent())
                 .defaultHeader(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9")
-                .defaultHeader(HttpHeaders.REFERER, buildReferer(this.baseUrl, this.initialSite))
-                .defaultHeader("Origin", this.origin)
                 .defaultHeader("X-Workday-Client", "Workday Web Client") // ✅ 正确头
                 .defaultHeader("X-Requested-With", "XMLHttpRequest")     // 避免部分租户反爬
                 .filter(sessionCookies())
@@ -463,6 +462,18 @@ public class WorkdaySourceClient implements SourceClient {
             String token = csrfToken.get();
             if (token != null && !token.isBlank()) {
                 builder.header("x-calypso-csrf-token", token);
+            }
+            String site = activeSite.get();
+            String referer = buildReferer(baseUrl, site);
+            builder.headers(headers -> {
+                headers.set(HttpHeaders.REFERER, referer);
+                if (!origin.isBlank()) {
+                    headers.set("Origin", origin);
+                }
+            });
+            String previous = lastAppliedReferer.getAndSet(referer);
+            if (!Objects.equals(previous, referer) && log.isDebugEnabled()) {
+                log.debug("Updated Workday referer header to '{}' for site '{}'", referer, site);
             }
             return next.exchange(builder.build())
                     .flatMap(response -> captureCookies(response).thenReturn(response));
