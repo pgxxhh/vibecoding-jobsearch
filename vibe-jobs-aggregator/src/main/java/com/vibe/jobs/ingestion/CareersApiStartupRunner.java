@@ -78,7 +78,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
                         + "(" + (companyName == null ? "unknown" : companyName) + ")，因为远端返回 403");
             } else {
                 System.err.println("[CareersApiStartupRunner] 拉取 " + client.sourceName()
-                        + "(" + (companyName == null ? "unknown" : companyName) + ") 失败: " + message);
+                        + "(" + (companyName == null ? "unknown" : companyName) + ") 失败: " + message + e);
             }
         }
     }

@@ -19,12 +19,13 @@ server:
   servlet:
     context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
 ingestion:
-  fixedDelayMs: 3600000
+  fixedDelayMs: 300000
   initialDelayMs: 10000
-  pageSize: 20
+  pageSize: 50
   concurrency: 4
   mode: companies
   companies:
+    - "Micron"
     - "HSBC"
     - "Standard Chartered"
     - "Citibank"
@@ -229,14 +230,14 @@ ingestion:
   sources:
     - id: greenhouse
       type: greenhouse
-      enabled: true
-      runOnStartup: true
+      enabled: false
+      runOnStartup: false
       options:
         slug: "{{slug}}"
     - id: lever
       type: lever
-      enabled: true
-      runOnStartup: true
+      enabled: false
+      runOnStartup: false
       options:
         company: "{{slug}}"
     - id: workday
