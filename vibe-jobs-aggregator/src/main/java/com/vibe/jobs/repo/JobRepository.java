@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface JobRepository extends JpaRepository<Job, Long> {
     Job findBySourceAndExternalId(String source, String externalId);
@@ -52,4 +53,6 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                      @Param("location") String location,
                      @Param("level") String level,
                      @Param("postedAfter") Instant postedAfter);
+
+    Optional<Job> findTopByCompanyIgnoreCaseAndTitleIgnoreCase(String company, String title);
 }

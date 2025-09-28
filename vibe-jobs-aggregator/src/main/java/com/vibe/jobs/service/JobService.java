@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Optional;
 
 @Service
 public class JobService {
@@ -18,22 +19,27 @@ public class JobService {
     public Job upsert(Job incoming){
         Job existing = repo.findBySourceAndExternalId(incoming.getSource(), incoming.getExternalId());
         String checksum = checksum(incoming);
-        if(existing == null){
-            incoming.setChecksum(checksum);
-            return repo.save(incoming);
-        } else {
+        if(existing != null){
             if(!checksum.equals(existing.getChecksum())){
-                existing.setTitle(incoming.getTitle());
-                existing.setCompany(incoming.getCompany());
-                existing.setLocation(incoming.getLocation());
-                existing.setLevel(incoming.getLevel());
-                existing.setPostedAt(incoming.getPostedAt());
-                existing.setTags(incoming.getTags());
-                existing.setUrl(incoming.getUrl());
-                existing.setChecksum(checksum);
+                applyUpdates(existing, incoming, checksum);
             }
             return existing;
         }
+
+        if(hasCompanyAndTitle(incoming)){
+            Optional<Job> duplicate = repo.findTopByCompanyIgnoreCaseAndTitleIgnoreCase(
+                    incoming.getCompany(), incoming.getTitle());
+            if(duplicate.isPresent()){
+                Job current = duplicate.get();
+                if(!checksum.equals(current.getChecksum())){
+                    applyUpdates(current, incoming, checksum);
+                }
+                return current;
+            }
+        }
+
+        incoming.setChecksum(checksum);
+        return repo.save(incoming);
     }
 
     private String checksum(Job j){
@@ -48,4 +54,23 @@ public class JobService {
         }catch(Exception e){ throw new RuntimeException(e); }
     }
     private String safe(String s){ return s==null?"":s; }
+
+    private boolean hasCompanyAndTitle(Job job){
+        return !isBlank(job.getCompany()) && !isBlank(job.getTitle());
+    }
+
+    private boolean isBlank(String value){
+        return value == null || value.trim().isEmpty();
+    }
+
+    private void applyUpdates(Job target, Job source, String checksum){
+        target.setTitle(source.getTitle());
+        target.setCompany(source.getCompany());
+        target.setLocation(source.getLocation());
+        target.setLevel(source.getLevel());
+        target.setPostedAt(source.getPostedAt());
+        target.setTags(source.getTags());
+        target.setUrl(source.getUrl());
+        target.setChecksum(checksum);
+    }
 }
