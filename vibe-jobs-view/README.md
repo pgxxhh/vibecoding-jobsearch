@@ -2,7 +2,7 @@
 # Elaine Jobs — Minimal Template (Next.js + Tailwind + React Query)
 
 A tiny starter for a jobs site: filters + list + pagination, with an API route
-that either proxies to your Java backend or serves mock data.
+that proxies to your Java backend.
 
 ## Stack
 - Next.js (App Router) + TypeScript
@@ -35,5 +35,4 @@ Your `/api/jobs` endpoint should accept query params like: `q, company, location
 
 ## Customize
 - Edit `app/page.tsx` to tweak filters and list UX.
-- Replace the mock in `app/api/jobs/route.ts` with your fields or leave proxy mode.
 - Add auth / favorites / SEO pages as needed.

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { MOCK_JOBS } from '../../mock-data';
-
 type Params = { params: { id: string } };
 
 function buildBackendUrl(base: string, path: string) {
@@ -34,42 +32,29 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = params;
   const base = resolveBackendBase();
 
-  if (base) {
-    const upstream = buildBackendUrl(base, `/jobs/${id}/detail`);
-    const res = await fetch(upstream, { headers: { accept: 'application/json' } });
-    const text = await res.text();
-
-    try {
-      const json = JSON.parse(text);
-      const content = json.content ?? json.description ?? '';
-      return NextResponse.json(
-        {
-          id: String(json.id ?? id),
-          title: json.title ?? '',
-          company: json.company ?? '',
-          location: json.location ?? '',
-          postedAt: json.postedAt ?? '',
-          content,
-        },
-        { status: res.status },
-      );
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON from backend', raw: text }, { status: 502 });
-    }
+  if (!base) {
+    return NextResponse.json({ error: 'Backend base URL not configured' }, { status: 500 });
   }
 
-  const job = MOCK_JOBS.find((item) => item.id === id);
-  if (!job) {
-    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-  }
+  const upstream = buildBackendUrl(base, `/jobs/${id}/detail`);
+  const res = await fetch(upstream, { headers: { accept: 'application/json' } });
+  const text = await res.text();
 
-  const content = job.content ?? job.description ?? '';
-  return NextResponse.json({
-    id: job.id,
-    title: job.title,
-    company: job.company,
-    location: job.location,
-    postedAt: job.postedAt,
-    content,
-  });
+  try {
+    const json = JSON.parse(text);
+    const content = json.content ?? json.description ?? '';
+    return NextResponse.json(
+      {
+        id: String(json.id ?? id),
+        title: json.title ?? '',
+        company: json.company ?? '',
+        location: json.location ?? '',
+        postedAt: json.postedAt ?? '',
+        content,
+      },
+      { status: res.status },
+    );
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON from backend', raw: text }, { status: 502 });
+  }
 }
