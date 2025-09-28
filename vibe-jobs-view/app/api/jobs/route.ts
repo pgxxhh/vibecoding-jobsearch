@@ -38,6 +38,23 @@ function buildBackendUrl(base: string, path: string) {
   return url;
 }
 
+function resolveBackendBase(): string | null {
+  const runtimeBase = process.env['BACKEND_BASE_URL'];
+  if (runtimeBase && runtimeBase.trim()) {
+    return runtimeBase.trim();
+  }
+
+  const publicBase = process.env['NEXT_PUBLIC_BACKEND_BASE'];
+  if (publicBase) {
+    const trimmed = publicBase.trim();
+    if (trimmed && /^(https?:)?\/\//.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const q = url.searchParams.get('q')?.toLowerCase() ?? '';
@@ -64,7 +81,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid cursor' }, { status: 400 });
   }
 
-  const base = process.env.BACKEND_BASE_URL;
+  const base = resolveBackendBase();
   if (base) {
     const upstream = buildBackendUrl(base, '/jobs');
     for (const [k, v] of url.searchParams.entries()) upstream.searchParams.set(k, v);

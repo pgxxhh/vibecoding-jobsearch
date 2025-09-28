@@ -13,9 +13,26 @@ function buildBackendUrl(base: string, path: string) {
   return url;
 }
 
+function resolveBackendBase(): string | null {
+  const runtimeBase = process.env['BACKEND_BASE_URL'];
+  if (runtimeBase && runtimeBase.trim()) {
+    return runtimeBase.trim();
+  }
+
+  const publicBase = process.env['NEXT_PUBLIC_BACKEND_BASE'];
+  if (publicBase) {
+    const trimmed = publicBase.trim();
+    if (trimmed && /^(https?:)?\/\//.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = params;
-  const base = process.env.BACKEND_BASE_URL;
+  const base = resolveBackendBase();
 
   if (base) {
     const upstream = buildBackendUrl(base, `/jobs/${id}/detail`);
