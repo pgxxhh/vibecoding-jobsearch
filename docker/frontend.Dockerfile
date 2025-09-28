@@ -19,7 +19,10 @@ RUN npm i -g pnpm && \
 
 FROM node:20-alpine
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000 NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production \
+    PORT=3000 \
+    NEXT_TELEMETRY_DISABLED=1 \
+    BACKEND_BASE_URL=http://backend:8080
 # ⬇️ 三个必须复制：standalone、static、public
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static

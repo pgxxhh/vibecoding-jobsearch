@@ -20,6 +20,9 @@ Set `BACKEND_BASE_URL` so `/api/jobs` will proxy to your backend's `/api/jobs` e
 ```bash
 BACKEND_BASE_URL="http://localhost:8080" pnpm dev
 ```
+When running inside Docker (or any environment where the Java service is available as `backend:8080`),
+set `BACKEND_BASE_URL="http://backend:8080"` so the Next.js API routes can call it directly over the
+container network.
 Your `/api/jobs` endpoint should accept query params like: `q, company, location, level, page, size` and return:
 ```json
 {
