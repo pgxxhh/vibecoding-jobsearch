@@ -33,6 +33,7 @@ services:
       dockerfile: ../docker/frontend.Dockerfile
     restart: always
     environment:
+      - BACKEND_BASE_URL=http://backend:8080
       - NEXT_PUBLIC_BACKEND_BASE=/api
       - PORT=3000
     expose: ["3000"]
