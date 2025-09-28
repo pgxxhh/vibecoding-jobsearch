@@ -43,6 +43,7 @@ public class WorkdaySourceClient implements SourceClient {
 
     private final String company;
     private final String baseUrl;       // e.g. https://micron.wd1.myworkdayjobs.com
+    private final String origin;        // e.g. https://micron.wd1.myworkdayjobs.com (no path component)
     private final String tenant;        // e.g. micron
     private final String initialSite;   // e.g. External / careers / ...
     private final AtomicReference<String> activeSite;
@@ -56,6 +57,7 @@ public class WorkdaySourceClient implements SourceClient {
     public WorkdaySourceClient(String company, String baseUrl, String tenant, String site) {
         this.company = company;
         this.baseUrl = trimTrailingSlash(baseUrl);
+        this.origin = deriveOrigin(this.baseUrl);
         this.tenant = tenant;
         this.initialSite = site == null ? "" : site.trim();
         this.activeSite = new AtomicReference<>(this.initialSite);
@@ -67,7 +69,7 @@ public class WorkdaySourceClient implements SourceClient {
                 .defaultHeader(HttpHeaders.USER_AGENT, desktopUserAgent())
                 .defaultHeader(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9")
                 .defaultHeader(HttpHeaders.REFERER, buildReferer(this.baseUrl, this.initialSite))
-                .defaultHeader("Origin", this.baseUrl)
+                .defaultHeader("Origin", this.origin)
                 .defaultHeader("X-Workday-Client", "Workday Web Client") // ✅ 正确头
                 .defaultHeader("X-Requested-With", "XMLHttpRequest")     // 避免部分租户反爬
                 .filter(sessionCookies())
@@ -213,8 +215,36 @@ public class WorkdaySourceClient implements SourceClient {
 
     private String buildReferer(String baseUrl, String site) {
         if (baseUrl == null || baseUrl.isBlank()) return "";
+        String normalized = trimTrailingSlash(baseUrl);
         String s = site == null ? "" : site.trim();
-        return s.isEmpty() ? baseUrl : baseUrl + "/" + s;
+        if (s.isEmpty()) {
+            return normalized;
+        }
+        if (normalized.endsWith("/" + s)) {
+            return normalized;
+        }
+        return normalized + "/" + s;
+    }
+
+    private String deriveOrigin(String url) {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null) {
+                return trimTrailingSlash(url);
+            }
+            int port = uri.getPort();
+            if (port == -1) {
+                return scheme + "://" + host;
+            }
+            return scheme + "://" + host + ":" + port;
+        } catch (IllegalArgumentException ex) {
+            return trimTrailingSlash(url);
+        }
     }
 
     /** 仅在 facet key 合法且 value 非空时才下发；不发 utm_source/空数组。 */
@@ -300,6 +330,9 @@ public class WorkdaySourceClient implements SourceClient {
 
     private String buildPath(String site) {
         String s = (site == null || site.isBlank()) ? "" : site.trim();
+        if (s.isEmpty()) {
+            return "/wday/cxs/" + tenant + "/jobs";
+        }
         return "/wday/cxs/" + tenant + "/" + s + "/jobs";
     }
 
