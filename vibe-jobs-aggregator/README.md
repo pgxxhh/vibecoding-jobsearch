@@ -96,3 +96,22 @@ If no SMTP configuration is supplied, the application falls back to logging veri
 - Lever timestamps are provided in epoch milliseconds and are normalised to `Instant`.
 - Workday endpoints vary by tenant/site; ensure `baseUrl`, `tenant`, and `site` values match the organisation you are integrating.
 - Job descriptions are stored in the `job_details` table and exposed via `GET /jobs/{id}/detail` so the frontend can lazy-load content.
+
+## Database indexes & query tuning
+
+- Flyway manages production indexes under `src/main/resources/db/migration`. New composite indexes cover the most common filters:
+  - `idx_jobs_posted_at_id_desc` to fetch the newest jobs first while avoiding filesorts.
+  - Functional indexes on `LOWER(company)` and `LOWER(location)` combined with `posted_at` to accelerate case-insensitive filters plus recency sorting. MySQL requires version **8.0.13+** for expression indexes.
+  - `idx_jobs_level` for exact level matches and two supporting indexes on `job_tags` (`tag` and `(job_id, tag)`) to speed up tag joins.
+- For future text search needs, prefer MySQL 8.0 `FULLTEXT` indexes on `title` / `description` or an external search service (e.g. OpenSearch). MySQL `FULLTEXT` indexes only work on InnoDB tables starting in 5.6; configure them via a dedicated Flyway migration so lower environments stay in sync.
+- Verify that queries benefit from the indexes with `EXPLAIN`, e.g.:
+
+  ```sql
+  EXPLAIN SELECT id, title FROM jobs
+  WHERE LOWER(company) = LOWER('Acme')
+  ORDER BY posted_at DESC, id DESC
+  LIMIT 20;
+  ```
+
+  Inspect the `key`/`key_len` columns to confirm index usage. Combine with `ANALYZE TABLE jobs;` after large data imports so the optimizer statistics stay fresh.
+- When deploying to new environments, baseline the existing schema (`spring.flyway.baseline-on-migrate=true`) before applying migrations to avoid checksum conflicts. Hibernate's `ddl-auto` should be set to `validate` or `none` in production; schema changes—including new indexes—must be introduced through Flyway scripts.
