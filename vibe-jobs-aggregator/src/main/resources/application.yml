@@ -256,3 +256,4 @@ auth:
     resendCooldown: PT60S
     sessionTtl: P30D
     exposeCodeInResponse: true
+    senderAddress: ${AUTH_EMAIL_SENDER_ADDRESS:}
