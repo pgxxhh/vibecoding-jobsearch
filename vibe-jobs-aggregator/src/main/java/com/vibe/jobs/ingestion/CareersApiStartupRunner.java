@@ -3,6 +3,7 @@ package com.vibe.jobs.ingestion;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
+import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.FetchedJob;
@@ -20,6 +21,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     private final SourceRegistry sourceRegistry;
     private final IngestionProperties ingestionProperties;
     private final JobIngestionFilter jobFilter;
+    private final LocationFilterService locationFilterService;
     private final JobService jobService;
     private final JobDetailService jobDetailService;
     private final ExecutorService executor;
@@ -27,12 +29,14 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     public CareersApiStartupRunner(SourceRegistry sourceRegistry,
                                    IngestionProperties ingestionProperties,
                                    JobIngestionFilter jobFilter,
+                                   LocationFilterService locationFilterService,
                                    JobService jobService,
                                    JobDetailService jobDetailService,
                                    ExecutorService executor) {
         this.sourceRegistry = sourceRegistry;
         this.ingestionProperties = ingestionProperties;
         this.jobFilter = jobFilter;
+        this.locationFilterService = locationFilterService;
         this.jobService = jobService;
         this.jobDetailService = jobDetailService;
         this.executor = executor;
@@ -40,6 +44,9 @@ public class CareersApiStartupRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // 打印location过滤器状态
+        System.out.println("[CareersApiStartupRunner] " + locationFilterService.getFilterStatus());
+        
         List<SourceRegistry.ConfiguredSource> startupSources = sourceRegistry.getStartupSources();
         if (startupSources.isEmpty()) {
             System.out.println("[CareersApiStartupRunner] 未配置启动时拉取的数据源");
@@ -62,11 +69,12 @@ public class CareersApiStartupRunner implements ApplicationRunner {
         try {
             List<FetchedJob> jobs = client.fetchPage(1, pageSize);
             List<FetchedJob> filtered = jobFilter.apply(jobs);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
             System.out.println("[CareersApiStartupRunner] " + client.sourceName()
                     + "(" + (companyName == null ? "unknown" : companyName) + ") 首批职位数量: "
-                    + (filtered == null ? 0 : filtered.size()));
-            if (filtered != null) {
-                filtered.forEach(fetched -> {
+                    + (locationFiltered == null ? 0 : locationFiltered.size()));
+            if (locationFiltered != null) {
+                locationFiltered.forEach(fetched -> {
                     Job persisted = jobService.upsert(fetched.job());
                     jobDetailService.saveContent(persisted, fetched.content());
                 });

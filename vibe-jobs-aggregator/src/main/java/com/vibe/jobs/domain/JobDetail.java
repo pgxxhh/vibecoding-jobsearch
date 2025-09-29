@@ -19,7 +19,7 @@ public class JobDetail {
     private Job job;
 
     @Lob
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "longtext")
     private String content;
 
     @Column(nullable = false, columnDefinition = "timestamp")

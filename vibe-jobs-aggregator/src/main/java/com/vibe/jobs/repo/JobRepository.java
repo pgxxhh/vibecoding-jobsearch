@@ -16,9 +16,12 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     @Query("""
         select j from Job j
-        where (:q is null or lower(j.title) like lower(concat('%',:q,'%')) or exists (
-                select t from j.tags t where lower(t) like lower(concat('%',:q,'%'))
-            ))
+        where (:q is null or 
+               lower(j.title) like lower(concat('%',:q,'%')) or 
+               lower(j.company) like lower(concat('%',:q,'%')) or 
+               lower(j.location) like lower(concat('%',:q,'%')) or 
+               exists (select t from j.tags t where lower(t) like lower(concat('%',:q,'%')))
+            )
         and (:company is null or lower(j.company) like lower(concat('%',:company,'%')))
         and (:location is null or lower(j.location) like lower(concat('%',:location,'%')))
         and (:level is null or lower(j.level) = lower(:level))
@@ -40,9 +43,12 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     @Query("""
         select count(j) from Job j
-        where (:q is null or lower(j.title) like lower(concat('%',:q,'%')) or exists (
-                select t from j.tags t where lower(t) like lower(concat('%',:q,'%'))
-            ))
+        where (:q is null or 
+               lower(j.title) like lower(concat('%',:q,'%')) or 
+               lower(j.company) like lower(concat('%',:q,'%')) or 
+               lower(j.location) like lower(concat('%',:q,'%')) or 
+               exists (select t from j.tags t where lower(t) like lower(concat('%',:q,'%')))
+            )
         and (:company is null or lower(j.company) like lower(concat('%',:company,'%')))
         and (:location is null or lower(j.location) like lower(concat('%',:location,'%')))
         and (:level is null or lower(j.level) = lower(:level))

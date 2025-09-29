@@ -165,7 +165,9 @@ export default function LoginStepVerify({
         {digits.map((digit, index) => (
           <input
             key={index}
-            ref={(el) => (inputsRef.current[index] = el)}
+            ref={(el) => {
+              inputsRef.current[index] = el;
+            }}
             value={digit}
             onChange={(event) => handleChange(event.target.value.slice(-1), index)}
             onKeyDown={(event) => handleKeyDown(event, index)}

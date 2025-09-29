@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginStepEmail from '@/components/auth/LoginStepEmail';
 import LoginStepVerify from '@/components/auth/LoginStepVerify';
+import { useAuth } from '@/lib/auth';
 
 export type LoginStep = 'email' | 'verify';
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [resendAvailableAt, setResendAvailableAt] = useState<Date | null>(null);
   const [debugCode, setDebugCode] = useState<string | null>(null);
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleEmailSubmitted = (
     nextChallengeId: string,
@@ -38,6 +40,8 @@ export default function LoginPage() {
   const handleVerificationSuccess = () => {
     setError(null);
     setDebugCode(null);
+    // Refresh the auth state to get the user info
+    login(''); // The session token is already stored in cookies
     router.push('/');
   };
 

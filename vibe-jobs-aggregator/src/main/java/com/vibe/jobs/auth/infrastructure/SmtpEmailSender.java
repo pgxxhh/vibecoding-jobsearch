@@ -11,8 +11,10 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 
 public class SmtpEmailSender implements EmailSender {
     private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
@@ -26,10 +28,13 @@ public class SmtpEmailSender implements EmailSender {
     }
 
     @Override
-    public void sendVerificationCode(EmailAddress email, String code) {
+    @Async("emailTaskExecutor")
+    public CompletableFuture<Void> sendVerificationCode(EmailAddress email, String code) {
         String from = resolveFromAddress();
         String subject = "Elaine Jobs 登录验证码";
         String text = buildBody(code);
+
+        log.debug("Attempting to send email to {} from {} using SMTP", email.masked(), from);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -40,11 +45,20 @@ public class SmtpEmailSender implements EmailSender {
             }
             helper.setSubject(subject);
             helper.setText(text, false);
+            
+            log.debug("Sending email message via JavaMailSender...");
             mailSender.send(message);
-            log.info("Sent verification code email to {}", email.masked());
-        } catch (MailException | MessagingException ex) {
-            log.error("Failed to send verification code to {}", email.value(), ex);
-            throw new IllegalStateException("Failed to send verification email", ex);
+            log.info("Successfully sent verification code email to {}", email.masked());
+            return CompletableFuture.completedFuture(null);
+        } catch (MailException ex) {
+            log.error("Mail sending failed for {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("SMTP mail sending failed: " + ex.getMessage(), ex));
+        } catch (MessagingException ex) {
+            log.error("Message creation failed for {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("Email message creation failed: " + ex.getMessage(), ex));
+        } catch (Exception ex) {
+            log.error("Unexpected error sending email to {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("Unexpected email sending error: " + ex.getMessage(), ex));
         }
     }
 
