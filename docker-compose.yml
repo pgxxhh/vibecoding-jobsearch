@@ -4,10 +4,10 @@ services:
     image: mysql:8
     restart: always
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:vibejobs}
-      MYSQL_USER: ${MYSQL_USER:vibejobs}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:changeme}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vibejobs}
+      MYSQL_USER: ${MYSQL_USER:-vibejobs}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
