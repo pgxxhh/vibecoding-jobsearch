@@ -248,6 +248,21 @@ ingestion:
         baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
         tenant: "{{slug}}"
         site: "{{slugUpper}}"
+      categories:
+        - name: "{{company}} Engineering"
+          limit: 40
+          tags:
+            - engineering
+            - software
+          facets:
+            jobFamily:
+              - Engineering
+              - "{{companyUpper}} Technology"
+        - name: "{{company}} Financial"
+          limit: 20
+          tags:
+            - finance
+            - financial
 
 
 auth:
