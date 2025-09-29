@@ -4,6 +4,7 @@ import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
+import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.WorkdaySourceClient;
@@ -29,6 +30,7 @@ public class JobIngestionScheduler {
     private final SourceRegistry sourceRegistry;
     private final JobIngestionFilter jobFilter;
     private final JobDetailService jobDetailService;
+    private final LocationFilterService locationFilterService;
     private final ExecutorService executor;
 
     public JobIngestionScheduler(JobService jobService,
@@ -36,12 +38,14 @@ public class JobIngestionScheduler {
                                  SourceRegistry sourceRegistry,
                                  JobIngestionFilter jobFilter,
                                  JobDetailService jobDetailService,
+                                 LocationFilterService locationFilterService,
                                  ExecutorService executor) {
         this.jobService = jobService;
         this.ingestionProperties = ingestionProperties;
         this.sourceRegistry = sourceRegistry;
         this.jobFilter = jobFilter;
         this.jobDetailService = jobDetailService;
+        this.locationFilterService = locationFilterService;
         this.executor = executor;
     }
 
@@ -98,8 +102,9 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            int persisted = storeJobs(filtered);
-            if (filtered.isEmpty() || persisted == 0) {
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            int persisted = storeJobs(locationFiltered);
+            if (locationFiltered.isEmpty() || persisted == 0) {
                 log.debug("All jobs filtered out for source {} ({}) on page {}", sourceName, companyName, page);
             }
             page++;
@@ -142,7 +147,8 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            int persisted = matchAndStore(filtered, configuredSource, remaining, null, page);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            int persisted = matchAndStore(locationFiltered, configuredSource, remaining, null, page);
             if (filtered.isEmpty() || persisted == 0) {
                 log.debug("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
             }
@@ -164,7 +170,8 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            int persisted = matchAndStore(filtered, configuredSource, remaining, category, page);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            int persisted = matchAndStore(locationFiltered, configuredSource, remaining, category, page);
             if (filtered.isEmpty() || persisted == 0) {
                 log.debug("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
             }

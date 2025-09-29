@@ -36,133 +36,263 @@ ingestion:
   concurrency: 4
   mode: companies
   companies:
-    - "akunacapital"
-#    - "adyen"
-#    - "affirm"
-#    - "afterpay"
-#    - "airwallex"
-#    - "airtable"
-#    - "algolia"
-#    - "alphasense"
-#    - "alphasights"
-#    - "ambergroup"
-#    - "anchorage"
-#    - "appsflyer"
-#    - "asana"
-#    - "atlassian"
-#    - "binance"
-#    - "bitgo"
-#    - "bitmex"
-#    - "bitpanda"
-#    - "block"
-#    - "blockdaemon"
-#    - "blockchain"
-#    - "blockfi"
-#    - "blockstream"
-#    - "bolt"
-#    - "brex"
-#    - "bybit"
-#    - "canva"
-#    - "carta"
-#    - "chainalysis"
-#    - "chainstack"
-#    - "checkoutcom"
-#    - "chime"
-#    - "chippercash"
-#    - "circle"
-#    - "codapayments"
-#    - "coinbase"
-#    - "coinlist"
-#    - "crypto"
-#    - "currencycloud"
-#    - "databricks"
-#    - "datadog"
-#    - "dataminr"
-#    - "deliveroo"
-#    - "dlocal"
-#    - "doordash"
-#    - "drw"
-#    - "elliptic"
-#    - "figma"
-#    - "fireblocks"
-#    - "flowtraders"
-#    - "flexport"
-#    - "five-rings"
-#    - "gojek"
-#    - "grab"
-#    - "gocardless"
-#    - "gusto"
-#    - "hashicorp"
-#    - "hudsonrivertrading"
-#    - "imcfinancialmarkets"
-#    - "intercom"
-#    - "janestreet"
-#    - "jumptrading"
-#    - "klarna"
-#    - "klook"
-#    - "kraken"
-#    - "lalamove"
-#    - "ledger"
-#    - "lendingclub"
-#    - "liveramp"
-#    - "luno"
-#    - "mambu"
-#    - "marqeta"
-#    - "mastercard"
-#    - "mongodb"
-#    - "monzo"
-#    - "n26"
-#    - "nium"
-#    - "notion"
-#    - "nubank"
-#    - "okx"
-#    - "onfido"
-#    - "opensea"
-#    - "optiver"
-#    - "palantir"
-#    - "patsnap"
-#    - "paxos"
-#    - "paypal"
-#    - "pipedrive"
-#    - "plaid"
-#    - "point72"
-#    - "rapyd"
-#    - "reddit"
-#    - "remitly"
-#    - "revolut"
-#    - "ripple"
-#    - "rippling"
-#    - "robinhood"
-#    - "rokt"
-#    - "shopback"
-#    - "shopify"
-#    - "shopee"
-#    - "snowflake"
-#    - "sofi"
-#    - "squareup"
-#    - "stripe"
-#    - "sumup"
-#    - "taboola"
-#    - "tala"
-#    - "thoughtmachine"
-#    - "thunes"
-#    - "transfergo"
-#    - "trmlabs"
-#    - "truelayer"
-#    - "twosigma"
-#    - "uber"
-#    - "upwork"
-#    - "visa"
-#    - "virtu"
-#    - "wework"
-#    - "wise"
-#    - "worldquant"
-#    - "xendit"
-#    - "xero"
-#    - "yelp"
-#    - "zendesk"
-#    - "zillow"
+    - "akunacapital"     # 8 total jobs - Trading firm with Asian offices
+    - "adyen"            # Payment processor with strong APAC presence  
+    - "affirm"           # Fintech expanding to Asia
+    - "afterpay"         # Now owned by Block, strong in Australia/Asia
+    - "airwallex"        # Australia-based fintech, heavy Asia focus
+    - "airtable"         # Global SaaS with Asian offices
+    - "algolia"          # Search-as-a-service, global presence
+    - "alphasense"       # 10 Singapore jobs - Financial tech
+    - "alphasights"      # 17 total jobs, 14 Hong Kong - Expert network
+    - "ambergroup"       # Crypto company based in Asia
+    - "anchorage"        # Crypto custody, expanding globally
+    - "appsflyer"        # Mobile attribution, Israel-based with APAC
+    - "asana"            # Work management, global offices
+    - "atlassian"        # Australian tech giant, major APAC presence
+    - "binance"          # 90 total jobs, 21 Hong Kong - Major crypto exchange
+    - "bitgo"            # Crypto infrastructure, global
+    - "bitmex"           # 8 total jobs, 7 Hong Kong - Crypto derivatives
+    - "bitpanda"         # European crypto exchange expanding
+    - "block"            # Square/Cash App, global fintech
+    - "blockdaemon"      # Blockchain infrastructure
+    - "blockchain"       # Crypto services company
+    - "blockfi"          # Crypto lending platform
+    - "blockstream"      # Bitcoin technology company
+    - "bolt"             # Estonian mobility/delivery platform
+    - "brex"             # Corporate fintech, expanding globally
+    - "bybit"            # Crypto derivatives exchange, Asia-focused
+    - "canva"            # Australian design platform, huge in APAC
+    - "carta"            # Equity management, global presence
+    - "chainalysis"      # Blockchain analytics, global compliance
+    - "chainstack"       # Blockchain infrastructure
+    - "checkoutcom"      # Payment processor, global expansion
+    - "chime"            # Digital banking, US-focused but expanding
+    - "chippercash"      # African fintech, expanding regionally
+    - "circle"           # Stablecoin issuer, global presence
+    - "codapayments"     # Southeast Asian payment platform
+    - "coinbase"         # 9 total jobs, 8 Remote Singapore - Major crypto exchange
+    - "coinlist"         # Crypto platform for institutions
+    - "crypto"           # 123 total jobs, 78 Hong Kong/Singapore - Crypto.com
+    - "currencycloud"    # Cross-border payments, global
+    - "databricks"       # 26 total jobs, 25 Singapore - Data analytics platform
+    - "datadog"          # 6 Singapore jobs - Monitoring platform
+    - "dataminr"         # Real-time information discovery
+    - "deliveroo"        # Food delivery, strong in Asia-Pacific
+    - "dlocal"           # Emerging markets payments
+    - "doordash"         # Food delivery expanding globally
+    - "drw"              # Trading firm with global presence
+    - "elliptic"         # Blockchain analytics, global compliance
+    - "figma"            # Design collaboration tool, global
+    - "fireblocks"       # 8 total jobs, 7 Singapore - Crypto infrastructure
+    - "flowtraders"      # 19 total jobs, 19 Hong Kong office - Algorithmic trading
+    - "flexport"         # 9 total jobs - Logistics platform
+    - "five-rings"       # Quantitative trading firm
+    - "gojek"            # Indonesian super-app (if available)
+    - "grab"             # Southeast Asian super-app (if available)  
+    - "gocardless"       # Direct debit platform, expanding globally
+    - "gusto"            # HR/payroll platform
+    - "hashicorp"        # Infrastructure automation, global
+    - "hudsonrivertrading" # Trading firm with Asian offices
+    - "imcfinancialmarkets" # Market maker with global presence
+    - "intercom"         # Customer messaging platform
+    - "janestreet"       # 38 total jobs, 33 Hong Kong - Quantitative trading
+    - "jumptrading"      # 25 total jobs, 6 Hong Kong - Trading firm
+    - "klarna"           # Buy now pay later, expanding to Asia
+    - "klook"            # Asian travel platform
+    - "kraken"           # Crypto exchange with global presence
+    - "lalamove"         # 38 total jobs, 33 Hong Kong/Singapore - Asian logistics
+    - "ledger"           # Hardware wallet company
+    - "lendingclub"      # Peer-to-peer lending
+    - "liveramp"         # Data connectivity platform
+    - "luno"             # Crypto exchange focused on emerging markets
+    - "mambu"            # Banking platform, expanding globally
+    - "marqeta"          # Modern card issuing platform
+    - "mastercard"       # Global payment processor
+    - "mongodb"          # 15 total jobs, 12 Singapore - Database platform
+    - "monzo"            # Digital bank expanding internationally
+    - "n26"              # European neobank expanding globally
+    - "nium"             # Global payments infrastructure
+    - "notion"           # Productivity platform
+    - "nubank"           # Brazilian neobank, may expand to Asia
+    - "okx"              # 197 total jobs, 196 Hong Kong/Singapore - Major crypto exchange
+    - "onfido"           # Identity verification, global compliance
+    - "opensea"          # NFT marketplace
+    - "optiver"          # Market maker with Asian operations
+    - "palantir"         # Data analytics, government and enterprise
+    - "patsnap"          # 16 total jobs, 16 Singapore - IP intelligence platform
+    - "paxos"            # Regulated blockchain infrastructure
+    - "paypal"           # Global payments, strong Asian presence
+    - "pipedrive"        # Sales CRM platform
+    - "plaid"            # Fintech infrastructure
+    - "point72"          # 21 total jobs, 18 Hong Kong/Singapore - Hedge fund
+    - "rapyd"            # Fintech-as-a-service platform
+    - "reddit"           # Social media platform
+    - "remitly"          # Cross-border remittances
+    - "revolut"          # European neobank expanding globally
+    - "ripple"           # Blockchain payments
+    - "rippling"         # HR and IT management platform
+    - "robinhood"        # Commission-free trading platform
+    - "rokt"             # Australian adtech platform
+    - "shopback"         # Cashback platform, strong in APAC
+    - "shopify"          # E-commerce platform
+    - "shopee"           # Southeast Asian e-commerce platform
+    - "snowflake"        # Cloud data platform
+    - "sofi"             # Digital personal finance
+    - "squareup"         # Point-of-sale and financial services
+    - "stripe"           # Payment processing infrastructure
+    - "sumup"            # Point-of-sale solutions
+    - "taboola"          # Content discovery platform
+    - "tala"             # Emerging markets fintech
+    - "thoughtmachine"   # Cloud-native banking technology
+    - "thunes"           # 8 total jobs - Cross-border payments, Asia focus
+    - "transfergo"       # International money transfers
+    - "trmlabs"          # Blockchain compliance
+    - "truelayer"        # Open banking infrastructure
+    - "twosigma"         # Quantitative investment firm
+    - "uber"             # Ride-sharing and delivery, global presence
+    - "upwork"           # Freelance platform
+    - "visa"             # Global payment network
+    - "virtu"            # 17 total jobs, 17 Singapore - Market maker
+    - "wework"           # Shared workspace provider
+    - "wise"             # International money transfers
+    - "worldquant"       # 16 total jobs, 10 Singapore - Quantitative hedge fund
+    - "xendit"           # Indonesian payment gateway
+    - "xero"             # Cloud accounting software
+    - "yelp"             # Local business reviews
+    - "zendesk"          # Customer service platform
+    - "zillow"           # Real estate platform
+    - "klarna"
+    - "klook"
+    - "kraken"
+    - "lalamove"
+    - "ledger"
+    - "lendingclub"
+    - "liveramp"
+    - "luno"
+    - "mambu"
+    - "marqeta"
+    - "mastercard"
+    - "mongodb"
+    - "monzo"
+    - "n26"
+    - "nium"
+    - "notion"
+    - "nubank"
+    - "okx"
+    - "onfido"
+    - "opensea"
+    - "optiver"
+    - "palantir"
+    - "patsnap"
+    - "paxos"
+    - "paypal"
+    - "pipedrive"
+    - "plaid"
+    - "point72"
+    - "rapyd"
+    - "reddit"
+    - "remitly"
+    - "revolut"
+    - "ripple"
+    - "rippling"
+    - "robinhood"
+    - "rokt"
+    - "shopback"
+    - "shopify"
+    - "shopee"
+    - "snowflake"
+    - "sofi"
+    - "squareup"
+    - "stripe"
+    - "sumup"
+    - "taboola"
+    - "tala"
+    - "thoughtmachine"
+    - "thunes"
+    - "transfergo"
+    - "trmlabs"
+    - "truelayer"
+    - "twosigma"
+    - "uber"
+    - "upwork"
+    - "visa"
+    - "virtu"
+    - "wework"
+    - "wise"
+    - "worldquant"
+    - "xendit"
+    - "xero"
+    - "yelp"
+    - "zendesk"
+    - "zillow"
   recentDays: 7
+  locationFilter:
+    enabled: ${LOCATION_FILTER_ENABLED:true}
+    includeCountries:
+      - "china"
+      - "singapore" 
+      - "hong kong"
+      - "taiwan"
+      - "japan"
+      - "south korea"
+      - "korea"
+      - "india"
+      - "australia"
+      - "new zealand"
+      - "thailand"
+      - "malaysia"
+      - "indonesia" 
+      - "philippines"
+      - "vietnam"
+    includeCities:
+      - "beijing"
+      - "shanghai"
+      - "shenzhen"
+      - "guangzhou"
+      - "hangzhou"
+      - "chengdu"
+      - "nanjing"
+      - "suzhou"
+      - "singapore"
+      - "hong kong"
+      - "taipei"
+      - "tokyo"
+      - "osaka"
+      - "seoul"
+      - "busan"
+      - "mumbai"
+      - "bangalore"
+      - "delhi"
+      - "hyderabad"
+      - "chennai"
+      - "pune"
+      - "sydney"
+      - "melbourne"
+      - "brisbane"
+      - "auckland"
+      - "bangkok"
+      - "kuala lumpur"
+      - "jakarta"
+      - "manila"
+      - "ho chi minh"
+      - "hanoi"
+    includeKeywords:
+      - "remote - asia"
+      - "remote - apac"
+      - "asia pacific"
+      - "apac"
+      - "remote - singapore"
+      - "remote - hong kong"
+      - "remote - australia"
+      - "remote - india"
+    excludeKeywords:
+      - "remote - us"
+      - "remote - usa" 
+      - "remote - canada"
+      - "remote - europe"
+      - "remote - uk"
+      - "remote - emea"
   sources:
     - id: greenhouse
       type: greenhouse

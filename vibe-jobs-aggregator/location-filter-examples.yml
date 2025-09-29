@@ -1,0 +1,79 @@
+# Location Filter Configuration Examples
+
+# Example 1: 只获取中国地区的职位
+ingestion:
+  locationFilter:
+    enabled: true
+    includeCountries:
+      - "china"
+    includeCities:
+      - "beijing"
+      - "shanghai"
+      - "shenzhen"
+      - "guangzhou"
+      - "hangzhou"
+      - "chengdu"
+      - "suzhou"
+      - "nanjing"
+    includeKeywords:
+      - "china"
+      - "remote - china"
+
+---
+
+# Example 2: 获取亚太地区的职位（包含中国、新加坡、香港等）
+ingestion:
+  locationFilter:
+    enabled: true
+    includeCountries:
+      - "china"
+      - "singapore"
+      - "hong kong"
+      - "taiwan"
+      - "japan"
+      - "south korea"
+    includeCities:
+      - "beijing"
+      - "shanghai"
+      - "shenzhen"
+      - "guangzhou"
+      - "hangzhou"
+      - "singapore"
+      - "hong kong"
+      - "taipei"
+      - "tokyo"
+      - "seoul"
+    includeKeywords:
+      - "remote - asia"
+      - "asia pacific"
+      - "apac"
+    excludeKeywords:
+      - "remote - us"
+      - "remote - europe"
+
+---
+
+# Example 3: 排除美国和欧洲，接受其他所有地区
+ingestion:
+  locationFilter:
+    enabled: true
+    excludeCountries:
+      - "united states"
+      - "usa"
+      - "canada"
+    excludeRegions:
+      - "europe"
+      - "european union"
+    excludeKeywords:
+      - "remote - us"
+      - "remote - usa"
+      - "remote - canada"
+      - "remote - europe"
+      - "remote - uk"
+
+---
+
+# Example 4: 禁用location过滤（默认行为）
+ingestion:
+  locationFilter:
+    enabled: false

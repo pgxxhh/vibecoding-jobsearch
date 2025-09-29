@@ -21,6 +21,7 @@ public class IngestionProperties {
     private int concurrency = 4;
     private List<Source> sources = new ArrayList<>();
     private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
+    private LocationFilter locationFilter = new LocationFilter();
 
     public enum Mode {
         COMPANIES,
@@ -108,6 +109,14 @@ public class IngestionProperties {
                 this.companyOverrides.put(normalized, value.normalized());
             }
         });
+    }
+
+    public LocationFilter getLocationFilter() {
+        return locationFilter;
+    }
+
+    public void setLocationFilter(LocationFilter locationFilter) {
+        this.locationFilter = locationFilter == null ? new LocationFilter() : locationFilter;
     }
 
     public Map<String, String> getPlaceholderOverrides(String companyName) {
@@ -385,6 +394,130 @@ public class IngestionProperties {
             copy.enabled = enabled;
             copy.options = optionsCopy();
             return copy;
+        }
+    }
+
+    public static class LocationFilter {
+        private boolean enabled = false;
+        private List<String> includeCountries = new ArrayList<>();
+        private List<String> includeRegions = new ArrayList<>();
+        private List<String> includeCities = new ArrayList<>();
+        private List<String> excludeCountries = new ArrayList<>();
+        private List<String> excludeRegions = new ArrayList<>();
+        private List<String> excludeCities = new ArrayList<>();
+        private List<String> includeKeywords = new ArrayList<>();
+        private List<String> excludeKeywords = new ArrayList<>();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<String> getIncludeCountries() {
+            return includeCountries;
+        }
+
+        public void setIncludeCountries(List<String> includeCountries) {
+            this.includeCountries = includeCountries == null ? new ArrayList<>() : new ArrayList<>(includeCountries);
+        }
+
+        public List<String> getIncludeRegions() {
+            return includeRegions;
+        }
+
+        public void setIncludeRegions(List<String> includeRegions) {
+            this.includeRegions = includeRegions == null ? new ArrayList<>() : new ArrayList<>(includeRegions);
+        }
+
+        public List<String> getIncludeCities() {
+            return includeCities;
+        }
+
+        public void setIncludeCities(List<String> includeCities) {
+            this.includeCities = includeCities == null ? new ArrayList<>() : new ArrayList<>(includeCities);
+        }
+
+        public List<String> getExcludeCountries() {
+            return excludeCountries;
+        }
+
+        public void setExcludeCountries(List<String> excludeCountries) {
+            this.excludeCountries = excludeCountries == null ? new ArrayList<>() : new ArrayList<>(excludeCountries);
+        }
+
+        public List<String> getExcludeRegions() {
+            return excludeRegions;
+        }
+
+        public void setExcludeRegions(List<String> excludeRegions) {
+            this.excludeRegions = excludeRegions == null ? new ArrayList<>() : new ArrayList<>(excludeRegions);
+        }
+
+        public List<String> getExcludeCities() {
+            return excludeCities;
+        }
+
+        public void setExcludeCities(List<String> excludeCities) {
+            this.excludeCities = excludeCities == null ? new ArrayList<>() : new ArrayList<>(excludeCities);
+        }
+
+        public List<String> getIncludeKeywords() {
+            return includeKeywords;
+        }
+
+        public void setIncludeKeywords(List<String> includeKeywords) {
+            this.includeKeywords = includeKeywords == null ? new ArrayList<>() : new ArrayList<>(includeKeywords);
+        }
+
+        public List<String> getExcludeKeywords() {
+            return excludeKeywords;
+        }
+
+        public void setExcludeKeywords(List<String> excludeKeywords) {
+            this.excludeKeywords = excludeKeywords == null ? new ArrayList<>() : new ArrayList<>(excludeKeywords);
+        }
+
+        /**
+         * 检查location是否符合过滤条件
+         */
+        public boolean matches(String location) {
+            if (!enabled || location == null || location.isBlank()) {
+                return !enabled; // 如果没有启用过滤，则接受所有；如果启用了但location为空，则拒绝
+            }
+
+            String locationLower = location.toLowerCase().trim();
+
+            // 检查排除条件 - 如果匹配任何排除条件，直接拒绝
+            if (matchesAnyKeyword(locationLower, excludeKeywords) ||
+                matchesAnyKeyword(locationLower, excludeCountries) ||
+                matchesAnyKeyword(locationLower, excludeRegions) ||
+                matchesAnyKeyword(locationLower, excludeCities)) {
+                return false;
+            }
+
+            // 如果没有任何包含条件，接受（只要不在排除列表中）
+            if (includeKeywords.isEmpty() && includeCountries.isEmpty() && 
+                includeRegions.isEmpty() && includeCities.isEmpty()) {
+                return true;
+            }
+
+            // 检查包含条件 - 需要匹配至少一个包含条件
+            return matchesAnyKeyword(locationLower, includeKeywords) ||
+                   matchesAnyKeyword(locationLower, includeCountries) ||
+                   matchesAnyKeyword(locationLower, includeRegions) ||
+                   matchesAnyKeyword(locationLower, includeCities);
+        }
+
+        private boolean matchesAnyKeyword(String location, List<String> keywords) {
+            if (keywords == null || keywords.isEmpty()) {
+                return false;
+            }
+            return keywords.stream()
+                    .filter(keyword -> keyword != null && !keyword.isBlank())
+                    .anyMatch(keyword -> location.contains(keyword.toLowerCase().trim()));
         }
     }
 

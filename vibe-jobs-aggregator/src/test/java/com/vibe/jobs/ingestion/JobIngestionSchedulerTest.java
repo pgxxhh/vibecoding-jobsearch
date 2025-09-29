@@ -4,6 +4,7 @@ import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
+import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +40,9 @@ class JobIngestionSchedulerTest {
 
     @Mock
     private JobDetailService jobDetailService;
+
+    @Mock
+    private LocationFilterService locationFilterService;
 
     private ExecutorService executor;
 
@@ -89,6 +93,9 @@ class JobIngestionSchedulerTest {
 
         when(jobService.upsert(any())).thenAnswer(invocation -> invocation.getArgument(0));
         doNothing().when(jobDetailService).saveContent(any(), anyString());
+        
+        // Mock location filter service to return all jobs unchanged
+        when(locationFilterService.filterJobs(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         JobIngestionScheduler scheduler = new JobIngestionScheduler(
                 jobService,
@@ -96,6 +103,7 @@ class JobIngestionSchedulerTest {
                 registry,
                 filter,
                 jobDetailService,
+                locationFilterService,
                 executor
         );
 
