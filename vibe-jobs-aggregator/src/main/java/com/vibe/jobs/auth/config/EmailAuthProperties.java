@@ -26,6 +26,12 @@ public class EmailAuthProperties {
      */
     private boolean exposeCodeInResponse = false;
 
+    /**
+     * Email address used as the sender when dispatching verification codes via SMTP.
+     * Falls back to {@code spring.mail.username} when left blank.
+     */
+    private String senderAddress;
+
     public Duration getChallengeTtl() {
         return challengeTtl;
     }
@@ -56,5 +62,13 @@ public class EmailAuthProperties {
 
     public void setSessionTtl(Duration sessionTtl) {
         this.sessionTtl = sessionTtl;
+    }
+
+    public String getSenderAddress() {
+        return senderAddress;
+    }
+
+    public void setSenderAddress(String senderAddress) {
+        this.senderAddress = senderAddress;
     }
 }

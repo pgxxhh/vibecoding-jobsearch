@@ -66,6 +66,31 @@ mvn spring-boot:run
 
 `CareersApiStartupRunner` logs the number of jobs fetched from each source marked `runOnStartup=true`. The `JobIngestionScheduler` reuses the same configuration for recurring updates.
 
+### Email verification
+
+To deliver login verification codes, configure an SMTP server using Spring Boot's mail settings and provide a sender address:
+
+```yaml
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: your-smtp-username
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+auth:
+  email:
+    senderAddress: no-reply@example.com
+```
+
+If no SMTP configuration is supplied, the application falls back to logging verification codes to the console.
+
 ## Notes
 - Greenhouse does not return `postedAt`; we stamp the current time. Extend `GreenhouseSourceClient` if you need more metadata.
 - Lever timestamps are provided in epoch milliseconds and are normalised to `Instant`.
