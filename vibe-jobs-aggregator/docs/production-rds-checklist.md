@@ -29,7 +29,7 @@ variables in the ECS task definition/Secrets Manager:
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `validate` | Prevents Hibernate from altering schema; Flyway owns migrations. |
 | `SPRING_FLYWAY_SCHEMAS` | `vibejobs` | Matches the database name created in RDS. |
 
-If you copy `.env.production.example`, make sure to update the password and any
+Ensure `.env.production` contains the latest password and any
 database-specific overrides before deploying.
 
 ## 3. Run Flyway migrations once

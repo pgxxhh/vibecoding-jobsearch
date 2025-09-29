@@ -112,7 +112,7 @@ If no SMTP configuration is supplied, the application falls back to logging veri
 
 - `docker-compose.yml` now provisions a `mysql:8` container and injects the connection details into the backend service via `SPRING_DATASOURCE_*` environment variables. Update `.env` before running `docker compose up -d` to customise the database name, credentials, or choose the `h2` profile for local experiments.
 - For managed database providers (AWS RDS, Azure Database for MySQL, etc.) set `SPRING_PROFILES_ACTIVE=mysql` and supply the managed endpoint credentials (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`) through your host environment or secrets manager. Ensure the security group / firewall allows inbound traffic from the application subnet on port 3306 while keeping the instance closed to the public internet.
-- A production checklist for Aurora/RDS lives in `docs/production-rds-checklist.md`. Copy `.env.production.example` to `.env.production`, override the secrets, and `deploy.sh` will automatically export the variables before rebuilding the containers.
+- A production checklist for Aurora/RDS lives in `docs/production-rds-checklist.md`. Update `.env.production` with the managed database secrets, and `deploy.sh` will automatically export the variables before rebuilding the containers.
 
 ## Notes
 - Greenhouse does not return `postedAt`; we stamp the current time. Extend `GreenhouseSourceClient` if you need more metadata.
