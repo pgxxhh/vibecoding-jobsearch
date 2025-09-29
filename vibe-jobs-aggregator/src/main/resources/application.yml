@@ -30,7 +30,7 @@ server:
   servlet:
     context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
 ingestion:
-  fixedDelayMs: 300000
+  fixedDelayMs: 180000
   initialDelayMs: 10000
   pageSize: 50
   concurrency: 4
