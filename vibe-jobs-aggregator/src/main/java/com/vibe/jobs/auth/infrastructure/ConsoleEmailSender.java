@@ -14,8 +14,7 @@ public class ConsoleEmailSender implements EmailSender {
     @Override
     @Async("emailTaskExecutor")
     public CompletableFuture<Void> sendVerificationCode(EmailAddress email, String code) {
-        return CompletableFuture.runAsync(() -> {
-            log.info("[DEV] Sending verification code {} to {}", code, email.value());
-        });
+        log.info("[DEV] Sending verification code {} to {}", code, email.value());
+        return CompletableFuture.completedFuture(null);
     }
 }

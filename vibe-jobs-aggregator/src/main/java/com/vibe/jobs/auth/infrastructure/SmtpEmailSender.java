@@ -30,27 +30,36 @@ public class SmtpEmailSender implements EmailSender {
     @Override
     @Async("emailTaskExecutor")
     public CompletableFuture<Void> sendVerificationCode(EmailAddress email, String code) {
-        return CompletableFuture.runAsync(() -> {
-            String from = resolveFromAddress();
-            String subject = "Elaine Jobs 登录验证码";
-            String text = buildBody(code);
+        String from = resolveFromAddress();
+        String subject = "Elaine Jobs 登录验证码";
+        String text = buildBody(code);
 
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
-                helper.setTo(email.value());
-                if (from != null && !from.isBlank()) {
-                    helper.setFrom(from);
-                }
-                helper.setSubject(subject);
-                helper.setText(text, false);
-                mailSender.send(message);
-                log.info("Sent verification code email to {}", email.masked());
-            } catch (MailException | MessagingException ex) {
-                log.error("Failed to send verification code to {}", email.value(), ex);
-                throw new IllegalStateException("Failed to send verification email", ex);
+        log.debug("Attempting to send email to {} from {} using SMTP", email.masked(), from);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+            helper.setTo(email.value());
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
             }
-        });
+            helper.setSubject(subject);
+            helper.setText(text, false);
+            
+            log.debug("Sending email message via JavaMailSender...");
+            mailSender.send(message);
+            log.info("Successfully sent verification code email to {}", email.masked());
+            return CompletableFuture.completedFuture(null);
+        } catch (MailException ex) {
+            log.error("Mail sending failed for {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("SMTP mail sending failed: " + ex.getMessage(), ex));
+        } catch (MessagingException ex) {
+            log.error("Message creation failed for {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("Email message creation failed: " + ex.getMessage(), ex));
+        } catch (Exception ex) {
+            log.error("Unexpected error sending email to {}: {}", email.masked(), ex.getMessage(), ex);
+            return CompletableFuture.failedFuture(new IllegalStateException("Unexpected email sending error: " + ex.getMessage(), ex));
+        }
     }
 
     private String resolveFromAddress() {

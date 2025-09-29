@@ -90,7 +90,13 @@ public class EmailAuthService {
         // Start email sending asynchronously - don't wait for completion
         emailSender.sendVerificationCode(email, code)
                 .exceptionally(throwable -> {
-                    log.error("Failed to send verification email to {}", email.masked(), throwable);
+                    // Log the root cause of the email failure
+                    Throwable rootCause = throwable;
+                    while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+                        rootCause = rootCause.getCause();
+                    }
+                    log.error("Failed to send verification email to {}. Root cause: {}", 
+                            email.masked(), rootCause.getMessage(), rootCause);
                     return null;
                 });
 
