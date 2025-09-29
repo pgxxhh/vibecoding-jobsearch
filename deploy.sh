@@ -6,16 +6,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$SCRIPT_DIR}"
 
-TMP_ENV_FILE=""
-
-cleanup() {
-  if [[ -n "${TMP_ENV_FILE:-}" && -f "${TMP_ENV_FILE}" ]]; then
-    rm -f "${TMP_ENV_FILE}"
-  fi
-}
-
-trap cleanup EXIT
-
 # Compose reads variables from a single env file. We merge `.env` (base defaults)
 # with `.env.production` (overrides for managed services) so production deploys
 # don't accidentally fall back to the local dockerised MySQL host.
@@ -32,7 +22,13 @@ fi
 COMPOSE_ENV_FILE=""
 if (( ${#ENV_FILES[@]} > 0 )); then
   if (( ${#ENV_FILES[@]} > 1 )); then
-    TMP_ENV_FILE="$(mktemp)"
+    TMP_ENV_FILE="$(mktemp "$PROJECT_DIR/.env.tmp.XXXXXX")"
+    cleanup_tmp() {
+      rm -f "$TMP_ENV_FILE"
+    }
+    trap cleanup_tmp EXIT
+
+    : > "$TMP_ENV_FILE"
 
     declare -A override_keys=()
     while IFS= read -r key; do
@@ -54,7 +50,12 @@ if (( ${#ENV_FILES[@]} > 0 )); then
     cat "$PROJECT_DIR/.env.production" >> "$TMP_ENV_FILE"
     printf '\n' >> "$TMP_ENV_FILE"
 
-    COMPOSE_ENV_FILE="$TMP_ENV_FILE"
+    mv "$TMP_ENV_FILE" "$PROJECT_DIR/.env"
+    trap - EXIT
+    unset -f cleanup_tmp
+
+    COMPOSE_ENV_FILE="$PROJECT_DIR/.env"
+    echo ">> wrote merged environment to $COMPOSE_ENV_FILE"
   else
     COMPOSE_ENV_FILE="${ENV_FILES[0]}"
   fi
@@ -65,6 +66,11 @@ if (( ${#ENV_FILES[@]} > 0 )); then
     source "$file"
   done
   set +a
+fi
+
+if [[ -n "${SPRING_DATASOURCE_URL:-}" && "$SPRING_DATASOURCE_URL" =~ jdbc:mysql://mysql(:|/|$) ]]; then
+  echo "error: SPRING_DATASOURCE_URL still points at the docker mysql service; aborting deploy" >&2
+  exit 1
 fi
 
 cd "$PROJECT_DIR"
