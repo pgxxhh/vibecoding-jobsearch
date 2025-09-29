@@ -30,7 +30,9 @@ variables in the ECS task definition/Secrets Manager:
 | `SPRING_FLYWAY_SCHEMAS` | `vibejobs` | Matches the database name created in RDS. |
 
 Ensure `.env.production` contains the latest password and any
-database-specific overrides before deploying.
+database-specific overrides before deploying. The `deploy.sh` helper merges
+`.env` with `.env.production`, allowing the production secrets to override the
+local docker settings so the backend connects to the managed RDS endpoint.
 
 ## 3. Run Flyway migrations once
 - [ ] Ensure the `vibejobs` schema exists: `CREATE DATABASE vibejobs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
