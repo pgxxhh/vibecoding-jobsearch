@@ -58,12 +58,13 @@ public class SourceRegistry {
                     continue;
                 }
                 String trimmedCompany = companyName.trim();
-                Map<String, String> mergedOptions = mergeOptions(type, source, trimmedCompany);
+                PlaceholderContext context = buildPlaceholderContext(trimmedCompany);
+                Map<String, String> mergedOptions = mergeOptions(type, source, trimmedCompany, context);
                 if (mergedOptions.isEmpty()) {
                     continue;
                 }
                 String cacheKey = source.key() + "::" + trimmedCompany;
-                List<CategoryQuota> categories = resolveCategories(source, trimmedCompany);
+                List<CategoryQuota> categories = resolveCategories(source, context);
                 try {
                     SourceClient client = clientCache.computeIfAbsent(cacheKey, key -> factory.create(type, mergedOptions));
                     resolved.add(new ConfiguredSource(source, trimmedCompany, client, categories));
@@ -108,8 +109,8 @@ public class SourceRegistry {
 
     private Map<String, String> mergeOptions(String type,
                                              IngestionProperties.Source source,
-                                             String companyName) {
-        PlaceholderContext context = buildPlaceholderContext(companyName);
+                                             String companyName,
+                                             PlaceholderContext context) {
         IngestionProperties.SourceOverride override = properties.getSourceOverride(companyName, type);
 
         if (override != null && !override.isEnabled()) {
@@ -140,7 +141,7 @@ public class SourceRegistry {
         return result;
     }
 
-    private List<CategoryQuota> resolveCategories(IngestionProperties.Source source, String companyName) {
+    private List<CategoryQuota> resolveCategories(IngestionProperties.Source source, PlaceholderContext context) {
         List<IngestionProperties.Source.CategoryQuota> configured = source.getCategories();
         if (configured == null || configured.isEmpty()) {
             return List.of();
@@ -154,39 +155,39 @@ public class SourceRegistry {
             if (limit <= 0) {
                 continue;
             }
-            String name = applyPlaceholders(quota.getName(), companyName);
+            String name = applyPlaceholders(quota.getName(), context);
             if (name == null || name.isBlank()) {
                 name = "category-" + (result.size() + 1);
             }
 
             List<String> tags = quota.getTags() == null ? List.of() : quota.getTags().stream()
-                    .map(tag -> applyPlaceholders(tag, companyName))
+                    .map(tag -> applyPlaceholders(tag, context))
                     .filter(tag -> tag != null && !tag.isBlank())
                     .map(tag -> tag.trim().toLowerCase(Locale.ROOT))
                     .distinct()
                     .toList();
 
-            Map<String, List<String>> facets = resolveFacets(quota.getFacets(), companyName);
+            Map<String, List<String>> facets = resolveFacets(quota.getFacets(), context);
 
             result.add(new CategoryQuota(name, limit, tags, facets));
         }
         return result;
     }
 
-    private Map<String, List<String>> resolveFacets(Map<String, List<String>> facets, String companyName) {
+    private Map<String, List<String>> resolveFacets(Map<String, List<String>> facets, PlaceholderContext context) {
         if (facets == null || facets.isEmpty()) {
             return Map.of();
         }
         Map<String, List<String>> resolved = new LinkedHashMap<>();
         facets.forEach((key, values) -> {
-            String resolvedKey = applyPlaceholders(key, companyName);
+            String resolvedKey = applyPlaceholders(key, context);
             if (resolvedKey == null || resolvedKey.isBlank()) {
                 return;
             }
             List<String> normalizedValues = new ArrayList<>();
             if (values != null) {
                 for (String value : values) {
-                    String resolvedValue = applyPlaceholders(value, companyName);
+                    String resolvedValue = applyPlaceholders(value, context);
                     if (resolvedValue != null && !resolvedValue.isBlank()) {
                         normalizedValues.add(resolvedValue);
                     }
@@ -197,23 +198,6 @@ public class SourceRegistry {
             }
         });
         return resolved.isEmpty() ? Map.of() : Map.copyOf(resolved);
-    }
-
-    private Map<String, String> deriveDefaults(String type, String companyName) {
-        if (companyName == null || companyName.isBlank()) {
-            return Map.of();
-        }
-        String normalized = slugify(companyName);
-        return switch (type.toLowerCase(Locale.ROOT)) {
-            case "greenhouse" -> Map.of("slug", normalized);
-            case "lever" -> Map.of("company", normalized);
-            case "workday" -> Map.of(
-                    "baseUrl", "https://" + normalized + ".wd1.myworkdayjobs.com",
-                    "tenant", normalized,
-                    "site", normalized.toUpperCase(Locale.ROOT)
-            );
-            default -> Map.of();
-        };
     }
 
     private Map<String, String> deriveDefaults(String type, PlaceholderContext context) {
