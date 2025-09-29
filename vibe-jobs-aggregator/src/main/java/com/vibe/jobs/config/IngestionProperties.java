@@ -1,9 +1,12 @@
 package com.vibe.jobs.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @ConfigurationProperties(prefix = "ingestion")
@@ -17,6 +20,7 @@ public class IngestionProperties {
     private int recentDays = 7;
     private int concurrency = 4;
     private List<Source> sources = new ArrayList<>();
+    private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
 
     public enum Mode {
         COMPANIES,
@@ -89,6 +93,57 @@ public class IngestionProperties {
         this.sources = sources == null ? new ArrayList<>() : sources;
     }
 
+    public Map<String, CompanyOverride> getCompanyOverrides() {
+        return companyOverrides;
+    }
+
+    public void setCompanyOverrides(Map<String, CompanyOverride> companyOverrides) {
+        this.companyOverrides = new HashMap<>();
+        if (companyOverrides == null) {
+            return;
+        }
+        companyOverrides.forEach((key, value) -> {
+            String normalized = normalizeKey(key);
+            if (!normalized.isEmpty() && value != null) {
+                this.companyOverrides.put(normalized, value.normalized());
+            }
+        });
+    }
+
+    public Map<String, String> getPlaceholderOverrides(String companyName) {
+        CompanyOverride override = findCompanyOverride(companyName);
+        if (override == null) {
+            return Map.of();
+        }
+        return override.placeholderCopy();
+    }
+
+    public SourceOverride getSourceOverride(String companyName, String sourceType) {
+        CompanyOverride override = findCompanyOverride(companyName);
+        if (override == null) {
+            return null;
+        }
+        return override.sourceOverride(sourceType);
+    }
+
+    private CompanyOverride findCompanyOverride(String companyName) {
+        if (companyOverrides.isEmpty()) {
+            return null;
+        }
+        String normalized = normalizeKey(companyName);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return companyOverrides.get(normalized);
+    }
+
+    private String normalizeKey(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
+    }
+
     public List<String> normalizedCompanies() {
         if (companies == null || companies.isEmpty()) {
             return List.of();
@@ -104,6 +159,7 @@ public class IngestionProperties {
         private String type;
         private boolean enabled = true;
         private boolean runOnStartup = true;
+        private boolean requireOverride = false;
         private Map<String, String> options = new HashMap<>();
         private List<CategoryQuota> categories = new ArrayList<>();
 
@@ -137,6 +193,14 @@ public class IngestionProperties {
 
         public void setRunOnStartup(boolean runOnStartup) {
             this.runOnStartup = runOnStartup;
+        }
+
+        public boolean isRequireOverride() {
+            return requireOverride;
+        }
+
+        public void setRequireOverride(boolean requireOverride) {
+            this.requireOverride = requireOverride;
         }
 
         public Map<String, String> getOptions() {
@@ -217,6 +281,110 @@ public class IngestionProperties {
                     this.facets.put(key, normalized);
                 });
             }
+        }
+    }
+
+    public static class CompanyOverride {
+        private Map<String, String> placeholders = new LinkedHashMap<>();
+        private Map<String, SourceOverride> sources = new HashMap<>();
+
+        public Map<String, String> getPlaceholders() {
+            return placeholders;
+        }
+
+        public void setPlaceholders(Map<String, String> placeholders) {
+            this.placeholders = sanitize(placeholders);
+        }
+
+        public Map<String, SourceOverride> getSources() {
+            return sources;
+        }
+
+        public void setSources(Map<String, SourceOverride> sources) {
+            this.sources = new HashMap<>();
+            if (sources == null) {
+                return;
+            }
+            sources.forEach((key, value) -> {
+                String normalized = key == null ? "" : key.trim().toLowerCase(Locale.ROOT);
+                if (!normalized.isEmpty() && value != null) {
+                    this.sources.put(normalized, value.normalized());
+                }
+            });
+        }
+
+        private Map<String, String> sanitize(Map<String, String> values) {
+            Map<String, String> result = new LinkedHashMap<>();
+            if (values == null) {
+                return result;
+            }
+            values.forEach((key, value) -> {
+                if (key == null || key.isBlank() || value == null) {
+                    return;
+                }
+                result.put(key.trim(), value.trim());
+            });
+            return result;
+        }
+
+        public Map<String, String> placeholderCopy() {
+            return new LinkedHashMap<>(placeholders);
+        }
+
+        public SourceOverride sourceOverride(String type) {
+            if (type == null) {
+                return null;
+            }
+            return sources.get(type.trim().toLowerCase(Locale.ROOT));
+        }
+
+        public CompanyOverride normalized() {
+            CompanyOverride copy = new CompanyOverride();
+            copy.placeholders = placeholderCopy();
+            copy.sources = new HashMap<>();
+            sources.forEach((key, value) -> copy.sources.put(key, value.normalized()));
+            return copy;
+        }
+    }
+
+    public static class SourceOverride {
+        private boolean enabled = true;
+        private Map<String, String> options = new LinkedHashMap<>();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Map<String, String> getOptions() {
+            return options;
+        }
+
+        public void setOptions(Map<String, String> options) {
+            this.options = new LinkedHashMap<>();
+            if (options == null) {
+                return;
+            }
+            options.forEach((key, value) -> {
+                if (key == null || key.isBlank() || value == null) {
+                    return;
+                }
+                this.options.put(key.trim(), value.trim());
+            });
+        }
+
+        public Map<String, String> optionsCopy() {
+            return new LinkedHashMap<>(options);
+        }
+
+        private SourceOverride normalized() {
+            SourceOverride copy = new SourceOverride();
+            copy.enabled = enabled;
+            copy.options = optionsCopy();
+            return copy;
         }
     }
 
