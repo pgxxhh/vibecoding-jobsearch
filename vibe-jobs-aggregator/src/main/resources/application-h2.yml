@@ -1,0 +1,18 @@
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:h2:file:./data/jobsdb;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:sa}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
