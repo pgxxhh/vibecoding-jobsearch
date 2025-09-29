@@ -119,3 +119,123 @@ If no SMTP configuration is supplied, the application falls back to logging veri
 - Lever timestamps are provided in epoch milliseconds and are normalised to `Instant`.
 - Workday endpoints vary by tenant/site; ensure `baseUrl`, `tenant`, and `site` values match the organisation you are integrating.
 - Job descriptions are stored in the `job_details` table and exposed via `GET /jobs/{id}/detail` so the frontend can lazy-load content.
+
+## Migrating from H2 to MySQL with Flyway
+
+`spring-boot-starter-data-jpa` now ships with Flyway migrations. When the backend starts with the `mysql` profile (`SPRING_PROFILES_ACTIVE=mysql,prod`), Flyway runs automatically before Hibernate initialises and validates the schema.
+
+### 1. Back up the embedded H2 database
+- Stop the running backend container or application.
+- Copy the file-based H2 database to a safe location, e.g. `cp vibe-jobs-aggregator/data/jobsdb.mv.db /backups/jobsdb-$(date +%Y%m%d).mv.db` or `docker cp backend:/app/data/jobsdb.mv.db ./jobsdb-backup.mv.db` if you are using the Compose stack.
+
+### 2. Export data from H2 (optional seed step)
+If you plan to migrate existing data, export each table to CSV using the H2 console (`/api/h2-console`) or the CLI:
+
+```sql
+CALL CSVWRITE('/tmp/jobs.csv', 'SELECT * FROM JOBS');
+CALL CSVWRITE('/tmp/job_details.csv', 'SELECT * FROM JOB_DETAILS');
+CALL CSVWRITE('/tmp/job_tags.csv', 'SELECT * FROM JOB_TAGS');
+CALL CSVWRITE('/tmp/auth_user.csv', 'SELECT * FROM AUTH_USER');
+CALL CSVWRITE('/tmp/auth_login_challenge.csv', 'SELECT * FROM AUTH_LOGIN_CHALLENGE');
+CALL CSVWRITE('/tmp/auth_session.csv', 'SELECT * FROM AUTH_SESSION');
+```
+
+### 3. Prepare the MySQL schema
+- Create a database using the same name you intend to pass to `spring.flyway.schemas` (defaults to `jobs`):
+
+```sql
+CREATE DATABASE jobs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+- Configure the backend environment (for example in `.env` or the deployment pipeline):
+  - `SPRING_PROFILES_ACTIVE=mysql,prod`
+  - `DB_URL=jdbc:mysql://<host>:3306/jobs`
+  - `DB_USER` / `DB_PASSWORD`
+  - `SPRING_FLYWAY_SCHEMAS=jobs` (or your chosen database name)
+  - Optional: `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`
+
+### 4. Run Flyway migrations
+- Start the backend once the environment variables are in place. The Flyway dependency creates the schema using `db/migration/V1__init.sql` before the application finishes booting:
+
+```bash
+SPRING_PROFILES_ACTIVE=mysql,prod DB_URL=jdbc:mysql://localhost:3306/jobs \
+  DB_USER=app DB_PASSWORD=secret docker compose up -d backend
+```
+
+- Check `flyway_schema_history` in MySQL to confirm version `1` is applied.
+
+### 5. Import legacy data with `LOAD DATA`
+After Flyway has created the tables, you can replay the CSV export. MySQL’s `LOAD DATA` works well and keeps the script idempotent—you can run it on an empty database or re-run it after truncating tables.
+
+```sql
+SET FOREIGN_KEY_CHECKS = 0;
+LOAD DATA LOCAL INFILE '/tmp/jobs.csv'
+INTO TABLE jobs
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(id, source, external_id, title, company, location, level, @posted_at, url, @created_at, @updated_at, checksum)
+SET posted_at = CASE WHEN @posted_at = '' THEN NULL ELSE STR_TO_DATE(@posted_at, '%Y-%m-%d %H:%i:%s.%f') END,
+    created_at = STR_TO_DATE(@created_at, '%Y-%m-%d %H:%i:%s.%f'),
+    updated_at = STR_TO_DATE(@updated_at, '%Y-%m-%d %H:%i:%s.%f');
+
+LOAD DATA LOCAL INFILE '/tmp/job_details.csv'
+INTO TABLE job_details
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(id, job_id, content, @created_at, @updated_at)
+SET created_at = STR_TO_DATE(@created_at, '%Y-%m-%d %H:%i:%s.%f'),
+    updated_at = STR_TO_DATE(@updated_at, '%Y-%m-%d %H:%i:%s.%f');
+
+LOAD DATA LOCAL INFILE '/tmp/job_tags.csv'
+INTO TABLE job_tags
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(job_id, tag);
+
+LOAD DATA LOCAL INFILE '/tmp/auth_user.csv'
+INTO TABLE auth_user
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(@id, email, @created_at, @updated_at, @last_login_at)
+SET id = UNHEX(REPLACE(@id, '-', '')),
+    created_at = STR_TO_DATE(@created_at, '%Y-%m-%d %H:%i:%s.%f'),
+    updated_at = STR_TO_DATE(@updated_at, '%Y-%m-%d %H:%i:%s.%f'),
+    last_login_at = CASE WHEN @last_login_at = '' THEN NULL ELSE STR_TO_DATE(@last_login_at, '%Y-%m-%d %H:%i:%s.%f') END;
+
+LOAD DATA LOCAL INFILE '/tmp/auth_login_challenge.csv'
+INTO TABLE auth_login_challenge
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(@id, email, code_hash, @expires_at, @last_sent_at, @verified, attempts, @created_at, @updated_at)
+SET id = UNHEX(REPLACE(@id, '-', '')),
+    expires_at = STR_TO_DATE(@expires_at, '%Y-%m-%d %H:%i:%s.%f'),
+    last_sent_at = STR_TO_DATE(@last_sent_at, '%Y-%m-%d %H:%i:%s.%f'),
+    verified = IF(@verified IN ('1', 'TRUE', 'true'), b'1', b'0'),
+    created_at = STR_TO_DATE(@created_at, '%Y-%m-%d %H:%i:%s.%f'),
+    updated_at = STR_TO_DATE(@updated_at, '%Y-%m-%d %H:%i:%s.%f');
+
+LOAD DATA LOCAL INFILE '/tmp/auth_session.csv'
+INTO TABLE auth_session
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(@id, @user_id, token_hash, @expires_at, @created_at, @revoked_at)
+SET id = UNHEX(REPLACE(@id, '-', '')),
+    user_id = UNHEX(REPLACE(@user_id, '-', '')),
+    expires_at = STR_TO_DATE(@expires_at, '%Y-%m-%d %H:%i:%s.%f'),
+    created_at = STR_TO_DATE(@created_at, '%Y-%m-%d %H:%i:%s.%f'),
+    revoked_at = CASE WHEN @revoked_at = '' THEN NULL ELSE STR_TO_DATE(@revoked_at, '%Y-%m-%d %H:%i:%s.%f') END;
+SET FOREIGN_KEY_CHECKS = 1;
+```
+
+If you create a reusable seed export, place it under `src/main/resources/db/migration/V2__seed_from_export.sql` so Flyway can manage it; otherwise keep the CSV workflow documented here.
+
+### 6. Verify the migration
+- Compare record counts between H2 and MySQL for each table (`SELECT COUNT(*) FROM jobs`, etc.).
+- Hit health endpoints (`/actuator/health`, `/jobs`) to ensure the application starts normally with `spring.jpa.hibernate.ddl-auto=validate`.
+- Inspect the Flyway history table to confirm subsequent deployments will continue from version 1.
