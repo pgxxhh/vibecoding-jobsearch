@@ -11,8 +11,10 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 
 public class SmtpEmailSender implements EmailSender {
     private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
@@ -26,26 +28,29 @@ public class SmtpEmailSender implements EmailSender {
     }
 
     @Override
-    public void sendVerificationCode(EmailAddress email, String code) {
-        String from = resolveFromAddress();
-        String subject = "Elaine Jobs 登录验证码";
-        String text = buildBody(code);
+    @Async("emailTaskExecutor")
+    public CompletableFuture<Void> sendVerificationCode(EmailAddress email, String code) {
+        return CompletableFuture.runAsync(() -> {
+            String from = resolveFromAddress();
+            String subject = "Elaine Jobs 登录验证码";
+            String text = buildBody(code);
 
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
-            helper.setTo(email.value());
-            if (from != null && !from.isBlank()) {
-                helper.setFrom(from);
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+                helper.setTo(email.value());
+                if (from != null && !from.isBlank()) {
+                    helper.setFrom(from);
+                }
+                helper.setSubject(subject);
+                helper.setText(text, false);
+                mailSender.send(message);
+                log.info("Sent verification code email to {}", email.masked());
+            } catch (MailException | MessagingException ex) {
+                log.error("Failed to send verification code to {}", email.value(), ex);
+                throw new IllegalStateException("Failed to send verification email", ex);
             }
-            helper.setSubject(subject);
-            helper.setText(text, false);
-            mailSender.send(message);
-            log.info("Sent verification code email to {}", email.masked());
-        } catch (MailException | MessagingException ex) {
-            log.error("Failed to send verification code to {}", email.value(), ex);
-            throw new IllegalStateException("Failed to send verification email", ex);
-        }
+        });
     }
 
     private String resolveFromAddress() {

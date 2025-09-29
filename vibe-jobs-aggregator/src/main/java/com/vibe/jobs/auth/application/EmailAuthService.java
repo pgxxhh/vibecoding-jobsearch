@@ -10,6 +10,8 @@ import com.vibe.jobs.auth.repo.AuthSessionRepository;
 import com.vibe.jobs.auth.repo.LoginChallengeRepository;
 import com.vibe.jobs.auth.repo.UserAccountRepository;
 import com.vibe.jobs.auth.spi.EmailSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ import java.util.UUID;
 @Service
 @Transactional
 public class EmailAuthService {
+    private static final Logger log = LoggerFactory.getLogger(EmailAuthService.class);
+    
     private final LoginChallengeRepository challengeRepository;
     private final UserAccountRepository userRepository;
     private final AuthSessionRepository sessionRepository;
@@ -82,7 +86,13 @@ public class EmailAuthService {
         }
 
         challengeRepository.save(challenge);
-        emailSender.sendVerificationCode(email, code);
+        
+        // Start email sending asynchronously - don't wait for completion
+        emailSender.sendVerificationCode(email, code)
+                .exceptionally(throwable -> {
+                    log.error("Failed to send verification email to {}", email.masked(), throwable);
+                    return null;
+                });
 
         Instant resendAvailableAt = challenge.getLastSentAt().plus(properties.getResendCooldown());
         String debugCode = properties.isExposeCodeInResponse() ? code : null;
