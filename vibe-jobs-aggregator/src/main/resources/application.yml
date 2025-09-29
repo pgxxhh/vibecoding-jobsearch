@@ -24,7 +24,7 @@ spring:
       mail.smtp.socketFactory.class: javax.net.ssl.SSLSocketFactory
       mail.smtp.socketFactory.port: 465
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:h2}
+    active: ${SPRING_PROFILES_ACTIVE:mysql}
 server:
   port: ${SERVER_PORT:8080}
   servlet:

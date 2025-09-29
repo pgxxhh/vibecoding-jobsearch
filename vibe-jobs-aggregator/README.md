@@ -70,17 +70,16 @@ mvn spring-boot:run
 
 The service ships with dedicated Spring profiles so you can switch between the embedded H2 database and MySQL without editing configuration files:
 
-- `application-h2.yml` — activates when `SPRING_PROFILES_ACTIVE=h2` (the default). Stores data on the local filesystem and enables the H2 console for quick development feedback.
-- `application-mysql.yml` — activates when `SPRING_PROFILES_ACTIVE=mysql`. It expects a MySQL 8+ instance and defaults to validating the schema on startup.
+- `application-mysql.yml` — activates when `SPRING_PROFILES_ACTIVE=mysql` (default). It expects a MySQL 8+ instance and defaults to validating the schema on startup.
+- `application-h2.yml` — activates when `SPRING_PROFILES_ACTIVE=h2`. Stores data on the local filesystem and enables the H2 console for quick development feedback.
 
 Both profiles honour the same environment overrides: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, and `SPRING_JPA_DATABASE_PLATFORM`.
 
 ```bash
-# Run with MySQL
-SPRING_PROFILES_ACTIVE=mysql \
+# Default MySQL profile (override only if your credentials differ)
 SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/vibejobs?useSSL=false \
 SPRING_DATASOURCE_USERNAME=vibejobs \
-SPRING_DATASOURCE_PASSWORD=secret \
+SPRING_DATASOURCE_PASSWORD=vibejobs \
 mvn spring-boot:run
 ```
 
@@ -140,26 +139,28 @@ CALL CSVWRITE('/tmp/auth_login_challenge.csv', 'SELECT * FROM AUTH_LOGIN_CHALLEN
 CALL CSVWRITE('/tmp/auth_session.csv', 'SELECT * FROM AUTH_SESSION');
 ```
 
+Alternatively, run `scripts/h2-to-mysql.sh` to generate a MySQL-compatible schema file (`scripts/h2-schema-mysql.sql`). Pass `WIPE_H2=true` (or answer `y` to the prompt) to remove the old H2 files once the schema has been exported.
+
 ### 3. Prepare the MySQL schema
-- Create a database using the same name you intend to pass to `spring.flyway.schemas` (defaults to `jobs`):
+- Create a database using the same name you intend to pass to `spring.flyway.schemas` (defaults to `vibejobs`):
 
 ```sql
-CREATE DATABASE jobs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE vibejobs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 - Configure the backend environment (for example in `.env` or the deployment pipeline):
   - `SPRING_PROFILES_ACTIVE=mysql,prod`
-  - `DB_URL=jdbc:mysql://<host>:3306/jobs`
+  - `DB_URL=jdbc:mysql://<host>:3306/vibejobs`
   - `DB_USER` / `DB_PASSWORD`
-  - `SPRING_FLYWAY_SCHEMAS=jobs` (or your chosen database name)
+  - `SPRING_FLYWAY_SCHEMAS=vibejobs` (or your chosen database name)
   - Optional: `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`
 
 ### 4. Run Flyway migrations
 - Start the backend once the environment variables are in place. The Flyway dependency creates the schema using `db/migration/V1__init.sql` before the application finishes booting:
 
 ```bash
-SPRING_PROFILES_ACTIVE=mysql,prod DB_URL=jdbc:mysql://localhost:3306/jobs \
-  DB_USER=app DB_PASSWORD=secret docker compose up -d backend
+SPRING_PROFILES_ACTIVE=mysql,prod DB_URL=jdbc:mysql://localhost:3306/vibejobs \
+  DB_USER=vibejobs DB_PASSWORD=vibejobs docker compose up -d backend
 ```
 
 - Check `flyway_schema_history` in MySQL to confirm version `1` is applied.

@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/vibejobs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:vibejobs}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:changeme}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:vibejobs}}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
   jpa:
     hibernate:
@@ -21,5 +21,5 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     baseline-description: "Baseline existing schema"
-    schemas: ${SPRING_FLYWAY_SCHEMAS:${DB_SCHEMA:jobs}}
+    schemas: ${SPRING_FLYWAY_SCHEMAS:${DB_SCHEMA:vibejobs}}
     clean-disabled: true

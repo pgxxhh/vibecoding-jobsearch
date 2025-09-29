@@ -1,0 +1,3 @@
+-- H2 2.2.224; 
+;              
+CREATE USER IF NOT EXISTS "SA" SALT 'd3b734aa8939fcaf' HASH 'c6b1e449e06d1a79d7f6819a3b2dd61f2937b7b03dae552c26ec605625cb08e0' ADMIN;          
