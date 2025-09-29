@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -83,51 +85,118 @@ public class SourceRegistry {
     private Map<String, String> mergeOptions(String type,
                                              IngestionProperties.Source source,
                                              String companyName) {
-        Map<String, String> result = new HashMap<>(source.getOptions());
-        result.replaceAll((k, v) -> applyPlaceholders(v, companyName));
+        PlaceholderContext context = buildPlaceholderContext(companyName);
+        IngestionProperties.SourceOverride override = properties.getSourceOverride(companyName, type);
 
-        Map<String, String> derived = deriveDefaults(type, companyName);
-        derived.forEach(result::putIfAbsent);
-
-        if (companyName != null && !companyName.isBlank()) {
-            result.putIfAbsent("company", companyName);
+        if (override != null && !override.isEnabled()) {
+            return Map.of();
+        }
+        if (source.isRequireOverride() && override == null) {
+            return Map.of();
         }
 
-        result.replaceAll((k, v) -> applyPlaceholders(v, companyName));
+        Map<String, String> overrideOptions = override == null ? Map.of() : override.optionsCopy();
+
+        Map<String, String> result = new HashMap<>(source.getOptions());
+        result.replaceAll((k, v) -> applyPlaceholders(v, context));
+
+        Map<String, String> derived = deriveDefaults(type, context);
+        derived.forEach(result::putIfAbsent);
+
+        overrideOptions.forEach(result::put);
+
+        if (!context.company().isBlank()) {
+            result.putIfAbsent("company", context.company());
+        }
+
+        result.replaceAll((k, v) -> applyPlaceholders(v, context));
+
+        result.values().removeIf(value -> value == null || value.isBlank());
 
         return result;
     }
 
-    private Map<String, String> deriveDefaults(String type, String companyName) {
-        if (companyName == null || companyName.isBlank()) {
+    private Map<String, String> deriveDefaults(String type, PlaceholderContext context) {
+        if (context.company().isBlank()) {
             return Map.of();
         }
-        String normalized = slugify(companyName);
+        String normalized = context.slug();
+        if (normalized.isBlank()) {
+            return Map.of();
+        }
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "greenhouse" -> Map.of("slug", normalized);
             case "lever" -> Map.of("company", normalized);
             case "workday" -> Map.of(
                     "baseUrl", "https://" + normalized + ".wd1.myworkdayjobs.com",
                     "tenant", normalized,
-                    "site", normalized.toUpperCase(Locale.ROOT)
+                    "site", context.slugUpper()
             );
             default -> Map.of();
         };
     }
 
-    private String applyPlaceholders(String value, String companyName) {
+    private String applyPlaceholders(String value, PlaceholderContext context) {
         if (value == null) {
             return null;
         }
-        String trimmed = companyName == null ? "" : companyName.trim();
-        String slug = slugify(trimmed);
-        return value
-                .replace("{{company}}", trimmed)
-                .replace("{{companyLower}}", trimmed.toLowerCase(Locale.ROOT))
-                .replace("{{companyUpper}}", trimmed.toUpperCase(Locale.ROOT))
-                .replace("{{slug}}", slug)
-                .replace("{{slugUpper}}", slug.toUpperCase(Locale.ROOT));
+        String result = value
+                .replace("{{company}}", context.company())
+                .replace("{{companyLower}}", context.companyLower())
+                .replace("{{companyUpper}}", context.companyUpper())
+                .replace("{{slug}}", context.slug())
+                .replace("{{slugUpper}}", context.slugUpper());
+        for (Map.Entry<String, String> entry : context.custom().entrySet()) {
+            result = result.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        }
+        return result;
     }
+
+    private PlaceholderContext buildPlaceholderContext(String companyName) {
+        String trimmed = Objects.requireNonNullElse(companyName, "").trim();
+        Map<String, String> overrides = new LinkedHashMap<>(properties.getPlaceholderOverrides(trimmed));
+
+        String company = overrides.containsKey("company")
+                ? overrides.remove("company")
+                : trimmed;
+        company = company == null ? "" : company.trim();
+
+        String slug = overrides.containsKey("slug")
+                ? overrides.remove("slug")
+                : slugify(company.isBlank() ? trimmed : company);
+        slug = slug == null ? "" : slug.trim();
+
+        String slugUpper = overrides.containsKey("slugUpper")
+                ? overrides.remove("slugUpper")
+                : slug.toUpperCase(Locale.ROOT);
+        slugUpper = slugUpper == null ? "" : slugUpper.trim();
+
+        String companyLower = overrides.containsKey("companyLower")
+                ? overrides.remove("companyLower")
+                : company.toLowerCase(Locale.ROOT);
+        companyLower = companyLower == null ? "" : companyLower.trim();
+
+        String companyUpper = overrides.containsKey("companyUpper")
+                ? overrides.remove("companyUpper")
+                : company.toUpperCase(Locale.ROOT);
+        companyUpper = companyUpper == null ? "" : companyUpper.trim();
+
+        return new PlaceholderContext(
+                company,
+                companyLower,
+                companyUpper,
+                slug,
+                slugUpper,
+                overrides
+        );
+    }
+
+    private record PlaceholderContext(String company,
+                                      String companyLower,
+                                      String companyUpper,
+                                      String slug,
+                                      String slugUpper,
+                                      Map<String, String> custom) { }
 
     private String slugify(String value) {
         return value.toLowerCase(Locale.ROOT)

@@ -25,12 +25,132 @@ ingestion:
   concurrency: 4
   mode: companies
   companies:
-    - Stripe
-    - Coupang
-    - The Trade Desk
-    - Ramp
-    - Deloitte
-    - Datadog
+    - "akunacapital"
+    - "adyen"
+    - "affirm"
+    - "afterpay"
+    - "airwallex"
+    - "airtable"
+    - "algolia"
+    - "alphasense"
+    - "alphasights"
+    - "ambergroup"
+    - "anchorage"
+    - "appsflyer"
+    - "asana"
+    - "atlassian"
+    - "binance"
+    - "bitgo"
+    - "bitmex"
+    - "bitpanda"
+    - "block"
+    - "blockdaemon"
+    - "blockchain"
+    - "blockfi"
+    - "blockstream"
+    - "bolt"
+    - "brex"
+    - "bybit"
+    - "canva"
+    - "carta"
+    - "chainalysis"
+    - "chainstack"
+    - "checkoutcom"
+    - "chime"
+    - "chippercash"
+    - "circle"
+    - "codapayments"
+    - "coinbase"
+    - "coinlist"
+    - "crypto"
+    - "currencycloud"
+    - "databricks"
+    - "datadog"
+    - "dataminr"
+    - "deliveroo"
+    - "dlocal"
+    - "doordash"
+    - "drw"
+    - "elliptic"
+    - "figma"
+    - "fireblocks"
+    - "flowtraders"
+    - "flexport"
+    - "five-rings"
+    - "gojek"
+    - "grab"
+    - "gocardless"
+    - "gusto"
+    - "hashicorp"
+    - "hudsonrivertrading"
+    - "imcfinancialmarkets"
+    - "intercom"
+    - "janestreet"
+    - "jumptrading"
+    - "klarna"
+    - "klook"
+    - "kraken"
+    - "lalamove"
+    - "ledger"
+    - "lendingclub"
+    - "liveramp"
+    - "luno"
+    - "mambu"
+    - "marqeta"
+    - "mastercard"
+    - "mongodb"
+    - "monzo"
+    - "n26"
+    - "nium"
+    - "notion"
+    - "nubank"
+    - "okx"
+    - "onfido"
+    - "opensea"
+    - "optiver"
+    - "palantir"
+    - "patsnap"
+    - "paxos"
+    - "paypal"
+    - "pipedrive"
+    - "plaid"
+    - "point72"
+    - "rapyd"
+    - "reddit"
+    - "remitly"
+    - "revolut"
+    - "ripple"
+    - "rippling"
+    - "robinhood"
+    - "rokt"
+    - "shopback"
+    - "shopify"
+    - "shopee"
+    - "snowflake"
+    - "sofi"
+    - "squareup"
+    - "stripe"
+    - "sumup"
+    - "taboola"
+    - "tala"
+    - "thoughtmachine"
+    - "thunes"
+    - "transfergo"
+    - "trmlabs"
+    - "truelayer"
+    - "twosigma"
+    - "uber"
+    - "upwork"
+    - "visa"
+    - "virtu"
+    - "wework"
+    - "wise"
+    - "worldquant"
+    - "xendit"
+    - "xero"
+    - "yelp"
+    - "zendesk"
+    - "zillow"
   recentDays: 7
   sources:
     - id: greenhouse
@@ -49,7 +169,97 @@ ingestion:
       type: workday
       enabled: true
       runOnStartup: true
+      requireOverride: true
       options:
         baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
         tenant: "{{slug}}"
         site: "{{slugUpper}}"
+  companyOverrides:
+    adyen:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://adyen.wd3.myworkdayjobs.com"
+            tenant: "adyen"
+            site: "AdyenCareers"
+    grab:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://grab.wd3.myworkdayjobs.com"
+            tenant: "grab"
+            site: "GrabCareers"
+    mastercard:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://mastercard.wd1.myworkdayjobs.com"
+            tenant: "mastercard"
+            site: "CorporateCareers"
+    paypal:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://paypal.wd1.myworkdayjobs.com"
+            tenant: "paypal"
+            site: "External"
+    revolut:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://revolut.wd3.myworkdayjobs.com"
+            tenant: "revolut"
+            site: "RevolutCareers"
+    stripe:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://stripe.wd1.myworkdayjobs.com"
+            tenant: "stripe"
+            site: "Stripe_Careers"
+    visa:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://visa.wd1.myworkdayjobs.com"
+            tenant: "visa"
+            site: "External"
+    wise:
+      sources:
+        greenhouse:
+          enabled: false
+        lever:
+          enabled: false
+        workday:
+          options:
+            baseUrl: "https://wise.wd3.myworkdayjobs.com"
+            tenant: "wise"
+            site: "Wise"
