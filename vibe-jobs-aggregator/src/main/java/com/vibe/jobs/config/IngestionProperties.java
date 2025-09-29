@@ -105,6 +105,7 @@ public class IngestionProperties {
         private boolean enabled = true;
         private boolean runOnStartup = true;
         private Map<String, String> options = new HashMap<>();
+        private List<CategoryQuota> categories = new ArrayList<>();
 
         public String getId() {
             return id;
@@ -146,6 +147,14 @@ public class IngestionProperties {
             this.options = options == null ? new HashMap<>() : options;
         }
 
+        public List<CategoryQuota> getCategories() {
+            return categories;
+        }
+
+        public void setCategories(List<CategoryQuota> categories) {
+            this.categories = categories == null ? new ArrayList<>() : new ArrayList<>(categories);
+        }
+
         public String key() {
             if (id != null && !id.isBlank()) {
                 return id;
@@ -162,6 +171,52 @@ public class IngestionProperties {
                 return "unknown";
             }
             return type.toLowerCase();
+        }
+
+        public static class CategoryQuota {
+            private String name;
+            private int limit;
+            private List<String> tags = new ArrayList<>();
+            private Map<String, List<String>> facets = new HashMap<>();
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public int getLimit() {
+                return Math.max(limit, 0);
+            }
+
+            public void setLimit(int limit) {
+                this.limit = Math.max(limit, 0);
+            }
+
+            public List<String> getTags() {
+                return tags;
+            }
+
+            public void setTags(List<String> tags) {
+                this.tags = tags == null ? new ArrayList<>() : new ArrayList<>(tags);
+            }
+
+            public Map<String, List<String>> getFacets() {
+                return facets;
+            }
+
+            public void setFacets(Map<String, List<String>> facets) {
+                this.facets = new HashMap<>();
+                if (facets == null) {
+                    return;
+                }
+                facets.forEach((key, values) -> {
+                    List<String> normalized = values == null ? new ArrayList<>() : new ArrayList<>(values);
+                    this.facets.put(key, normalized);
+                });
+            }
         }
     }
 
