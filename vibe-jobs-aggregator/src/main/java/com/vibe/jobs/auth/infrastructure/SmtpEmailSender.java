@@ -3,74 +3,62 @@ package com.vibe.jobs.auth.infrastructure;
 import com.vibe.jobs.auth.config.EmailAuthProperties;
 import com.vibe.jobs.auth.domain.EmailAddress;
 import com.vibe.jobs.auth.spi.EmailSender;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.util.StringUtils;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
 
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 
 public class SmtpEmailSender implements EmailSender {
     private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
 
     private final JavaMailSender mailSender;
-    private final EmailAuthProperties emailAuthProperties;
-    private final MailProperties mailProperties;
+    private final EmailAuthProperties properties;
 
-    public SmtpEmailSender(JavaMailSender mailSender,
-                           EmailAuthProperties emailAuthProperties,
-                           MailProperties mailProperties) {
+    public SmtpEmailSender(JavaMailSender mailSender, EmailAuthProperties properties) {
         this.mailSender = mailSender;
-        this.emailAuthProperties = emailAuthProperties;
-        this.mailProperties = mailProperties;
+        this.properties = properties;
     }
 
     @Override
     public void sendVerificationCode(EmailAddress email, String code) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(resolveFromAddress());
-        message.setTo(email.value());
-        message.setSubject("Your VibeCoding verification code");
-        message.setText(buildBody(code));
+        String from = resolveFromAddress();
+        String subject = "Elaine Jobs 登录验证码";
+        String text = buildBody(code);
 
         try {
-            mailSender.send(message);
-            if (log.isDebugEnabled()) {
-                log.debug("Sent verification code email to {}", email.value());
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+            helper.setTo(email.value());
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
             }
-        } catch (MailException ex) {
-            log.error("Failed to send verification code email to {}", email.value(), ex);
-            throw ex;
+            helper.setSubject(subject);
+            helper.setText(text, false);
+            mailSender.send(message);
+            log.info("Sent verification code email to {}", email.masked());
+        } catch (MailException | MessagingException ex) {
+            log.error("Failed to send verification code to {}", email.value(), ex);
+            throw new IllegalStateException("Failed to send verification email", ex);
         }
     }
 
     private String resolveFromAddress() {
-        if (StringUtils.hasText(emailAuthProperties.getSenderAddress())) {
-            return emailAuthProperties.getSenderAddress();
+        if (properties.getFromAddress() != null && !properties.getFromAddress().isBlank()) {
+            return properties.getFromAddress();
         }
-        if (StringUtils.hasText(mailProperties.getUsername())) {
-            return mailProperties.getUsername();
+        if (mailSender instanceof JavaMailSenderImpl impl) {
+            return impl.getUsername();
         }
-        throw new IllegalStateException("Sender email address is not configured. Set auth.email.senderAddress or spring.mail.username.");
+        return null;
     }
 
     private String buildBody(String code) {
-        Duration ttl = emailAuthProperties.getChallengeTtl();
-        long minutes = ttl.toMinutes();
-        if (minutes <= 0) {
-            minutes = Math.max(1, ttl.getSeconds() / 60);
-        }
-
-        String ttlMessage = minutes > 0
-                ? "This code will expire in " + minutes + " minute" + (minutes == 1 ? "" : "s") + "."
-                : "This code will expire soon.";
-
-        return "Hello,\n\n" +
-                "Your verification code is: " + code + "\n" +
-                ttlMessage + "\n\n" +
-                "If you did not request this code, you can safely ignore this email.";
+        return "您好！\n\n您的登录验证码是：" + code + "。验证码有效期 10 分钟，请勿泄露给他人。\n\nElaine Jobs 团队";
     }
 }

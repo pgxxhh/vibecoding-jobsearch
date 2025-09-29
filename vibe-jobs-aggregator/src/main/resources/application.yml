@@ -14,6 +14,16 @@ spring:
   h2:
     console:
       enabled: true
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 975022570@qq.com
+    password: whryriubzonmbcic
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.socketFactory.class: javax.net.ssl.SSLSocketFactory
+      mail.smtp.socketFactory.port: 465
 server:
   port: ${SERVER_PORT:8080}
   servlet:
@@ -256,4 +266,4 @@ auth:
     resendCooldown: PT60S
     sessionTtl: P30D
     exposeCodeInResponse: true
-    senderAddress: ${AUTH_EMAIL_SENDER_ADDRESS:}
+    fromAddress: 975022570@qq.com
