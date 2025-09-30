@@ -124,7 +124,7 @@ public class GenericAtsSourceClient implements SourceClient {
     
     private String detectSearchPath(String atsType) {
         return switch (atsType) {
-            case "moka" -> "/api/jobs/search";
+            case "moka" -> "/m/api/position/list"; // 更新的Moka API路径
             case "beisen" -> "/sf/job-search";
             case "successfactors" -> "/career-search/job_search_api";
             case "taleo" -> "/careersection/2/jobsearch.ftl";
