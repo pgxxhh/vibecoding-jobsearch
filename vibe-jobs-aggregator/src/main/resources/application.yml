@@ -86,6 +86,9 @@ ingestion:
     - "pdd"
     - "baidu"
     - "jd"
+    - "glints"
+    - "zenyum"
+    - "stashaway"
   recentDays: 45
   locationFilter:
     enabled: ${LOCATION_FILTER_ENABLED:true}
@@ -216,6 +219,24 @@ ingestion:
       enabled: true
       runOnStartup: true
       requireOverride: true
+    - id: smartrecruiters
+      type: smartrecruiters
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: limited
+    - id: recruitee
+      type: recruitee
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: limited
+    - id: workable
+      type: workable
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: unlimited
   companyOverrides:
     notion:
       sources:
@@ -250,6 +271,13 @@ ingestion:
             baseUrl: "https://adyen.wd3.myworkdayjobs.com"
             tenant: "adyen"
             site: "AdyenCareers"
+    checkoutcom:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Checkout.com"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Checkout.com"
     grab:
       sources:
         workday:
@@ -258,6 +286,13 @@ ingestion:
             baseUrl: "https://grab.wd3.myworkdayjobs.com"
             tenant: "grab"
             site: "GrabCareers"
+    lalamove:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "lalamove"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/lalamove"
     paypal:
       sources:
         workday:
@@ -274,6 +309,77 @@ ingestion:
             baseUrl: "https://revolut.wd3.myworkdayjobs.com"
             tenant: "revolut"
             site: "RevolutCareers"
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Revolut"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Revolut"
+    shopback:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "ShopBack"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/ShopBack"
+    xendit:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "xendit"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/xendit"
+    thunes:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "thunes"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/thunes"
+    glints:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "glints"
+            baseUrl: "https://glints.recruitee.com/api"
+    zenyum:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "zenyum"
+            baseUrl: "https://zenyum.recruitee.com/api"
+    stashaway:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "stashaway"
+            baseUrl: "https://stashaway.recruitee.com/api"
     stripe:
       sources:
         workday:

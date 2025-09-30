@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -62,12 +63,26 @@ public class JobIngestionScheduler {
         }
 
         int pageSize = Math.max(1, ingestionProperties.getPageSize());
-        CompletableFuture<?>[] tasks = sources.stream()
+        List<SourceRegistry.ConfiguredSource> limited = new ArrayList<>();
+        List<SourceRegistry.ConfiguredSource> unlimited = new ArrayList<>();
+        for (SourceRegistry.ConfiguredSource source : sources) {
+            if (source.definition().isLimitedFlow()) {
+                limited.add(source);
+            } else {
+                unlimited.add(source);
+            }
+        }
+
+        CompletableFuture<?>[] tasks = unlimited.stream()
                 .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executor))
                 .toArray(CompletableFuture[]::new);
 
         if (tasks.length > 0) {
             CompletableFuture.allOf(tasks).join();
+        }
+
+        for (SourceRegistry.ConfiguredSource source : limited) {
+            processSource(source, pageSize);
         }
     }
 

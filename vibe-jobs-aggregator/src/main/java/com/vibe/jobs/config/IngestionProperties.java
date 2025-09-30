@@ -180,6 +180,7 @@ public class IngestionProperties {
         private boolean requireOverride = false;
         private Map<String, String> options = new HashMap<>();
         private List<CategoryQuota> categories = new ArrayList<>();
+        private Flow flow = Flow.UNLIMITED;
 
         public String getId() {
             return id;
@@ -237,6 +238,18 @@ public class IngestionProperties {
             this.categories = categories == null ? new ArrayList<>() : new ArrayList<>(categories);
         }
 
+        public Flow getFlow() {
+            return flow;
+        }
+
+        public void setFlow(Flow flow) {
+            this.flow = flow == null ? Flow.UNLIMITED : flow;
+        }
+
+        public boolean isLimitedFlow() {
+            return flow == Flow.LIMITED;
+        }
+
         public String key() {
             if (id != null && !id.isBlank()) {
                 return id;
@@ -253,6 +266,11 @@ public class IngestionProperties {
                 return "unknown";
             }
             return type.toLowerCase();
+        }
+
+        public enum Flow {
+            LIMITED,
+            UNLIMITED
         }
 
         public static class CategoryQuota {

@@ -37,10 +37,17 @@
 | 🥇 P1 | **Workday** | ✅ 已启用 | 900+ | Facet筛选、APAC覆盖广 |
 | 🥈 P2 | **Greenhouse** | ✅ 已启用 | 800+ | 稳定JSON API |
 | 🥉 P3 | **Ashby** | ✅ 已启用 | 400+ | 现代科技公司，支持标签 |
-| 🏆 P4 | **Amazon Jobs API** | ✅ 已启用 | 300+ | 官方APAC职位接口 |
-| 🆕 P5 | **本土ATS** | ⚠️ 可选启用 | 1500+ | Moka、北森、SuccessFactors 等 |
+| 🆕 P4 | **SmartRecruiters** | ✅ 已启用 | 350+ | 覆盖Revolut / Checkout.com / ShopBack 等外企 |
+| 🆕 P5 | **Workable** | ✅ 已启用 | 220+ | Lalamove / Xendit / Thunes 等东南亚金融科技 |
+| 🆕 P6 | **Recruitee** | ✅ 已启用 | 160+ | Glints / Zenyum / StashAway 聚焦亚洲岗位 |
+| 🏆 P7 | **Amazon Jobs API** | ✅ 已启用 | 300+ | 官方APAC职位接口 |
+| 🆕 P8 | **本土ATS** | ⚠️ 可选启用 | 1500+ | Moka、北森、SuccessFactors 等 |
 
-**总计预期**: **2000+ 岗位 (财务 & 工程双线)**
+**总计预期**: **2300+ 岗位 (财务 & 工程双线)**
+
+> 🧵 **并发策略**：
+> - Workday / Greenhouse / Ashby / Workable 等无限流数据源使用 6 线程并发抓取。
+> - SmartRecruiters、Recruitee 等有限流数据源统一串行拉取，规避 API 限流与 403。
 
 ## 🇨🇳 中国本土化配置
 
