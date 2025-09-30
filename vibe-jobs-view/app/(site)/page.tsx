@@ -329,6 +329,9 @@ export default function Page() {
     const loadMoreElement = loadMoreRef.current;
     if (!loadMoreElement) return;
 
+    const listElement = listRef.current;
+    const isScrollable = !!listElement && listElement.scrollHeight > listElement.clientHeight + 1;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
@@ -337,18 +340,18 @@ export default function Page() {
         }
       },
       {
-        root: listRef.current,
+        root: isScrollable ? listElement : null,
         rootMargin: '20px', // 提前20px触发
-        threshold: 0.1
+        threshold: 0.1,
       }
     );
 
     observer.observe(loadMoreElement);
 
     return () => {
-      observer.unobserve(loadMoreElement);
+      observer.disconnect();
     };
-  }, [hasMore, loading, nextCursor]);
+  }, [hasMore, loading, nextCursor, jobs.length]);
 
   // 过滤计数
   const activeFilterCount = useMemo(
