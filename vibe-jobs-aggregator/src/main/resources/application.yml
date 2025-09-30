@@ -203,16 +203,16 @@ ingestion:
   sources:
     - id: greenhouse
       type: greenhouse
-      enabled: true
-      runOnStartup: true
+      enabled: false
+      runOnStartup: false
     - id: lever
       type: lever
       enabled: false
       runOnStartup: false
     - id: workday
       type: workday
-      enabled: true
-      runOnStartup: true
+      enabled: false
+      runOnStartup: false
       requireOverride: true
     - id: ashby
       type: ashby
