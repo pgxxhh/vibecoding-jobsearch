@@ -374,6 +374,7 @@ export default function Page() {
     };
   }, [hasMore, loading, nextCursor, jobs.length, isMobile]);
 
+
   // 过滤计数
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter((value) => value !== '' && value !== undefined).length,
