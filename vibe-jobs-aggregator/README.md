@@ -4,11 +4,11 @@ Spring Boot service that ingests external job boards on a schedule and upserts t
 
 ## 🌟 Supported Data Sources
 
-- **Workday** — `/wday/cxs/{tenant}/{site}/jobs` (POST, supports facets, Chinese language)
+- **Workday** — `/wday/cxs/{tenant}/{site}/jobs` (POST, supports facets & Chinese content)
 - **Greenhouse** — `https://boards.greenhouse.io/{org}.json`
-- **Lever** — `https://api.lever.co/v0/postings/{org}?mode=json`  
 - **Ashby ATS** — Modern tech companies (Notion, Figma, Linear, etc.)
-- **Generic ATS** — Moka智聘, 北森Beisen, SAP SuccessFactors, Oracle Taleo, iCIMS, SmartRecruiters
+- **Amazon Jobs API** — Official APAC feed from `https://www.amazon.jobs/en/search.json`
+- **Generic ATS (Moka/Beisen)** — Unified client covering Moka智聘、北森Beisen 等中国本土 ATS（现已为小红书、知乎、快手、美团、PingCAP 启用）
 
 Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
 
@@ -22,18 +22,19 @@ Edit `src/main/resources/application.yml` under the `ingestion` section:
 ```yaml
 ingestion:
   fixedDelayMs: 180000    # 3 minutes interval
-  initialDelayMs: 10000   # 10 seconds startup delay  
-  pageSize: 50            # Jobs per page
-  concurrency: 4          # Parallel threads
-  mode: companies         # or recent
+  initialDelayMs: 10000   # 10 seconds startup delay
+  pageSize: 100           # Jobs per page
+  concurrency: 6          # Parallel threads
+  mode: companies         # Filter against the curated list below
   companies:
-    - "jpmorgan"          # JPMorgan Chase
-    - "mastercard"        # Mastercard
-    - "notion"            # Notion (Ashby)
-    - "grab"              # Grab (Workday)
-  recentDays: 7
-  
-  # 🇨🇳 China-Optimized Filtering
+    - "binance"
+    - "okx"
+    - "grab"
+    - "stripe"
+    - "notion"
+  recentDays: 14
+
+  # 🇨🇳 China-Optimized Filtering (Location + Role)
   locationFilter:
     enabled: true
     includeCities:
@@ -41,10 +42,23 @@ ingestion:
       - "shanghai" / "上海"
       - "shenzhen" / "深圳"
       - "guangzhou" / "广州"
+      - "hong kong" / "香港"
+      - "singapore"
+    includeKeywords:
+      - "china" / "中国"
+      - "apac"
+      - "greater china" / "大中华"
+  roleFilter:
+    enabled: true
     includeKeywords:
       - "financial" / "财务"
       - "analyst" / "分析师"
       - "investment" / "投资"
+      - "engineer" / "工程师"
+      - "software" / "软件"
+    excludeKeywords:
+      - "intern" / "实习"
+      - "campus" / "校园"
 ```
 
 ### Running Locally
@@ -63,27 +77,25 @@ docker compose up -d
 
 ## 🎯 China Market Optimization
 
-This system is optimized for **Chinese financial & engineering positions**:
+This system is optimised for **financial analyst & engineering roles across Mainland China and Greater China**:
 
-✅ **Bilingual Keywords**: 
-- **Financial**: `financial|finance|财务|财务分析|投融资|investment|analyst`  
-- **Engineering**: `engineer|工程师|software|developer|程序员|backend|frontend|fullstack` 🆕
+✅ **Dual filters** — Location + role keyword filters keep only China/APAC finance & engineering roles.
+✅ **Curated connectors** — Workday, Greenhouse, Ashby and Amazon feeds preconfigured for 30+ fintech & tech companies with Mainland teams.
+✅ **Mainland ATS coverage** — Generic Moka / Beisen 客户端连接小红书、知乎、快手、美团、PingCAP 等中国公司的人才系统。
+✅ **Bilingual keywords** — Chinese + English synonyms for major job families (财务分析师 / Financial Analyst, 软件工程师 / Software Engineer, etc.).
+✅ **Major cities** — Beijing, Shanghai, Shenzhen, Guangzhou, Hangzhou, Hong Kong, Singapore and more.
 
-✅ **Major Cities**: Beijing, Shanghai, Shenzhen, Guangzhou, Hangzhou, etc.  
-✅ **Local ATS Support**: Moka, Beisen, and other Chinese recruitment platforms  
-✅ **Priority Filtering**: China|中国|Shanghai|上海|北京|深圳|广州  
-
-**Expected Output**: 4300+ positions (500+ Financial Analyst + 3800+ Engineers)
+**Expected Output**: 2000+ China-focused engineer & financial openings (sampled from 35+ organisations).
 
 ## 📊 Data Source Priority
 
 | Priority | Source | Status | Est. Jobs | Features |
 |----------|--------|--------|-----------|----------|
-| 🥇 P1 | **Workday** | ✅ Fixed | 1000+ | Chinese support, facets |
-| 🥈 P2 | **Greenhouse** | ⚠️ Optional | 800+ | Stable JSON API |
-| 🥉 P3 | **Lever** | ⚠️ Optional | 600+ | Simple interface |
-| 🏆 P4 | **Ashby** | ✅ Active | 400+ | Modern tech companies |
-| 🆕 P5 | **Generic ATS** | ✅ Ready | 1500+ | Moka, Beisen, etc. |
+| 🥇 P1 | **Workday** | ✅ Active | 900+ | Faceted search, strong APAC coverage |
+| 🥈 P2 | **Greenhouse** | ✅ Active | 800+ | Stable JSON API |
+| 🥉 P3 | **Ashby** | ✅ Active | 400+ | Modern tech companies |
+| 🏆 P4 | **Amazon Jobs API** | ✅ Active | 300+ | Official APAC feed, finance & engineering search |
+| 🆕 P5 | **Generic ATS** | ✅ Active | 1500+ | Moka, Beisen (Mainland-focused connectors) |
 
 - Set `enabled: false` to skip a connector entirely.
 - `runOnStartup: false` keeps the source scheduled but excludes it from the startup runner.
@@ -127,20 +139,18 @@ To deliver login verification codes, configure an SMTP server using Spring Boot'
 ```yaml
 spring:
   mail:
-    host: smtp.example.com
-    port: 587
-    username: your-smtp-username
-    password: ${SMTP_PASSWORD}
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:true}
 
 auth:
   email:
-    senderAddress: no-reply@example.com
+    fromAddress: ${AUTH_EMAIL_FROM:no-reply@example.com}
+    sender: ${AUTH_EMAIL_SENDER:smtp}
 ```
 
 If no SMTP configuration is supplied, the application falls back to logging verification codes to the console.

@@ -38,6 +38,8 @@ public class GenericAtsSourceClient implements SourceClient {
     private final String atsType;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final Map<String, String> payloadParams;
+    private final Map<String, String> extraHeaders;
     
     /**
      * @param company 公司名称
@@ -46,15 +48,21 @@ public class GenericAtsSourceClient implements SourceClient {
      * @param queryParams 查询参数映射
      * @param atsType ATS类型标识 (moka, beisen, successfactors, taleo, icims, smartrecruiters)
      */
-    public GenericAtsSourceClient(String company, String baseUrl, String searchPath, 
-                                  Map<String, String> queryParams, String atsType) {
+    public GenericAtsSourceClient(String company, String baseUrl, String searchPath,
+                                  Map<String, String> queryParams,
+                                  Map<String, String> payloadParams,
+                                  Map<String, String> headers,
+                                  String atsType) {
         this.company = company;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.searchPath = searchPath != null ? searchPath : detectSearchPath(atsType);
         this.queryParams = queryParams != null ? queryParams : Map.of();
+        this.payloadParams = payloadParams != null ? payloadParams : Map.of();
+        this.extraHeaders = headers != null ? headers : Map.of();
         this.atsType = atsType != null ? atsType.toLowerCase() : "generic";
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         this.objectMapper = new ObjectMapper();
     }
@@ -75,6 +83,8 @@ public class GenericAtsSourceClient implements SourceClient {
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .header("Accept", "application/json, text/plain, */*")
                 .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+
+        extraHeaders.forEach(requestBuilder::header);
         
         // 根据ATS类型设置特定请求头
         switch (atsType) {
@@ -131,23 +141,21 @@ public class GenericAtsSourceClient implements SourceClient {
     private String buildApiUrl(int page, int size) {
         StringBuilder url = new StringBuilder(baseUrl + searchPath);
         
+        Map<String, String> combinedParams = new java.util.LinkedHashMap<>();
         if (!requiresPost()) {
-            // GET请求的查询参数
+            combinedParams.putAll(getDefaultParams(page, size));
+        }
+        combinedParams.putAll(queryParams);
+
+        if (!combinedParams.isEmpty()) {
             boolean firstParam = !searchPath.contains("?");
-            
-            for (Map.Entry<String, String> param : getDefaultParams(page, size).entrySet()) {
-                url.append(firstParam ? "?" : "&");
-                url.append(param.getKey()).append("=").append(encode(param.getValue()));
-                firstParam = false;
-            }
-            
-            for (Map.Entry<String, String> param : queryParams.entrySet()) {
+            for (Map.Entry<String, String> param : combinedParams.entrySet()) {
                 url.append(firstParam ? "?" : "&");
                 url.append(param.getKey()).append("=").append(encode(param.getValue()));
                 firstParam = false;
             }
         }
-        
+
         return url.toString();
     }
     
@@ -180,6 +188,7 @@ public class GenericAtsSourceClient implements SourceClient {
                     "location", "上海,北京,深圳,广州",
                     "page", page,
                     "size", size,
+                    "limit", size,
                     "department", "",
                     "jobType", ""
             );
@@ -212,7 +221,15 @@ public class GenericAtsSourceClient implements SourceClient {
         };
         
         try {
-            return objectMapper.writeValueAsString(payload);
+            java.util.Map<String, Object> merged = new java.util.LinkedHashMap<>(payload);
+            payloadParams.forEach(merged::put);
+            merged.putIfAbsent("page", page);
+            merged.putIfAbsent("pageIndex", page);
+            merged.putIfAbsent("offset", page * size);
+            merged.putIfAbsent("limit", size);
+            merged.putIfAbsent("size", size);
+            merged.putIfAbsent("pageSize", size);
+            return objectMapper.writeValueAsString(merged);
         } catch (Exception e) {
             throw new RuntimeException("Failed to build POST payload", e);
         }
