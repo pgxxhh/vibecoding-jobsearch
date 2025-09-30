@@ -14,13 +14,15 @@ spring:
     console:
       enabled: true
   mail:
-    host: ${SPRING_MAIL_HOST:}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+    host: smtp.qq.com
+    port: 465
+    username: 975022570@qq.com
+    password: whryriubzonmbcic
     properties:
-      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:true}
-      mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:true}
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.socketFactory.class: javax.net.ssl.SSLSocketFactory
+      mail.smtp.socketFactory.port: 465
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql}
 server:
@@ -317,5 +319,5 @@ auth:
     resendCooldown: PT60S
     sessionTtl: P30D
     exposeCodeInResponse: true
-    fromAddress: ${AUTH_EMAIL_FROM:no-reply@example.com}
+    fromAddress: 975022570@qq.com
     sender: ${AUTH_EMAIL_SENDER:smtp}
