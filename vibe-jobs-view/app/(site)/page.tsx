@@ -300,6 +300,27 @@ export default function Page() {
   const hasPromptedSubscription = useRef(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileDetailOpen(false);
+    }
+  }, [isMobile]);
 
   const jobDetailLabels = useMemo(
     () => ({
@@ -329,6 +350,9 @@ export default function Page() {
     const loadMoreElement = loadMoreRef.current;
     if (!loadMoreElement) return;
 
+    const listElement = listRef.current;
+    const isScrollable = !!listElement && listElement.scrollHeight > listElement.clientHeight + 1;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
@@ -337,18 +361,18 @@ export default function Page() {
         }
       },
       {
-        root: listRef.current,
+        root: isScrollable ? listElement : null,
         rootMargin: '20px', // 提前20px触发
-        threshold: 0.1
+        threshold: 0.1,
       }
     );
 
     observer.observe(loadMoreElement);
 
     return () => {
-      observer.unobserve(loadMoreElement);
+      observer.disconnect();
     };
-  }, [hasMore, loading, nextCursor]);
+  }, [hasMore, loading, nextCursor, jobs.length, isMobile]);
 
   // 过滤计数
   const activeFilterCount = useMemo(
@@ -459,7 +483,20 @@ export default function Page() {
       setNextCursor(nextCursorValue);
       setHasMore(hasMore);
       // 自动选中第一个
-      if (reset && pageItems.length > 0) setSelectedJob(pageItems[0]);
+      if (reset && pageItems.length > 0) {
+        setSelectedJob((previous) => {
+          if (isMobile && previous) {
+            const stillExists = pageItems.some((item) => item.id === previous.id);
+            if (stillExists) {
+              return previous;
+            }
+          }
+          return pageItems[0];
+        });
+        if (isMobile) {
+          setIsMobileDetailOpen(false);
+        }
+      }
     } catch (e) {
       setHasMore(false);
     } finally {
@@ -668,7 +705,16 @@ export default function Page() {
             {jobs.map((job) => {
               const active = selectedJob?.id === job.id;
               return (
-                <div key={job.id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
+                <div
+                  key={job.id}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedJob(job);
+                    if (isMobile) {
+                      setIsMobileDetailOpen(true);
+                    }
+                  }}
+                >
                   <JobCardNew
                     job={job}
                     className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
@@ -695,7 +741,7 @@ export default function Page() {
           </div>
         </Card>
 
-        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-y-auto">
+        <Card className="hidden border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
           <JobDetail
             job={combinedSelectedJob}
             isLoading={isDetailLoading}
@@ -706,6 +752,32 @@ export default function Page() {
           />
         </Card>
       </div>
+
+      {isMobile && isMobileDetailOpen && selectedJob && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+            <div className="min-w-0 flex-1 pr-3">
+              <p className="truncate text-sm font-medium text-gray-600">{selectedJob.title}</p>
+              <p className="truncate text-xs text-gray-400">
+                {selectedJob.company} · {selectedJob.location}
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsMobileDetailOpen(false)}>
+              {t('actions.cancel')}
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-6">
+            <JobDetail
+              job={combinedSelectedJob}
+              isLoading={isDetailLoading}
+              isError={isDetailError}
+              isRefreshing={isDetailFetching}
+              onRetry={() => refetchJobDetail()}
+              labels={jobDetailLabels}
+            />
+          </div>
+        </div>
+      )}
 
       <SubscriptionModal
         visible={showSubscriptionModal}
