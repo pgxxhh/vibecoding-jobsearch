@@ -2,51 +2,88 @@
 
 Spring Boot service that ingests external job boards on a schedule and upserts them into the local database.
 
-## Supported data sources
-- **Greenhouse** — `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs`
-- **Lever** — `https://api.lever.co/v0/postings/{company}?mode=json`
-- **Workday** — `https://{tenant-domain}/wday/cxs/{tenant}/{site}/jobs`
+## 🌟 Supported Data Sources
+
+- **Workday** — `/wday/cxs/{tenant}/{site}/jobs` (POST, supports facets, Chinese language)
+- **Greenhouse** — `https://boards.greenhouse.io/{org}.json`
+- **Lever** — `https://api.lever.co/v0/postings/{org}?mode=json`  
+- **Ashby ATS** — Modern tech companies (Notion, Figma, Linear, etc.)
+- **Generic ATS** — Moka智聘, 北森Beisen, SAP SuccessFactors, Oracle Taleo, iCIMS, SmartRecruiters
 
 Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
 
-## Configuration
+📖 **[完整数据源配置指南 →](DATA-SOURCES.md)**
+
+## ⚡ Quick Start
+
+### Configuration
 Edit `src/main/resources/application.yml` under the `ingestion` section:
 
 ```yaml
 ingestion:
-  fixedDelayMs: 3600000
-  initialDelayMs: 10000
-  pageSize: 20
-  concurrency: 4
-  mode: companies # or recent
+  fixedDelayMs: 180000    # 3 minutes interval
+  initialDelayMs: 10000   # 10 seconds startup delay  
+  pageSize: 50            # Jobs per page
+  concurrency: 4          # Parallel threads
+  mode: companies         # or recent
   companies:
-    - Stripe
-    - Ramp
-    - Deloitte
-    - Datadog
+    - "jpmorgan"          # JPMorgan Chase
+    - "mastercard"        # Mastercard
+    - "notion"            # Notion (Ashby)
+    - "grab"              # Grab (Workday)
   recentDays: 7
-  sources:
-    - id: greenhouse
-      type: greenhouse
-      enabled: true
-      runOnStartup: true
-      options:
-        slug: "{{slug}}"
-    - id: lever
-      type: lever
-      enabled: true
-      runOnStartup: true
-      options:
-        company: "{{slug}}"
-    - id: workday
-      type: workday
-      enabled: true
-      runOnStartup: true
-      options:
-        baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
-        tenant: "{{slug}}"
-        site: "{{slugUpper}}"
+  
+  # 🇨🇳 China-Optimized Filtering
+  locationFilter:
+    enabled: true
+    includeCities:
+      - "beijing" / "北京"
+      - "shanghai" / "上海"
+      - "shenzhen" / "深圳"
+      - "guangzhou" / "广州"
+    includeKeywords:
+      - "financial" / "财务"
+      - "analyst" / "分析师"
+      - "investment" / "投资"
 ```
+
+### Running Locally
+```bash
+mvn spring-boot:run
+```
+
+### Docker Deployment
+```bash
+# Start with MySQL
+docker compose up -d
+
+# Or with custom environment
+./deploy.sh
+```
+
+## 🎯 China Market Optimization
+
+This system is optimized for **Chinese financial & engineering positions**:
+
+✅ **Bilingual Keywords**: 
+- **Financial**: `financial|finance|财务|财务分析|投融资|investment|analyst`  
+- **Engineering**: `engineer|工程师|software|developer|程序员|backend|frontend|fullstack` 🆕
+
+✅ **Major Cities**: Beijing, Shanghai, Shenzhen, Guangzhou, Hangzhou, etc.  
+✅ **Local ATS Support**: Moka, Beisen, and other Chinese recruitment platforms  
+✅ **Priority Filtering**: China|中国|Shanghai|上海|北京|深圳|广州  
+
+**Expected Output**: 4300+ positions (500+ Financial Analyst + 3800+ Engineers)
+
+## 📊 Data Source Priority
+
+| Priority | Source | Status | Est. Jobs | Features |
+|----------|--------|--------|-----------|----------|
+| 🥇 P1 | **Workday** | ✅ Fixed | 1000+ | Chinese support, facets |
+| 🥈 P2 | **Greenhouse** | ⚠️ Optional | 800+ | Stable JSON API |
+| 🥉 P3 | **Lever** | ⚠️ Optional | 600+ | Simple interface |
+| 🏆 P4 | **Ashby** | ✅ Active | 400+ | Modern tech companies |
+| 🆕 P5 | **Generic ATS** | ✅ Ready | 1500+ | Moka, Beisen, etc. |
 
 - Set `enabled: false` to skip a connector entirely.
 - `runOnStartup: false` keeps the source scheduled but excludes it from the startup runner.

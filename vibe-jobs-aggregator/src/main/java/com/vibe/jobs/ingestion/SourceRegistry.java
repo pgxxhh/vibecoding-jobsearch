@@ -53,6 +53,24 @@ public class SourceRegistry {
                 continue;
             }
 
+            // 检查是否为单实例API客户端（如Apple、Microsoft等官方API）
+            if (isSingleInstanceApiClient(type)) {
+                // 对于单实例客户端，不需要遍历公司列表，只创建一个实例
+                String cacheKey = source.key();
+                PlaceholderContext context = buildPlaceholderContext("");
+                Map<String, String> mergedOptions = source.getOptions();
+                List<CategoryQuota> categories = resolveCategories(source, context);
+                try {
+                    SourceClient client = clientCache.computeIfAbsent(cacheKey, key -> factory.create(type, mergedOptions));
+                    resolved.add(new ConfiguredSource(source, type.toUpperCase(), client, categories));
+                } catch (Exception ex) {
+                    log.warn("Failed to initialize single-instance source {}: {}", source.displayName(), ex.getMessage());
+                    log.debug("Source initialization error", ex);
+                }
+                continue;
+            }
+
+            // 对于公司特定的客户端，遍历公司列表
             for (String companyName : properties.getCompanies()) {
                 if (companyName == null || companyName.isBlank()) {
                     continue;
@@ -75,6 +93,18 @@ public class SourceRegistry {
             }
         }
         return resolved;
+    }
+    
+    /**
+     * 判断是否为单实例API客户端
+     */
+    private boolean isSingleInstanceApiClient(String type) {
+        if (type == null) return false;
+        String normalized = type.toLowerCase(Locale.ROOT);
+        return normalized.equals("apple-api") || 
+               normalized.equals("microsoft-api") || 
+               normalized.equals("amazon-api") ||
+               normalized.endsWith("-api");  // 通用规则：以-api结尾的都视为单实例客户端
     }
 
     public record ConfiguredSource(IngestionProperties.Source definition,
@@ -215,6 +245,10 @@ public class SourceRegistry {
                     "baseUrl", "https://" + normalized + ".wd1.myworkdayjobs.com",
                     "tenant", normalized,
                     "site", context.slugUpper()
+            );
+            case "ashby" -> Map.of(
+                    "company", context.company(),
+                    "baseUrl", "https://jobs.ashbyhq.com/" + normalized
             );
             default -> Map.of();
         };
