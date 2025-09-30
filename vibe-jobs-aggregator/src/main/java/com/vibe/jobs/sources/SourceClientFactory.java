@@ -42,7 +42,13 @@ public class SourceClientFactory {
                     opts.entrySet().stream()
                         .filter(e -> e.getKey().startsWith("param_"))
                         .collect(java.util.stream.Collectors.toMap(
-                            e -> e.getKey().substring(6), // 移除"param_"前缀
+                            e -> e.getKey().substring(6),
+                            Map.Entry::getValue
+                        )),
+                    opts.entrySet().stream()
+                        .filter(e -> e.getKey().startsWith("payload_"))
+                        .collect(java.util.stream.Collectors.toMap(
+                            e -> e.getKey().substring(8),
                             Map.Entry::getValue
                         )),
                     normalized

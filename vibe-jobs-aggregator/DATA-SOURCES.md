@@ -95,12 +95,24 @@ excludeKeywords:
   - "customer success" / "客户成功"
 ```
 
-## 🏢 扩展公司列表
+## 🏢 扩展公司列表 & 本土 ATS
 
 ### 核心金融/科技公司（示例）
 - **金融科技/支付**: Adyen, Airwallex, Binance, Bybit, Checkout.com, Circle, Coinbase, Crypto.com, Revolut, Stripe, Thunes, Visa, Wise
 - **互联网/科技**: Grab, Lalamove, Notion, Figma, Linear, Airtable, Webflow, Shopify, Snowflake, Databricks, Palantir, Zendesk, Uber
 - **新加坡/香港重点**: OKX, Xendit, ShopBack, Patsnap, Brex
+
+### 🆕 本土 ATS 连接（Moka / 北森）
+
+| 公司 | ATS | `baseUrl` | 关键参数 |
+|------|-----|----------|----------|
+| 小红书 Xiaohongshu | Moka | `https://app.mokahr.com` | `payload_orgName: xiaohongshu`, `payload_recruitmentType: SOCIAL`, `param_onlyPublished: true` |
+| 知乎 Zhihu | Moka | `https://app.mokahr.com` | `payload_orgName: zhihu`, `payload_keyword: 财务 工程师`, `param_onlyPublished: true` |
+| 快手 Kuaishou | Moka | `https://app.mokahr.com` | `payload_orgName: kuaishou`, `payload_keyword: 财务 工程师 技术` |
+| 美团 Meituan | Moka | `https://app.mokahr.com` | `payload_orgName: meituan`, `payload_recruitmentType: SOCIAL` |
+| PingCAP | 北森 Beisen | `https://pingcap.zhiye.com` | `searchPath: /api/job/search`, `payload_searchText: 财务 金融 工程师 软件` |
+
+> ℹ️ `payload_` 前缀会把自定义字段合并进 POST 请求体，`param_` 前缀既适用于 GET 查询参数，也会在 POST 模式下补充请求体。默认会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
 
 ## 🚀 部署指南
 

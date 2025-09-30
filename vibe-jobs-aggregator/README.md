@@ -8,7 +8,7 @@ Spring Boot service that ingests external job boards on a schedule and upserts t
 - **Greenhouse** — `https://boards.greenhouse.io/{org}.json`
 - **Ashby ATS** — Modern tech companies (Notion, Figma, Linear, etc.)
 - **Amazon Jobs API** — Official APAC feed from `https://www.amazon.jobs/en/search.json`
-- **Generic ATS (optional)** — Moka智聘, 北森Beisen, SAP SuccessFactors, Oracle Taleo, iCIMS, SmartRecruiters
+- **Generic ATS (Moka/Beisen)** — Unified client covering Moka智聘、北森Beisen 等中国本土 ATS（现已为小红书、知乎、快手、美团、PingCAP 启用）
 
 Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
 
@@ -81,6 +81,7 @@ This system is optimised for **financial analyst & engineering roles across Main
 
 ✅ **Dual filters** — Location + role keyword filters keep only China/APAC finance & engineering roles.
 ✅ **Curated connectors** — Workday, Greenhouse, Ashby and Amazon feeds preconfigured for 30+ fintech & tech companies with Mainland teams.
+✅ **Mainland ATS coverage** — Generic Moka / Beisen 客户端连接小红书、知乎、快手、美团、PingCAP 等中国公司的人才系统。
 ✅ **Bilingual keywords** — Chinese + English synonyms for major job families (财务分析师 / Financial Analyst, 软件工程师 / Software Engineer, etc.).
 ✅ **Major cities** — Beijing, Shanghai, Shenzhen, Guangzhou, Hangzhou, Hong Kong, Singapore and more.
 
@@ -94,7 +95,7 @@ This system is optimised for **financial analyst & engineering roles across Main
 | 🥈 P2 | **Greenhouse** | ✅ Active | 800+ | Stable JSON API |
 | 🥉 P3 | **Ashby** | ✅ Active | 400+ | Modern tech companies |
 | 🏆 P4 | **Amazon Jobs API** | ✅ Active | 300+ | Official APAC feed, finance & engineering search |
-| 🆕 P5 | **Generic ATS** | ⚠️ Optional | 1500+ | Moka, Beisen, SuccessFactors, etc. |
+| 🆕 P5 | **Generic ATS** | ✅ Active | 1500+ | Moka, Beisen (Mainland-focused connectors) |
 
 - Set `enabled: false` to skip a connector entirely.
 - `runOnStartup: false` keeps the source scheduled but excludes it from the startup runner.

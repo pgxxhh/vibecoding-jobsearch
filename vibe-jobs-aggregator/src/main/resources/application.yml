@@ -69,6 +69,11 @@ ingestion:
     - "webflow"
     - "xendit"
     - "zendesk"
+    - "xiaohongshu"
+    - "zhihu"
+    - "kuaishou"
+    - "meituan"
+    - "pingcap"
   recentDays: 14
   locationFilter:
     enabled: ${LOCATION_FILTER_ENABLED:true}
@@ -204,6 +209,18 @@ ingestion:
       enabled: true
       runOnStartup: true
       options: {}
+    - id: moka
+      type: moka
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      options: {}
+    - id: beisen
+      type: beisen
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      options: {}
   companyOverrides:
     notion:
       sources:
@@ -300,6 +317,69 @@ ingestion:
           tags:
             - finance
             - financial
+    xiaohongshu:
+      sources:
+        moka:
+          enabled: true
+          options:
+            company: "Xiaohongshu"
+            baseUrl: "https://app.mokahr.com"
+            searchPath: "/api/jobs/search"
+            payload_orgName: "xiaohongshu"
+            payload_recruitmentType: "SOCIAL"
+            payload_location: "中国"
+            payload_keyword: "财务 分析师 工程师 软件"
+            param_onlyPublished: "true"
+    zhihu:
+      sources:
+        moka:
+          enabled: true
+          options:
+            company: "Zhihu"
+            baseUrl: "https://app.mokahr.com"
+            searchPath: "/api/jobs/search"
+            payload_orgName: "zhihu"
+            payload_recruitmentType: "SOCIAL"
+            payload_location: "中国"
+            payload_keyword: "财务 工程师"
+            param_onlyPublished: "true"
+    kuaishou:
+      sources:
+        moka:
+          enabled: true
+          options:
+            company: "Kuaishou"
+            baseUrl: "https://app.mokahr.com"
+            searchPath: "/api/jobs/search"
+            payload_orgName: "kuaishou"
+            payload_recruitmentType: "SOCIAL"
+            payload_location: "中国"
+            payload_keyword: "财务 工程师 技术"
+            param_onlyPublished: "true"
+    meituan:
+      sources:
+        moka:
+          enabled: true
+          options:
+            company: "Meituan"
+            baseUrl: "https://app.mokahr.com"
+            searchPath: "/api/jobs/search"
+            payload_orgName: "meituan"
+            payload_recruitmentType: "SOCIAL"
+            payload_location: "中国"
+            payload_keyword: "财务 工程师"
+            param_onlyPublished: "true"
+    pingcap:
+      sources:
+        beisen:
+          enabled: true
+          options:
+            company: "PingCAP"
+            baseUrl: "https://pingcap.zhiye.com"
+            searchPath: "/api/job/search"
+            payload_searchText: "财务 金融 工程师 软件"
+            payload_location: "中国"
+            payload_sortType: "1"
 auth:
   email:
     challengeTtl: PT10M
