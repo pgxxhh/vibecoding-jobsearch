@@ -34,6 +34,18 @@ public class SourceClientFactory {
                     require(opts, "company"),
                     require(opts, "baseUrl")
             );
+            case "smartrecruiters" -> new SmartRecruitersSourceClient(
+                    require(opts, "company"),
+                    opts.get("baseUrl")
+            );
+            case "recruitee" -> new RecruiteeSourceClient(
+                    require(opts, "company"),
+                    opts.get("baseUrl")
+            );
+            case "workable" -> new WorkableSourceClient(
+                    require(opts, "company"),
+                    opts.get("baseUrl")
+            );
             default -> throw new IllegalArgumentException("Unsupported source type: " + type);
         };
     }

@@ -250,6 +250,15 @@ public class SourceRegistry {
                     "company", context.company(),
                     "baseUrl", "https://jobs.ashbyhq.com/" + normalized
             );
+            case "smartrecruiters" -> Map.of(
+                    "company", context.company()
+            );
+            case "recruitee" -> Map.of(
+                    "company", normalized
+            );
+            case "workable" -> Map.of(
+                    "company", normalized
+            );
             default -> Map.of();
         };
     }
