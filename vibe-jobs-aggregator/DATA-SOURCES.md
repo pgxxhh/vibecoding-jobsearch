@@ -131,6 +131,20 @@ excludeKeywords:
 
 > ℹ️ `param_` 前缀会转换成查询字符串（POST/GET 均适用），`payload_` 前缀负责覆盖或追加请求体字段，`header_` 前缀可以自定义所需的 HTTP 头（如 Referer/Origin）。默认仍会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
 
+### 🆕 国际 ATS 限量租户（2024 Q1 更新）
+
+| 公司 | ATS | 租户标识 | 预计岗位量 | 大中华区覆盖 |
+|------|-----|----------|-------------|----------------|
+| Crypto.com | SmartRecruiters | `CryptoCom` | ≈120 | 香港总部、深圳技术团队，支持远程大中华区岗位 |
+| BitMEX | SmartRecruiters | `HDRGlobalTradingLimited` | ≈60 | 香港交易团队、台湾支持职能 |
+| OSL | SmartRecruiters | `OSL` | ≈80 | 香港数字资产业务、区域合规岗位 |
+| Klook | Workable | `klook` | ≈150 | 香港/深圳双枢纽，涵盖产品与工程岗位 |
+| HashKey | Workable | `hashkey` | ≈70 | 香港合规持牌虚拟资产业务 |
+| Matrixport | Workable | `matrixport` | ≈90 | 香港及新加坡团队，支持大陆远程研发 |
+| WeLab | Recruitee | `welab` | ≈60 | 香港金融科技岗位，部分深圳开发中心 |
+| OneDegree | Recruitee | `onedegree` | ≈55 | 香港数码保险团队，覆盖粤港大湾区 |
+| GoGoX | Recruitee | `gogox` | ≈65 | 香港物流总部及深圳产品技术团队 |
+
 ## 🚀 部署指南
 
 ### 立即部署

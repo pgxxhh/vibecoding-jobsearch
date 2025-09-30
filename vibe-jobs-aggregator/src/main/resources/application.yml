@@ -40,9 +40,11 @@ ingestion:
     - "airwallex"
     - "airbnb"
     - "airtable"
+    - "bitmex"
     - "binance"
     - "brex"
     - "bybit"
+    - "gogox"
     - "chainalysis"
     - "checkoutcom"
     - "circle"
@@ -53,9 +55,14 @@ ingestion:
     - "figma"
     - "flexport"
     - "grab"
+    - "hashkey"
     - "lalamove"
+    - "klook"
     - "linear"
+    - "matrixport"
     - "notion"
+    - "onedegree"
+    - "osl"
     - "okx"
     - "palantir"
     - "paypal"
@@ -66,6 +73,7 @@ ingestion:
     - "stripe"
     - "thunes"
     - "uber"
+    - "welab"
     - "visa"
     - "wise"
     - "webflow"
@@ -278,6 +286,13 @@ ingestion:
           options:
             company: "Checkout.com"
             baseUrl: "https://api.smartrecruiters.com/v1/companies/Checkout.com"
+    crypto:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Crypto.com"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CryptoCom"
     grab:
       sources:
         workday:
@@ -335,6 +350,20 @@ ingestion:
           options:
             company: "thunes"
             baseUrl: "https://apply.workable.com/api/v3/accounts/thunes"
+    bitmex:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "HDR Global Trading Limited"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HDRGlobalTradingLimited"
+    gogox:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "gogox"
+            baseUrl: "https://gogox.recruitee.com/api"
     glints:
       sources:
         greenhouse:
@@ -350,6 +379,20 @@ ingestion:
           options:
             company: "glints"
             baseUrl: "https://glints.recruitee.com/api"
+    hashkey:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "hashkey"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/hashkey"
+    klook:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "klook"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/klook"
     zenyum:
       sources:
         greenhouse:
@@ -380,6 +423,20 @@ ingestion:
           options:
             company: "stashaway"
             baseUrl: "https://stashaway.recruitee.com/api"
+    welab:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "welab"
+            baseUrl: "https://welab.recruitee.com/api"
+    matrixport:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "matrixport"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/matrixport"
     stripe:
       sources:
         workday:
@@ -388,6 +445,13 @@ ingestion:
             baseUrl: "https://stripe.wd1.myworkdayjobs.com"
             tenant: "stripe"
             site: "Stripe_Careers"
+    onedegree:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "onedegree"
+            baseUrl: "https://onedegree.recruitee.com/api"
     visa:
       sources:
         workday:
@@ -418,6 +482,13 @@ ingestion:
           tags:
             - finance
             - financial
+    osl:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OSL"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OSL"
 
 auth:
   email:
