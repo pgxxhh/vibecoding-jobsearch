@@ -5,76 +5,66 @@
 ## 🎯 岗位类型支持
 
 ### 财务分析师岗位
-- **关键词**: `financial|finance|财务|财务分析|投融资|investment|analyst`
-- **专业术语**: 金融分析师、投资分析师、风险分析师、量化分析师等
-- **预计岗位**: 500+
+- **核心关键词**: `financial|finance|accounting|treasury|investment|analyst|财务|金融|分析师`
+- **典型岗位**: 财务分析师、投资分析师、风险分析师、量化分析师、资金管理、财务计划等
 
 ### 工程师岗位 🆕
-- **关键词**: `engineer|工程师|software|developer|程序员|backend|frontend|fullstack`
-- **专业领域**: 
+- **核心关键词**: `engineer|developer|software|程序员|工程师|backend|frontend|fullstack|data|算法`
+- **重点方向**:
   - 🔹 **软件工程师**: Software Engineer, 软件工程师, Developer
   - 🔹 **后端工程师**: Backend Engineer, 后端工程师, Server-side Developer
   - 🔹 **前端工程师**: Frontend Engineer, 前端工程师, UI Developer
   - 🔹 **全栈工程师**: Full Stack Engineer, 全栈工程师
   - 🔹 **移动端工程师**: iOS/Android Engineer, 移动端工程师
-  - 🔹 **数据工程师**: Data Engineer, 数据工程师, ML Engineer
-  - 🔹 **AI工程师**: AI Engineer, 人工智能工程师, 算法工程师
-  - 🔹 **DevOps工程师**: DevOps Engineer, 运维工程师, SRE
-  - 🔹 **安全工程师**: Security Engineer, 安全工程师
-  - 🔹 **架构师**: Software Architect, 架构师, Technical Lead
-- **预计岗位**: 3800+
+  - 🔹 **数据/算法**: Data Engineer, ML Engineer, 算法工程师
+  - 🔹 **平台基础设施**: DevOps, SRE, Platform Engineer, 云计算工程师
+  - 🔹 **安全/架构**: Security Engineer, Software Architect, 技术负责人
 
 ### 📊 岗位分布预期
 
-| 岗位类别 | 预计数量 | 占比 | 主要来源 |
-|---------|---------|------|----------|
-| **财务分析师** | 500+ | 12% | 金融公司、投行、咨询 |
-| **软件工程师** | 1500+ | 35% | 科技公司、互联网 |
-| **后端工程师** | 800+ | 19% | 各类科技公司 |
-| **前端工程师** | 600+ | 14% | 互联网、电商平台 |
-| **全栈工程师** | 400+ | 9% | 创业公司、中小企业 |
-| **AI/数据工程师** | 200+ | 5% | AI公司、大数据企业 |
-| **DevOps/SRE** | 300+ | 7% | 云计算、基础设施 |
-| **总计** | **4300+** | **100%** | 全行业覆盖 |
+| 岗位类别 | 预计数量 | 主要来源 |
+|---------|---------|----------|
+| **财务分析师/投融资** | 500+ | 跨国金融、支付公司、咨询公司 |
+| **软件工程 / 平台** | 1200+ | 科技公司、金融科技、云服务 |
+| **数据 / AI / 算法** | 300+ | 科技公司、量化团队、云计算 |
+| **DevOps / SRE / 安全** | 200+ | 基础设施、支付、云计算 |
+| **总计** | **2000+** | Workday / Greenhouse / Ashby / Amazon |
 
 ## 📊 数据源优先级
 
 | 优先级 | 数据源 | 状态 | 预计岗位 | 特点 |
 |-------|-------|------|---------|------|
-| 🥇 P1 | **Workday** | ✅ 已修复 | 1000+ | 支持中文、facets筛选 |
-| 🥈 P2 | **Greenhouse** | ⚠️ 可选启用 | 800+ | JSON API稳定 |
-| 🥉 P3 | **Lever** | ⚠️ 可选启用 | 600+ | 简单JSON接口 |
-| 🏆 P4 | **Ashby** | ✅ 运行中 | 400+ | 现代科技公司 |
-| 🆕 P5 | **本土ATS** | ✅ 架构就绪 | 1500+ | Moka、北森等 |
+| 🥇 P1 | **Workday** | ✅ 已启用 | 900+ | Facet筛选、APAC覆盖广 |
+| 🥈 P2 | **Greenhouse** | ✅ 已启用 | 800+ | 稳定JSON API |
+| 🥉 P3 | **Ashby** | ✅ 已启用 | 400+ | 现代科技公司，支持标签 |
+| 🏆 P4 | **Amazon Jobs API** | ✅ 已启用 | 300+ | 官方APAC职位接口 |
+| 🆕 P5 | **本土ATS** | ⚠️ 可选启用 | 1500+ | Moka、北森、SuccessFactors 等 |
 
-**总计预期**: **4300+ 岗位 (财务500+ + 工程师3800+)**
+**总计预期**: **2000+ 岗位 (财务 & 工程双线)**
 
 ## 🇨🇳 中国本土化配置
 
-### 关键词优化
+### 关键词优化（Role Filter）
 ```yaml
-includeKeywords:
-  # 财务金融关键词(中英文)
-  - "financial" / "finance" / "财务" / "财务分析"
-  - "investment" / "投融资" / "analyst" / "分析师"
-  - "金融分析师" / "财务分析师" / "投资分析师"
-  - "风险分析师" / "数据分析师" / "量化分析师"
-  
-  # 工程师关键词(中英文) 🆕
-  - "engineer" / "工程师" / "software engineer" / "软件工程师"
-  - "backend engineer" / "后端工程师" / "frontend engineer" / "前端工程师"  
-  - "fullstack engineer" / "全栈工程师" / "mobile engineer" / "移动端工程师"
-  - "data engineer" / "数据工程师" / "ai engineer" / "人工智能工程师"
-  - "devops engineer" / "运维工程师" / "security engineer" / "安全工程师"
-  - "developer" / "开发者" / "程序员" / "architect" / "架构师"
+roleFilter:
+  enabled: true
+  includeKeywords:
+    - "financial" / "finance" / "accounting" / "treasury" / "财务" / "金融"
+    - "analyst" / "analysis" / "分析师"
+    - "investment" / "投融资" / "量化"
+    - "engineer" / "工程师" / "developer" / "软件" / "程序员"
+    - "backend" / "前端" / "后端" / "全栈" / "数据" / "算法" / "云"
+  excludeKeywords:
+    - "intern" / "实习" / "campus"
+    - "sales" / "marketing" / "hr" / "customer success"
 ```
 
-### 地理位置过滤
+### 地理位置过滤（Location Filter）
 ```yaml
 includeCities:
   # 中国主要城市(优先级最高)
   - "beijing" / "北京"
-  - "shanghai" / "上海"  
+  - "shanghai" / "上海"
   - "shenzhen" / "深圳"
   - "guangzhou" / "广州"
   - "hangzhou" / "杭州"
@@ -89,36 +79,40 @@ includeCities:
   - "dalian" / "大连"
 ```
 
-### 排除关键词
+### 排除关键词（Location Filter）
 ```yaml
 excludeKeywords:
   # 排除非目标地区
   - "us only" / "美国公民"
   - "eu citizens only" / "欧盟公民"
-  
+  - "north america only"
+
   # 排除非相关岗位(保留工程师和财务岗位)
   - "sales" / "销售"
-  - "marketing" / "市场"  
+  - "marketing" / "市场"
   - "hr" / "人力资源"
   - "legal" / "法务"
   - "customer success" / "客户成功"
 ```
 
-## 🏢 扩展公司列表
+## 🏢 扩展公司列表 & 本土 ATS
 
-### 全球科技巨头 🆕
-- Google, Microsoft, Amazon, Apple, Meta, Netflix, Tesla
-- NVIDIA, Salesforce, Oracle, Adobe, Zoom, Slack, Dropbox
-- Airbnb, Spotify, Square, Twilio, Okta, Splunk
+### 核心金融/科技公司（示例）
+- **金融科技/支付**: Adyen, Airwallex, Binance, Bybit, Checkout.com, Circle, Coinbase, Crypto.com, Revolut, Stripe, Thunes, Visa, Wise
+- **互联网/科技**: Grab, Lalamove, Notion, Figma, Linear, Airtable, Webflow, Shopify, Snowflake, Databricks, Palantir, Zendesk, Uber
+- **新加坡/香港重点**: OKX, Xendit, ShopBack, Patsnap, Brex
 
-### 中国科技公司 🆕  
-- 阿里巴巴, 腾讯, 百度, 字节跳动, 小米
-- 京东, 美团, 滴滴, 网易, 新浪, 搜狐
+### 🆕 本土 ATS 连接（Moka / 北森）
 
-### 现有金融公司
-- JPMorgan Chase, Goldman Sachs, Morgan Stanley, BlackRock
-- Mastercard, PayPal, Visa, Stripe, Revolut
-- McKinsey, BCG, Bain, Deloitte, PwC, KPMG
+| 公司 | ATS | `baseUrl` | 关键参数 |
+|------|-----|----------|----------|
+| 小红书 Xiaohongshu | Moka | `https://app.mokahr.com` | `payload_orgName: xiaohongshu`, `payload_recruitmentType: SOCIAL`, `param_onlyPublished: true` |
+| 知乎 Zhihu | Moka | `https://app.mokahr.com` | `payload_orgName: zhihu`, `payload_keyword: 财务 工程师`, `param_onlyPublished: true` |
+| 快手 Kuaishou | Moka | `https://app.mokahr.com` | `payload_orgName: kuaishou`, `payload_keyword: 财务 工程师 技术` |
+| 美团 Meituan | Moka | `https://app.mokahr.com` | `payload_orgName: meituan`, `payload_recruitmentType: SOCIAL` |
+| PingCAP | 北森 Beisen | `https://pingcap.zhiye.com` | `searchPath: /api/job/search`, `payload_searchText: 财务 金融 工程师 软件` |
+
+> ℹ️ `payload_` 前缀会把自定义字段合并进 POST 请求体，`param_` 前缀既适用于 GET 查询参数，也会在 POST 模式下补充请求体。默认会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
 
 ## 🚀 部署指南
 
@@ -151,7 +145,7 @@ docker compose logs -f backend | grep -E "(financial|财务|analyst|分析师)"
 
 ---
 
-**📈 总结**: 系统现在支持**财务分析师 + 工程师**双重岗位类型，预计提供**4300+个岗位**，覆盖**339家公司**，满足更广泛的用户需求！
+**📈 总结**: 系统通过「Location + Role」双过滤和精选数据源，持续产出**2000+**面向中国大陆及大中华区的财务/工程岗位，覆盖三十余家金融科技与互联网企业。
 
 **🔗 相关文档**: 
 - [项目主README](./vibe-jobs-aggregator/README.md)

@@ -34,7 +34,7 @@ public class SourceClientFactory {
                     require(opts, "company"),
                     require(opts, "baseUrl")
             );
-            case "generic", "moka", "beisen", "successfactors", "taleo", "icims", "smartrecruiters", "avature" -> 
+            case "generic", "moka", "beisen", "successfactors", "taleo", "icims", "smartrecruiters", "avature" ->
                 new GenericAtsSourceClient(
                     require(opts, "company"),
                     require(opts, "baseUrl"),
@@ -42,14 +42,17 @@ public class SourceClientFactory {
                     opts.entrySet().stream()
                         .filter(e -> e.getKey().startsWith("param_"))
                         .collect(java.util.stream.Collectors.toMap(
-                            e -> e.getKey().substring(6), // 移除"param_"前缀
+                            e -> e.getKey().substring(6),
+                            Map.Entry::getValue
+                        )),
+                    opts.entrySet().stream()
+                        .filter(e -> e.getKey().startsWith("payload_"))
+                        .collect(java.util.stream.Collectors.toMap(
+                            e -> e.getKey().substring(8),
                             Map.Entry::getValue
                         )),
                     normalized
                 );
-            // 新增：官方API客户端
-            case "apple-api" -> new AppleJobsClient();
-            case "microsoft-api" -> new MicrosoftJobsClient();
             case "amazon-api" -> new AmazonJobsClient();
             default -> throw new IllegalArgumentException("Unsupported source type: " + type);
         };

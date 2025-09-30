@@ -38,6 +38,7 @@ public class GenericAtsSourceClient implements SourceClient {
     private final String atsType;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final Map<String, String> payloadParams;
     
     /**
      * @param company 公司名称
@@ -46,12 +47,15 @@ public class GenericAtsSourceClient implements SourceClient {
      * @param queryParams 查询参数映射
      * @param atsType ATS类型标识 (moka, beisen, successfactors, taleo, icims, smartrecruiters)
      */
-    public GenericAtsSourceClient(String company, String baseUrl, String searchPath, 
-                                  Map<String, String> queryParams, String atsType) {
+    public GenericAtsSourceClient(String company, String baseUrl, String searchPath,
+                                  Map<String, String> queryParams,
+                                  Map<String, String> payloadParams,
+                                  String atsType) {
         this.company = company;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.searchPath = searchPath != null ? searchPath : detectSearchPath(atsType);
         this.queryParams = queryParams != null ? queryParams : Map.of();
+        this.payloadParams = payloadParams != null ? payloadParams : Map.of();
         this.atsType = atsType != null ? atsType.toLowerCase() : "generic";
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
@@ -131,23 +135,21 @@ public class GenericAtsSourceClient implements SourceClient {
     private String buildApiUrl(int page, int size) {
         StringBuilder url = new StringBuilder(baseUrl + searchPath);
         
+        Map<String, String> combinedParams = new java.util.LinkedHashMap<>();
         if (!requiresPost()) {
-            // GET请求的查询参数
+            combinedParams.putAll(getDefaultParams(page, size));
+        }
+        combinedParams.putAll(queryParams);
+
+        if (!combinedParams.isEmpty()) {
             boolean firstParam = !searchPath.contains("?");
-            
-            for (Map.Entry<String, String> param : getDefaultParams(page, size).entrySet()) {
-                url.append(firstParam ? "?" : "&");
-                url.append(param.getKey()).append("=").append(encode(param.getValue()));
-                firstParam = false;
-            }
-            
-            for (Map.Entry<String, String> param : queryParams.entrySet()) {
+            for (Map.Entry<String, String> param : combinedParams.entrySet()) {
                 url.append(firstParam ? "?" : "&");
                 url.append(param.getKey()).append("=").append(encode(param.getValue()));
                 firstParam = false;
             }
         }
-        
+
         return url.toString();
     }
     
@@ -180,6 +182,7 @@ public class GenericAtsSourceClient implements SourceClient {
                     "location", "上海,北京,深圳,广州",
                     "page", page,
                     "size", size,
+                    "limit", size,
                     "department", "",
                     "jobType", ""
             );
@@ -212,7 +215,10 @@ public class GenericAtsSourceClient implements SourceClient {
         };
         
         try {
-            return objectMapper.writeValueAsString(payload);
+            java.util.Map<String, Object> merged = new java.util.LinkedHashMap<>(payload);
+            queryParams.forEach(merged::putIfAbsent);
+            payloadParams.forEach(merged::put);
+            return objectMapper.writeValueAsString(merged);
         } catch (Exception e) {
             throw new RuntimeException("Failed to build POST payload", e);
         }

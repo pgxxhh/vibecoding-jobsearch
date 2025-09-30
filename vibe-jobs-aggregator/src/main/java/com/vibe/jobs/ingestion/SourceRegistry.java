@@ -53,7 +53,7 @@ public class SourceRegistry {
                 continue;
             }
 
-            // 检查是否为单实例API客户端（如Apple、Microsoft等官方API）
+            // 检查是否为单实例API客户端（如Amazon官方API）
             if (isSingleInstanceApiClient(type)) {
                 // 对于单实例客户端，不需要遍历公司列表，只创建一个实例
                 String cacheKey = source.key();
