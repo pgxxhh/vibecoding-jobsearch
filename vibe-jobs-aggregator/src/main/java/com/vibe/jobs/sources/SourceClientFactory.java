@@ -51,6 +51,12 @@ public class SourceClientFactory {
                             e -> e.getKey().substring(8),
                             Map.Entry::getValue
                         )),
+                    opts.entrySet().stream()
+                        .filter(e -> e.getKey().startsWith("header_"))
+                        .collect(java.util.stream.Collectors.toMap(
+                            e -> e.getKey().substring(7),
+                            Map.Entry::getValue
+                        )),
                     normalized
                 );
             case "amazon-api" -> new AmazonJobsClient();

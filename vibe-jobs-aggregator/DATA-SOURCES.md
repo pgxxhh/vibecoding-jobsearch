@@ -106,13 +106,23 @@ excludeKeywords:
 
 | 公司 | ATS | `baseUrl` | 关键参数 |
 |------|-----|----------|----------|
-| 小红书 Xiaohongshu | Moka | `https://app.mokahr.com` | `payload_orgName: xiaohongshu`, `payload_recruitmentType: SOCIAL`, `param_onlyPublished: true` |
-| 知乎 Zhihu | Moka | `https://app.mokahr.com` | `payload_orgName: zhihu`, `payload_keyword: 财务 工程师`, `param_onlyPublished: true` |
-| 快手 Kuaishou | Moka | `https://app.mokahr.com` | `payload_orgName: kuaishou`, `payload_keyword: 财务 工程师 技术` |
-| 美团 Meituan | Moka | `https://app.mokahr.com` | `payload_orgName: meituan`, `payload_recruitmentType: SOCIAL` |
-| PingCAP | 北森 Beisen | `https://pingcap.zhiye.com` | `searchPath: /api/job/search`, `payload_searchText: 财务 金融 工程师 软件` |
+| 小红书 Xiaohongshu | Moka | `https://app.mokahr.com` | `param_orgName: xiaohongshu`, `payload_keyword: 财务 分析师 工程师 软件`, `header_Referer: https://app.mokahr.com/careers/xiaohongshu/positions` |
+| 知乎 Zhihu | Moka | `https://app.mokahr.com` | `param_orgName: zhihu`, `payload_keyword: 财务 工程师`, `header_Referer: https://app.mokahr.com/careers/zhihu/positions` |
+| 快手 Kuaishou | Moka | `https://app.mokahr.com` | `param_orgName: kuaishou`, `payload_keyword: 财务 工程师 技术` |
+| 美团 Meituan | Moka | `https://app.mokahr.com` | `param_orgName: meituan`, `payload_keyword: 财务 工程师`, `header_Referer: https://app.mokahr.com/careers/meituan/positions` |
+| 字节跳动 ByteDance | Moka | `https://app.mokahr.com` | `param_orgName: bytedance`, `payload_keyword: 财务 工程师 技术 数据` |
+| 小米 Xiaomi | Moka | `https://app.mokahr.com` | `param_orgName: xiaomi`, `payload_keyword: 财务 工程师 软件` |
+| OPPO | Moka | `https://app.mokahr.com` | `param_orgName: oppo`, `payload_keyword: 财务 工程师 软件 硬件` |
+| vivo | Moka | `https://app.mokahr.com` | `param_orgName: vivo`, `payload_keyword: 财务 工程师 软件 硬件` |
+| 蔚来 NIO | Moka | `https://app.mokahr.com` | `param_orgName: nio`, `payload_keyword: 财务 工程师 软件 智能` |
+| 大疆 DJI | Moka | `https://app.mokahr.com` | `param_orgName: dji`, `payload_keyword: 财务 工程师 软件 硬件` |
+| SHEIN | Moka | `https://app.mokahr.com` | `param_orgName: shein`, `payload_keyword: 财务 工程师 数据` |
+| 拼多多 Pinduoduo | Moka | `https://app.mokahr.com` | `param_orgName: pinduoduo`, `payload_keyword: 财务 工程师 软件 数据` |
+| 百度 Baidu | Moka | `https://app.mokahr.com` | `param_orgName: baidu`, `payload_keyword: 财务 工程师 软件 数据` |
+| 京东 JD.com | Moka | `https://app.mokahr.com` | `param_orgName: jd`, `payload_keyword: 财务 工程师 软件 数据` |
+| PingCAP | 北森 Beisen | `https://pingcap.zhiye.com` | `searchPath: /api/job/search`, `payload_searchText: 财务 金融 工程师 软件`, `header_Referer: https://pingcap.zhiye.com/jobs` |
 
-> ℹ️ `payload_` 前缀会把自定义字段合并进 POST 请求体，`param_` 前缀既适用于 GET 查询参数，也会在 POST 模式下补充请求体。默认会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
+> ℹ️ `param_` 前缀会转换成查询字符串（POST/GET 均适用），`payload_` 前缀负责覆盖或追加请求体字段，`header_` 前缀可以自定义所需的 HTTP 头（如 Referer/Origin）。默认仍会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
 
 ## 🚀 部署指南
 
@@ -145,7 +155,7 @@ docker compose logs -f backend | grep -E "(financial|财务|analyst|分析师)"
 
 ---
 
-**📈 总结**: 系统通过「Location + Role」双过滤和精选数据源，持续产出**2000+**面向中国大陆及大中华区的财务/工程岗位，覆盖三十余家金融科技与互联网企业。
+**📈 总结**: 系统通过「Location + Role」双过滤和精选数据源，持续产出**3000+**面向中国大陆及大中华区的财务/工程岗位，覆盖三十余家金融科技与互联网企业。
 
 **🔗 相关文档**: 
 - [项目主README](./vibe-jobs-aggregator/README.md)
