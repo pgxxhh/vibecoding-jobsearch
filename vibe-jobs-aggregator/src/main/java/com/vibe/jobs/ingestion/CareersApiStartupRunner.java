@@ -4,6 +4,7 @@ import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
+import com.vibe.jobs.service.RoleFilterService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.FetchedJob;
@@ -22,6 +23,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     private final IngestionProperties ingestionProperties;
     private final JobIngestionFilter jobFilter;
     private final LocationFilterService locationFilterService;
+    private final RoleFilterService roleFilterService;
     private final JobService jobService;
     private final JobDetailService jobDetailService;
     private final ExecutorService executor;
@@ -30,6 +32,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
                                    IngestionProperties ingestionProperties,
                                    JobIngestionFilter jobFilter,
                                    LocationFilterService locationFilterService,
+                                   RoleFilterService roleFilterService,
                                    JobService jobService,
                                    JobDetailService jobDetailService,
                                    ExecutorService executor) {
@@ -37,6 +40,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
         this.ingestionProperties = ingestionProperties;
         this.jobFilter = jobFilter;
         this.locationFilterService = locationFilterService;
+        this.roleFilterService = roleFilterService;
         this.jobService = jobService;
         this.jobDetailService = jobDetailService;
         this.executor = executor;
@@ -46,6 +50,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // 打印location过滤器状态
         System.out.println("[CareersApiStartupRunner] " + locationFilterService.getFilterStatus());
+        System.out.println("[CareersApiStartupRunner] " + roleFilterService.getFilterStatus());
         
         List<SourceRegistry.ConfiguredSource> startupSources = sourceRegistry.getStartupSources();
         if (startupSources.isEmpty()) {
@@ -70,11 +75,12 @@ public class CareersApiStartupRunner implements ApplicationRunner {
             List<FetchedJob> jobs = client.fetchPage(1, pageSize);
             List<FetchedJob> filtered = jobFilter.apply(jobs);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             System.out.println("[CareersApiStartupRunner] " + client.sourceName()
                     + "(" + (companyName == null ? "unknown" : companyName) + ") 首批职位数量: "
-                    + (locationFiltered == null ? 0 : locationFiltered.size()));
-            if (locationFiltered != null) {
-                locationFiltered.forEach(fetched -> {
+                    + (roleFiltered == null ? 0 : roleFiltered.size()));
+            if (roleFiltered != null) {
+                roleFiltered.forEach(fetched -> {
                     Job persisted = jobService.upsert(fetched.job());
                     jobDetailService.saveContent(persisted, fetched.content());
                 });
