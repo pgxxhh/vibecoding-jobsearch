@@ -1,6 +1,7 @@
 package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.sources.FetchedJob;
 import org.springframework.stereotype.Component;
@@ -16,9 +17,11 @@ import java.util.Set;
 public class JobIngestionFilter {
 
     private final IngestionProperties properties;
+    private final DataSourceQueryService queryService;
 
-    public JobIngestionFilter(IngestionProperties properties) {
+    public JobIngestionFilter(IngestionProperties properties, DataSourceQueryService queryService) {
         this.properties = properties;
+        this.queryService = queryService;
     }
 
     public List<FetchedJob> apply(List<FetchedJob> jobs) {
@@ -28,7 +31,7 @@ public class JobIngestionFilter {
 
         IngestionProperties.Mode mode = properties.getMode();
         if (mode == IngestionProperties.Mode.COMPANIES) {
-            Set<String> allowedCompanies = new HashSet<>(properties.normalizedCompanies());
+            Set<String> allowedCompanies = new HashSet<>(queryService.getNormalizedCompanyNames());
             if (allowedCompanies.isEmpty()) {
                 return jobs; // nothing to filter against
             }
