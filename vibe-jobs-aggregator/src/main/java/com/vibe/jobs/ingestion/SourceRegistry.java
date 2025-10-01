@@ -135,6 +135,13 @@ public class SourceRegistry {
         if (!context.company().isBlank()) {
             merged.putIfAbsent("company", context.company());
         }
+        if (source.getCode() != null) {
+            merged.putIfAbsent("__sourceCode", source.getCode());
+            merged.putIfAbsent("__sourceName", "crawler:" + source.getCode());
+        }
+        if (!context.company().isBlank()) {
+            merged.put("__company", context.company());
+        }
         merged.replaceAll((k, v) -> applyPlaceholders(v, context));
         merged.values().removeIf(value -> value == null || value.isBlank());
         return merged;
