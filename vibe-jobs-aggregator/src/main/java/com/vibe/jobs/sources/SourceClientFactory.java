@@ -1,5 +1,6 @@
 package com.vibe.jobs.sources;
 
+import com.vibe.jobs.crawler.application.CrawlerOrchestrator;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
@@ -7,6 +8,12 @@ import java.util.Map;
 
 @Component
 public class SourceClientFactory {
+
+    private final CrawlerOrchestrator crawlerOrchestrator;
+
+    public SourceClientFactory(CrawlerOrchestrator crawlerOrchestrator) {
+        this.crawlerOrchestrator = crawlerOrchestrator;
+    }
 
     public SourceClient create(String type, Map<String, String> options) {
         if (type == null || type.isBlank()) {
@@ -46,6 +53,15 @@ public class SourceClientFactory {
                     require(opts, "company"),
                     opts.get("baseUrl")
             );
+            case "crawler" -> new CrawlerSourceClient(
+                    resolveBlueprint(opts),
+                    crawlerOrchestrator,
+                    opts.getOrDefault("__sourceCode", ""),
+                    opts.getOrDefault("__company", ""),
+                    opts.getOrDefault("sourceName", opts.getOrDefault("__sourceName", "")),
+                    opts.getOrDefault("entryUrl", ""),
+                    opts
+            );
             default -> throw new IllegalArgumentException("Unsupported source type: " + type);
         };
     }
@@ -56,5 +72,13 @@ public class SourceClientFactory {
             throw new IllegalArgumentException("Missing required option '" + key + "'");
         }
         return value;
+    }
+
+    private String resolveBlueprint(Map<String, String> options) {
+        String blueprint = options.getOrDefault("blueprintCode", options.getOrDefault("crawlerBlueprintCode", ""));
+        if (blueprint == null || blueprint.isBlank()) {
+            throw new IllegalArgumentException("Missing required option 'blueprintCode'");
+        }
+        return blueprint;
     }
 }
