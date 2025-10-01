@@ -42,12 +42,82 @@
 | 🆕 P6 | **Recruitee** | ✅ 已启用 | 1750+ | 扩展 35 家香港/台湾数字企业与新经济团队 |
 | 🏆 P7 | **Amazon Jobs API** | ✅ 已启用 | 300+ | 官方APAC职位接口 |
 | 🆕 P8 | **本土ATS** | ⚠️ 可选启用 | 1500+ | Moka、北森、SuccessFactors 等 |
+| 🆕 P9 | **Crawler 蓝图** | 🚧 逐步放量 | 视站点而定 | Career Page + HTML 解析 |
 
 **总计预期**: **6800+ 岗位 (财务 & 工程双线)**
 
 > 🧵 **并发策略**：
 > - Workday / Greenhouse / Ashby / Workable 等无限流数据源使用 6 线程并发抓取。
 > - SmartRecruiters、Recruitee 等有限流数据源统一串行拉取，规避 API 限流与 403。
+
+## 🕸️ Career Page Crawler 蓝图配置
+
+当目标公司只有自研 Career Page 且未开放结构化 API 时，可以通过 `crawler` 类型的数据源接入 HTML 爬虫蓝图。蓝图相关元数据在以下四张表中管理：
+
+- `crawler_blueprint`
+- `crawler_parser_template`
+- `crawler_run_log`
+- `crawler_cache`
+
+### 关键概念
+
+- **Blueprint** (`crawler_blueprint`)：定义入口 URL、分页方式、反爬节奏、流程步骤及解析配置。
+- **Parser Template** (`crawler_parser_template`)：可复用的解析模板，描述列表 CSS Selector、字段提取方式、标签规则等。
+- **Run Log** (`crawler_run_log`)：记录每次执行的页码、耗时、产出岗位数、是否成功以及错误快照。
+- **Cache** (`crawler_cache`)：按需缓存静态响应，减少重复抓取。
+
+### Blueprint 配置示例
+
+`crawler_blueprint.config_json` 支持 JSON/YAML 结构，以下为 JSON 示例：
+
+```json
+{
+  "entryUrl": "https://careers.example.com/jobs",
+  "paging": { "mode": "QUERY", "parameter": "page", "start": 1, "step": 1, "sizeParameter": "limit" },
+  "rateLimit": { "requestsPerMinute": 20, "burst": 2 },
+  "parser": {
+    "listSelector": ".job-card",
+    "descriptionField": "description",
+    "tagFields": ["tags"],
+    "fields": {
+      "title": { "type": "TEXT", "selector": "h3" },
+      "url": { "type": "ATTRIBUTE", "selector": "a", "attribute": "href" },
+      "externalId": { "type": "ATTRIBUTE", "selector": "a", "attribute": "data-job-id" },
+      "location": { "type": "TEXT", "selector": ".location" },
+      "tags": { "type": "LIST", "selector": ".tags", "delimiter": "," },
+      "description": { "type": "HTML", "selector": ".content" }
+    }
+  }
+}
+```
+
+### Data Source 配置示例
+
+```yaml
+code: example-career-page
+type: crawler
+enabled: true
+baseOptions:
+  blueprintCode: example-career-blueprint
+  entryUrl: https://careers.example.com/jobs
+companies:
+  - displayName: Example Corp
+    reference: example
+    overrideOptions:
+      entryUrl: https://careers.example.com/jobs?location=china
+categories:
+  - name: engineering
+    limit: 80
+    tags: [engineering, software]
+```
+
+### 调度与执行
+
+- `SourceClientFactory` 根据 `type: crawler` 创建 `CrawlerSourceClient`，内部持有 `CrawlerOrchestrator`。
+- `CrawlerOrchestrator` 读取蓝图 → 调用 `HttpCrawlerExecutionEngine` 获取 HTML → 用 `DefaultCrawlerParserEngine` 解析为 `FetchedJob` → 将执行信息写入 `crawler_run_log`。
+- 支持通过蓝图的 `rateLimit` 与 `concurrencyLimit` 控制爬虫节奏，避免 403/429。
+
+> 提示：如果多个公司共用同一职业站，只需在 `crawler_blueprint` 中维护一次解析模板，再通过不同 `JobDataSource.company.overrideOptions.entryUrl` 定位到具体公司页面。
 
 ## 🇨🇳 中国本土化配置
 

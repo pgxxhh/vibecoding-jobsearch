@@ -9,6 +9,7 @@ Spring Boot service that ingests external job boards on a schedule and upserts t
 - **Ashby ATS** — Modern tech companies (Notion, Figma, Linear, etc.)
 - **Amazon Jobs API** — Official APAC feed from `https://www.amazon.jobs/en/search.json`
 - **Generic ATS (Moka/Beisen)** — Unified client covering Moka智聘、北森Beisen 等中国本土 ATS（现已为小红书、知乎、快手、美团、PingCAP 启用）
+- **Crawler Blueprints** — Configurable crawler domain that renders career sites via HTTP/Playwright-like flows and parses them with reusable parser templates.
 
 Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
 
@@ -107,6 +108,49 @@ This system is optimised for **financial analyst & engineering roles across Main
 - Companies define provider-specific overrides under `sources`. Each enabled provider spawns one client per company; placeholders like `{{company}}`, `{{slug}}`, `{{slugUpper}}` are resolved automatically.
 - `concurrency` controls how many provider/company tasks run in parallel (default 4).
 - Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner).
+
+## 🕸️ Crawler Blueprints
+
+The new `crawler` source type treats each career site as a standalone blueprint. A blueprint describes:
+
+- **Entry point** — base URL or HTTP request template, plus paging rules (query, offset, or path-based).
+- **Flow DSL** — optional steps such as `REQUEST`, `WAIT`, `SCROLL`, `EXTRACT_LIST`, etc. for JavaScript-heavy pages.
+- **Parser profile** — reusable templates (`crawler_parser_template` table) define CSS selectors or attributes for `title`, `url`, `externalId`, `location`, tags, and details.
+- **Rate limit & concurrency** — per-blueprint restrictions to respect robots.txt and throttle sessions.
+
+Blueprint metadata is persisted in four new tables managed by Flyway migration `V7__crawler_tables.sql`:
+
+- `crawler_blueprint`
+- `crawler_parser_template`
+- `crawler_run_log`
+- `crawler_cache`
+
+### Configuring a crawler source
+
+Add a data source with `type: crawler` and point it to a blueprint code:
+
+```yaml
+code: riot-games-crawler
+type: crawler
+enabled: true
+baseOptions:
+  blueprintCode: riot-careers
+  entryUrl: https://www.riotgames.com/en/work-with-us
+  sourceName: crawler:riot
+companies:
+  - displayName: Riot Games
+    reference: riot
+    overrideOptions:
+      entryUrl: https://www.riotgames.com/en/work-with-us?location=shanghai
+categories:
+  - name: engineering
+    limit: 120
+    tags: [engineering, software]
+```
+
+When the scheduler resolves this source, `SourceClientFactory` instantiates a `CrawlerSourceClient`, which delegates to `CrawlerOrchestrator`. The orchestrator loads the blueprint, spins up an execution session via `HttpCrawlerExecutionEngine`, parses the HTML with `DefaultCrawlerParserEngine`, converts the results into `FetchedJob`, and records metrics to `crawler_run_log`.
+
+Blueprint parser templates can be reused across companies. Updating `crawler_blueprint.config_json` or the referenced template allows hot swaps without redeploying the application.
 
 ## Running locally
 ```
