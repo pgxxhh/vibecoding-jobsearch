@@ -1,0 +1,138 @@
+package com.vibe.jobs.datasource.infrastructure.jpa;
+
+import com.vibe.jobs.datasource.domain.JobDataSource;
+import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonStringMapConverter;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+@Entity
+@Table(name = "job_data_source")
+public class JobDataSourceEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    @Column(nullable = false)
+    private String type;
+
+    @Column(nullable = false)
+    private boolean enabled;
+
+    @Column(name = "run_on_startup", nullable = false)
+    private boolean runOnStartup;
+
+    @Column(name = "require_override", nullable = false)
+    private boolean requireOverride;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private JobDataSource.Flow flow = JobDataSource.Flow.UNLIMITED;
+
+    @Column(name = "base_options", columnDefinition = "text")
+    @jakarta.persistence.Convert(converter = JsonStringMapConverter.class)
+    private Map<String, String> baseOptions = new LinkedHashMap<>();
+
+    @OneToMany(mappedBy = "dataSource", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<JobDataSourceCompanyEntity> companies = new ArrayList<>();
+
+    @OneToMany(mappedBy = "dataSource", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<JobDataSourceCategoryEntity> categories = new ArrayList<>();
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public boolean isRunOnStartup() {
+        return runOnStartup;
+    }
+
+    public void setRunOnStartup(boolean runOnStartup) {
+        this.runOnStartup = runOnStartup;
+    }
+
+    public boolean isRequireOverride() {
+        return requireOverride;
+    }
+
+    public void setRequireOverride(boolean requireOverride) {
+        this.requireOverride = requireOverride;
+    }
+
+    public JobDataSource.Flow getFlow() {
+        return flow;
+    }
+
+    public void setFlow(JobDataSource.Flow flow) {
+        this.flow = flow;
+    }
+
+    public Map<String, String> getBaseOptions() {
+        return baseOptions;
+    }
+
+    public void setBaseOptions(Map<String, String> baseOptions) {
+        this.baseOptions = baseOptions;
+    }
+
+    public List<JobDataSourceCompanyEntity> getCompanies() {
+        return companies;
+    }
+
+    public void setCompanies(List<JobDataSourceCompanyEntity> companies) {
+        this.companies = companies;
+    }
+
+    public List<JobDataSourceCategoryEntity> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(List<JobDataSourceCategoryEntity> categories) {
+        this.categories = categories;
+    }
+}

@@ -63,7 +63,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
         List<SourceRegistry.ConfiguredSource> limited = new ArrayList<>();
         List<SourceRegistry.ConfiguredSource> unlimited = new ArrayList<>();
         for (SourceRegistry.ConfiguredSource source : startupSources) {
-            if (source.definition().isLimitedFlow()) {
+            if (source.isLimitedFlow()) {
                 limited.add(source);
             } else {
                 unlimited.add(source);
