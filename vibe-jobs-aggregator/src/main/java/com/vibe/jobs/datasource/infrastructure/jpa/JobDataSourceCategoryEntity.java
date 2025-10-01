@@ -25,9 +25,13 @@ public class JobDataSourceCategoryEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 基于 code 的关联 - 更符合业务语义
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "data_source_id", nullable = false)
+    @JoinColumn(name = "data_source_code", referencedColumnName = "code", nullable = false)
     private JobDataSourceEntity dataSource;
+
+    @Column(name = "data_source_code", nullable = false, insertable = false, updatable = false)
+    private String dataSourceCode;
 
     @Column(nullable = false)
     private String name;
@@ -57,6 +61,14 @@ public class JobDataSourceCategoryEntity {
 
     public void setDataSource(JobDataSourceEntity dataSource) {
         this.dataSource = dataSource;
+    }
+
+    public String getDataSourceCode() {
+        return dataSourceCode;
+    }
+
+    public void setDataSourceCode(String dataSourceCode) {
+        this.dataSourceCode = dataSourceCode;
     }
 
     public String getName() {
