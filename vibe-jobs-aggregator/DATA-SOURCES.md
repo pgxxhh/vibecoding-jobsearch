@@ -109,6 +109,20 @@ excludeKeywords:
 - **互联网/科技**: Grab, Lalamove, Notion, Figma, Linear, Airtable, Webflow, Shopify, Snowflake, Databricks, Palantir, Zendesk, Uber
 - **新加坡/香港重点**: OKX, Xendit, ShopBack, Patsnap, Brex
 
+
+### SmartRecruiters / Workable / Recruitee 验证脚本
+
+在新增大中华区租户之前，可运行 `scripts/validate_ats_sources.py` 对 `application.yml` 中的覆盖配置做快速联网自检：
+
+```bash
+cd vibe-jobs-aggregator
+python scripts/validate_ats_sources.py --companies okx bitget
+```
+
+脚本会针对 SmartRecruiters `postings`、Workable `jobs`、Recruitee `offers` 接口发起轻量请求，并给出返回岗位数量/状态码。若任意租户返回 0 或网络错误，命令会以非零状态退出，便于在本地或 CI 中阻止错误配置上线。
+
+> 注：沙箱环境的代理会屏蔽部分外网域名，如出现 `Tunnel connection failed: 403 Forbidden`，请在可访问公网的环境复测。
+
 ### 🆕 本土 ATS 连接（Moka / 北森）
 
 | 公司 | ATS | `baseUrl` | 关键参数 |
