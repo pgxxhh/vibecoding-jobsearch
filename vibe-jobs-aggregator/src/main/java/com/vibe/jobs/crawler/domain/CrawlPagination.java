@@ -3,10 +3,8 @@ package com.vibe.jobs.crawler.domain;
 public record CrawlPagination(int page, int size) {
 
     public CrawlPagination {
-        int normalizedPage = Math.max(1, page);
-        int normalizedSize = Math.max(1, size);
-        this.page = normalizedPage;
-        this.size = normalizedSize;
+        page = Math.max(1, page);
+        size = Math.max(1, size);
     }
 
     public int offset() {

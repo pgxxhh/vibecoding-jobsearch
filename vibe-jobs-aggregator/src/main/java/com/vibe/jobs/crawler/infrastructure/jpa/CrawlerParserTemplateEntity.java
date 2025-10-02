@@ -15,8 +15,7 @@ public class CrawlerParserTemplateEntity {
     @Column(length = 256)
     private String description;
 
-    @Lob
-    @Column(name = "config_json")
+    @Column(name = "config_json", columnDefinition = "LONGTEXT")
     private String configJson;
 
     @Column(name = "created_at")

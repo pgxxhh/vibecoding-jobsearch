@@ -26,6 +26,7 @@ public class Job {
     @ElementCollection
     @CollectionTable(name = "job_tags", joinColumns = @JoinColumn(name = "job_id"))
     @Column(name = "tag")
+    @Builder.Default
     private Set<String> tags = new HashSet<>();
     @Column(length = 1024) private String url;
     @Column(nullable = false, updatable = false, columnDefinition = "timestamp")

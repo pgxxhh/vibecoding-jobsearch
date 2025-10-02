@@ -18,8 +18,7 @@ public class CrawlerCacheEntryEntity {
     @Column(name = "cache_key", length = 256)
     private String cacheKey;
 
-    @Lob
-    @Column(name = "response_blob")
+    @Column(name = "response_blob", columnDefinition = "LONGBLOB")
     private byte[] responseBlob;
 
     @Column(name = "expires_at")

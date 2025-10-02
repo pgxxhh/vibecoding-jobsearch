@@ -24,8 +24,7 @@ public class CrawlerBlueprintEntity {
     @Column(name = "concurrency_limit")
     private int concurrencyLimit;
 
-    @Lob
-    @Column(name = "config_json")
+    @Column(name = "config_json", columnDefinition = "LONGTEXT")
     private String configJson;
 
     @Column(name = "parser_template_code", length = 128)

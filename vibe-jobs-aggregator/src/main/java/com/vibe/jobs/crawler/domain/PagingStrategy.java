@@ -50,7 +50,7 @@ public class PagingStrategy {
         try {
             return switch (mode) {
                 case NONE -> baseUrl;
-                case QUERY -> applyQuery(baseUrl, pagination.page());
+                case QUERY -> applyQuery(baseUrl, pagination);
                 case PATH_SUFFIX -> applyPathSuffix(baseUrl, pagination.page());
                 case OFFSET -> applyOffset(baseUrl, pagination);
             };
@@ -59,11 +59,11 @@ public class PagingStrategy {
         }
     }
 
-    private String applyQuery(String baseUrl, int page) throws URISyntaxException {
+    private String applyQuery(String baseUrl, CrawlPagination pagination) throws URISyntaxException {
         String param = parameter.isBlank() ? "page" : parameter;
         URI uri = new URI(baseUrl);
         String query = uri.getQuery();
-        int normalized = normalizePage(page);
+        int normalized = normalizePage(pagination.page());
         String newQueryParam = param + "=" + normalized;
         String updated = query == null || query.isBlank() ? newQueryParam : query + "&" + newQueryParam;
         if (!sizeParameter.isBlank() && !updated.contains(sizeParameter + "=")) {
