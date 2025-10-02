@@ -34,7 +34,179 @@ ingestion:
   initialDelayMs: 10000
   pageSize: 100
   concurrency: 6
-
+  mode: companies
+  companies:
+    - "adyen"
+    - "airwallex"
+    - "airbnb"
+    - "airtable"
+    - "bitmex"
+    - "binance"
+    - "brex"
+    - "bybit"
+    - "gogox"
+    - "chainalysis"
+    - "checkoutcom"
+    - "circle"
+    - "coinbase"
+    - "crypto"
+    - "bitget"
+    - "databricks"
+    - "datadog"
+    - "figma"
+    - "flexport"
+    - "grab"
+    - "hashkey"
+    - "lalamove"
+    - "klook"
+    - "linear"
+    - "matrixport"
+    - "notion"
+    - "onedegree"
+    - "osl"
+    - "okx"
+    - "palantir"
+    - "paypal"
+    - "revolut"
+    - "shopback"
+    - "shopify"
+    - "shopline"
+    - "hypebeast"
+    - "snowflake"
+    - "stripe"
+    - "thunes"
+    - "uber"
+    - "welab"
+    - "visa"
+    - "wise"
+    - "webflow"
+    - "animoca"
+    - "xendit"
+    - "zendesk"
+    - "xiaohongshu"
+    - "zhihu"
+    - "kuaishou"
+    - "meituan"
+    - "pingcap"
+    - "bytedance"
+    - "xiaomi"
+    - "oppo"
+    - "vivo"
+    - "nio"
+    - "dji"
+    - "shein"
+    - "pdd"
+    - "baidu"
+    - "jd"
+    - "glints"
+    - "zenyum"
+    - "stashaway"
+    - "bitmex"
+    - "osl"
+    - "matrixport"
+    - "hashkey"
+    - "ambergroup"
+    - "babelfinance"
+    - "imtoken"
+    - "coinflex"
+    - "okcoin"
+    - "gateio"
+    - "bullish"
+    - "cobo"
+    - "q9capital"
+    - "tigerbrokers"
+    - "futu"
+    - "aqumon"
+    - "lynk"
+    - "welabbank"
+    - "zabank"
+    - "huobitech"
+    - "bitmart"
+    - "coincola"
+    - "kucoin"
+    - "bitdeer"
+    - "canaan"
+    - "sensetime"
+    - "megvii"
+    - "horizonrobotics"
+    - "ponyai"
+    - "qcraft"
+    - "momenta"
+    - "deeproute"
+    - "inceptio"
+    - "autox"
+    - "weride"
+    - "smartmore"
+    - "aibee"
+    - "klook"
+    - "gogox"
+    - "endowus"
+    - "bolttech"
+    - "welend"
+    - "coinsuper"
+    - "hextrust"
+    - "diginex"
+    - "ninjavan"
+    - "carousell"
+    - "propertyguru"
+    - "grain"
+    - "singlife"
+    - "trustbank"
+    - "razerfintech"
+    - "moneysmart"
+    - "coinhako"
+    - "zipmex"
+    - "tokenize"
+    - "matrixdock"
+    - "kybernetwork"
+    - "quantstamp"
+    - "silot"
+    - "validus"
+    - "fundingasia"
+    - "skymavis"
+    - "versa"
+    - "jenfi"
+    - "xfers"
+    - "hoolah"
+    - "pace"
+    - "atome"
+    - "aspire"
+    - "codapayments"
+    - "welab"
+    - "onedegree"
+    - "bowtie"
+    - "weaveliving"
+    - "daydaycook"
+    - "preface"
+    - "aftership"
+    - "pickupp"
+    - "kpay"
+    - "particlex"
+    - "kkday"
+    - "kkcompany"
+    - "appier"
+    - "gogoro"
+    - "ninetyoneapp"
+    - "seventeenlive"
+    - "coolbitx"
+    - "xrex"
+    - "bitgin"
+    - "bitoex"
+    - "maicoin"
+    - "fanolabs"
+    - "presslogic"
+    - "privetech"
+    - "tutorme"
+    - "welendtech"
+    - "snapask"
+    - "zeek"
+    - "prenetics"
+    - "innoage"
+    - "viu"
+    - "wristcheck"
+    - "tappytech"
+    - "onechain"
+    - "taospace"
   recentDays: 45
   locationFilter:
     enabled: ${LOCATION_FILTER_ENABLED:true}
@@ -146,6 +318,1778 @@ ingestion:
       - "hr"
       - "legal"
       - "customer success"
+  sources:
+    - id: greenhouse
+      type: greenhouse
+      enabled: false
+      runOnStartup: false
+    - id: lever
+      type: lever
+      enabled: false
+      runOnStartup: false
+    - id: workday
+      type: workday
+      enabled: false
+      runOnStartup: false
+      requireOverride: true
+    - id: ashby
+      type: ashby
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+    - id: smartrecruiters
+      type: smartrecruiters
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: limited
+    - id: recruitee
+      type: recruitee
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: limited
+    - id: workable
+      type: workable
+      enabled: true
+      runOnStartup: true
+      requireOverride: true
+      flow: unlimited
+  companyOverrides:
+    notion:
+      sources:
+        ashby:
+          options:
+            baseUrl: "https://jobs.ashbyhq.com/notion"
+    figma:
+      sources:
+        ashby:
+          options:
+            baseUrl: "https://jobs.ashbyhq.com/figma"
+    linear:
+      sources:
+        ashby:
+          options:
+            baseUrl: "https://jobs.ashbyhq.com/linear"
+    airtable:
+      sources:
+        ashby:
+          options:
+            baseUrl: "https://jobs.ashbyhq.com/airtable"
+    webflow:
+      sources:
+        ashby:
+          options:
+            baseUrl: "https://jobs.ashbyhq.com/webflow"
+    adyen:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://adyen.wd3.myworkdayjobs.com"
+            tenant: "adyen"
+            site: "AdyenCareers"
+    checkoutcom:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Checkout.com"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Checkout.com"
+    crypto:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Crypto.com"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CryptoCom"
+        workable:
+          enabled: true
+          options:
+            company: "crypto"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/crypto"
+    grab:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://grab.wd3.myworkdayjobs.com"
+            tenant: "grab"
+            site: "GrabCareers"
+    lalamove:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "lalamove"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/lalamove"
+    paypal:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://paypal.wd1.myworkdayjobs.com"
+            tenant: "paypal"
+            site: "External"
+    revolut:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://revolut.wd3.myworkdayjobs.com"
+            tenant: "revolut"
+            site: "RevolutCareers"
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Revolut"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Revolut"
+    okx:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OKX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OKX"
+    bitget:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Bitget"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Bitget"
+    shopback:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "ShopBack"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/ShopBack"
+    shopline:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "shopline"
+            baseUrl: "https://shopline.recruitee.com/api"
+    xendit:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "xendit"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/xendit"
+    thunes:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "thunes"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/thunes"
+    hypebeast:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "hypebeast"
+            baseUrl: "https://hypebeast.recruitee.com/api"
+
+    bitmex:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "HDR Global Trading Limited"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HDRGlobalTradingLimited"
+    gogox:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "gogox"
+            baseUrl: "https://gogox.recruitee.com/api"
+        workable:
+          enabled: true
+          options:
+            ompany: "gogox"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/gogox"
+
+    glints:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "glints"
+            baseUrl: "https://glints.recruitee.com/api"
+
+    zenyum:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "zenyum"
+            baseUrl: "https://zenyum.recruitee.com/api"
+    stashaway:
+      sources:
+        greenhouse:
+          enabled: false
+        workday:
+          enabled: false
+        ashby:
+          enabled: false
+        smartrecruiters:
+          enabled: false
+        recruitee:
+          enabled: true
+          options:
+            company: "stashaway"
+            baseUrl: "https://stashaway.recruitee.com/api"
+    matrixport:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "matrixport"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/matrixport"
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Matrixport"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Matrixport"
+    stripe:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://stripe.wd1.myworkdayjobs.com"
+            tenant: "stripe"
+            site: "Stripe_Careers"
+
+    crypto:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "crypto"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/crypto"
+
+
+    onedegree:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "onedegree"
+            baseUrl: "https://onedegree.recruitee.com/api"
+
+    visa:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://visa.wd1.myworkdayjobs.com"
+            tenant: "visa"
+            site: "External"
+    wise:
+      sources:
+        workday:
+          enabled: true
+          options:
+            baseUrl: "https://wise.wd3.myworkdayjobs.com"
+            tenant: "wise"
+            site: "Wise"
+    animoca:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "animoca"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/animoca"
+      categories:
+        - name: "{{company}} Engineering"
+          limit: 40
+          tags:
+            - engineering
+            - software
+          facets:
+            jobFamily:
+              - Engineering
+        - name: "{{company}} Financial"
+          limit: 20
+          tags:
+            - finance
+            - financial
+    osl:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OSL"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OSL"
+    ambergroup:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Amber Group"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AmberGroup"
+    babelfinance:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Babel Finance"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/BabelFinance"
+    imtoken:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "imToken"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/imToken"
+    coinflex:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "CoinFLEX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CoinFLEX"
+    okcoin:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OKCoin"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OKCoin"
+    gateio:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Gate.io"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Gate.io"
+    bullish:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Bullish"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Bullish"
+    cobo:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Cobo"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Cobo"
+    q9capital:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Q9 Capital"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Q9Capital"
+    tigerbrokers:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Tiger Brokers"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/TigerBrokers"
+    futu:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Futu Securities"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/FutuSecurities"
+    aqumon:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "AQUMON"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AQUMON"
+    lynk:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Lynk"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Lynk"
+    welabbank:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "WeLab Bank"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/WeLabBank"
+    zabank:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "ZA Bank"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/ZABank"
+    huobitech:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Huobi Tech"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HuobiTech"
+    bitmart:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "BitMart"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/BitMart"
+    coincola:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "CoinCola"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CoinCola"
+    kucoin:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "KuCoin"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/KuCoin"
+    bitdeer:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Bitdeer"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Bitdeer"
+    canaan:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Canaan"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Canaan"
+    sensetime:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "SenseTime"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/SenseTime"
+    megvii:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Megvii"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Megvii"
+    horizonrobotics:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Horizon Robotics"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HorizonRobotics"
+    ponyai:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Pony.ai"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/PonyAI"
+    qcraft:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "QCraft"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/QCraft"
+    momenta:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Momenta"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Momenta"
+    deeproute:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "DeepRoute"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/DeepRoute"
+    inceptio:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Inceptio"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Inceptio"
+    autox:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "AutoX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AutoX"
+    weride:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "WeRide"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/WeRide"
+    smartmore:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "SmartMore"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/SmartMore"
+    aibee:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Aibee"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Aibee"
+    klook:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "klook"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/klook"
+
+    endowus:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "endowus"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/endowus"
+    bolttech:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "bolttech"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/bolttech"
+    welend:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "welend"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/welend"
+    coinsuper:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "coinsuper"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/coinsuper"
+    hextrust:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "hextrust"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/hextrust"
+    diginex:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "diginex"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/diginex"
+    ninjavan:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "ninjavan"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/ninjavan"
+    carousell:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "carousell"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/carousell"
+    propertyguru:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "propertyguru"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/propertyguru"
+    grain:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "grain"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/grain"
+    singlife:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "singlife"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/singlife"
+    trustbank:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "trustbank"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/trustbank"
+    razerfintech:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "razerfintech"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/razerfintech"
+    moneysmart:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "moneysmart"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/moneysmart"
+    coinhako:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "coinhako"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/coinhako"
+    zipmex:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "zipmex"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/zipmex"
+    tokenize:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "tokenize"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/tokenize"
+    matrixdock:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "matrixdock"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/matrixdock"
+    kybernetwork:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "kybernetwork"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/kybernetwork"
+    quantstamp:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "quantstamp"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/quantstamp"
+    silot:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "silot"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/silot"
+    validus:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "validus"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/validus"
+    fundingasia:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "fundingasia"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/fundingasia"
+    skymavis:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "skymavis"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/skymavis"
+    versa:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "versa"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/versa"
+    jenfi:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "jenfi"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/jenfi"
+    xfers:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "xfers"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/xfers"
+    hoolah:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "hoolah"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/hoolah"
+    pace:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "pace"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/pace"
+    atome:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "atome"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/atome"
+    aspire:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "aspire"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/aspire"
+    codapayments:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "codapayments"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/codapayments"
+    welab:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "welab"
+            baseUrl: "https://welab.recruitee.com/api"
+
+    bowtie:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bowtie"
+            baseUrl: "https://bowtie.recruitee.com/api"
+    weaveliving:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "weaveliving"
+            baseUrl: "https://weaveliving.recruitee.com/api"
+    daydaycook:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "daydaycook"
+            baseUrl: "https://daydaycook.recruitee.com/api"
+    preface:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "preface"
+            baseUrl: "https://preface.recruitee.com/api"
+    aftership:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "aftership"
+            baseUrl: "https://aftership.recruitee.com/api"
+    pickupp:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "pickupp"
+            baseUrl: "https://pickupp.recruitee.com/api"
+    kpay:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kpay"
+            baseUrl: "https://kpay.recruitee.com/api"
+    particlex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "particlex"
+            baseUrl: "https://particlex.recruitee.com/api"
+    kkday:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kkday"
+            baseUrl: "https://kkday.recruitee.com/api"
+    kkcompany:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kkcompany"
+            baseUrl: "https://kkcompany.recruitee.com/api"
+    appier:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "appier"
+            baseUrl: "https://appier.recruitee.com/api"
+    gogoro:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "gogoro"
+            baseUrl: "https://gogoro.recruitee.com/api"
+    ninetyoneapp:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "91APP"
+            baseUrl: "https://ninetyoneapp.recruitee.com/api"
+    seventeenlive:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "17LIVE"
+            baseUrl: "https://seventeenlive.recruitee.com/api"
+    coolbitx:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "coolbitx"
+            baseUrl: "https://coolbitx.recruitee.com/api"
+    xrex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "xrex"
+            baseUrl: "https://xrex.recruitee.com/api"
+    bitgin:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bitgin"
+            baseUrl: "https://bitgin.recruitee.com/api"
+    bitoex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bitoex"
+            baseUrl: "https://bitoex.recruitee.com/api"
+    maicoin:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "maicoin"
+            baseUrl: "https://maicoin.recruitee.com/api"
+    fanolabs:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "fanolabs"
+            baseUrl: "https://fanolabs.recruitee.com/api"
+    presslogic:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "presslogic"
+            baseUrl: "https://presslogic.recruitee.com/api"
+    privetech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "Prive Technologies"
+            baseUrl: "https://privetech.recruitee.com/api"
+    tutorme:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "tutorme"
+            baseUrl: "https://tutorme.recruitee.com/api"
+    welendtech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "welendtech"
+            baseUrl: "https://welendtech.recruitee.com/api"
+    snapask:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "snapask"
+            baseUrl: "https://snapask.recruitee.com/api"
+    zeek:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "zeek"
+            baseUrl: "https://zeek.recruitee.com/api"
+    prenetics:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "prenetics"
+            baseUrl: "https://prenetics.recruitee.com/api"
+    innoage:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "innoage"
+            baseUrl: "https://innoage.recruitee.com/api"
+    viu:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "viu"
+            baseUrl: "https://viu.recruitee.com/api"
+    wristcheck:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "wristcheck"
+            baseUrl: "https://wristcheck.recruitee.com/api"
+    tappytech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "tappytech"
+            baseUrl: "https://tappytech.recruitee.com/api"
+    onechain:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "onechain"
+            baseUrl: "https://onechain.recruitee.com/api"
+    taospace:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "taospace"
+            baseUrl: "https://taospace.recruitee.com/api"
+
+
+    bitmex:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "BitMEX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HDRGlobalTradingLimited"
+    osl:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OSL"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OSL"
+    matrixport:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Matrixport"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Matrixport"
+    hashkey:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "HashKey"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HashKey"
+    ambergroup:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Amber Group"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AmberGroup"
+    babelfinance:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Babel Finance"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/BabelFinance"
+    imtoken:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "imToken"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/imToken"
+    coinflex:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "CoinFLEX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CoinFLEX"
+    okcoin:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "OKCoin"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/OKCoin"
+    gateio:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Gate.io"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Gate.io"
+    bullish:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Bullish"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Bullish"
+    cobo:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Cobo"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Cobo"
+    q9capital:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Q9 Capital"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Q9Capital"
+    tigerbrokers:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Tiger Brokers"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/TigerBrokers"
+    futu:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Futu Securities"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/FutuSecurities"
+    aqumon:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "AQUMON"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AQUMON"
+    lynk:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Lynk"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Lynk"
+    welabbank:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "WeLab Bank"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/WeLabBank"
+    zabank:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "ZA Bank"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/ZABank"
+    huobitech:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Huobi Tech"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HuobiTech"
+    bitmart:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "BitMart"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/BitMart"
+    coincola:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "CoinCola"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/CoinCola"
+    kucoin:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "KuCoin"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/KuCoin"
+    bitdeer:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Bitdeer"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Bitdeer"
+    canaan:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Canaan"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Canaan"
+    sensetime:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "SenseTime"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/SenseTime"
+    megvii:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Megvii"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Megvii"
+    horizonrobotics:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Horizon Robotics"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/HorizonRobotics"
+    ponyai:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Pony.ai"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/PonyAI"
+    qcraft:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "QCraft"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/QCraft"
+    momenta:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Momenta"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Momenta"
+    deeproute:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "DeepRoute"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/DeepRoute"
+    inceptio:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Inceptio"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Inceptio"
+    autox:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "AutoX"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/AutoX"
+    weride:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "WeRide"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/WeRide"
+    smartmore:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "SmartMore"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/SmartMore"
+    aibee:
+      sources:
+        smartrecruiters:
+          enabled: true
+          options:
+            company: "Aibee"
+            baseUrl: "https://api.smartrecruiters.com/v1/companies/Aibee"
+    klook:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "klook"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/klook"
+    gogox:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "gogox"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/gogox"
+    endowus:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "endowus"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/endowus"
+    bolttech:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "bolttech"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/bolttech"
+    welend:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "welend"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/welend"
+    coinsuper:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "coinsuper"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/coinsuper"
+    hextrust:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "hextrust"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/hextrust"
+    diginex:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "diginex"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/diginex"
+    ninjavan:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "ninjavan"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/ninjavan"
+    carousell:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "carousell"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/carousell"
+    propertyguru:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "propertyguru"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/propertyguru"
+    grain:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "grain"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/grain"
+    singlife:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "singlife"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/singlife"
+    trustbank:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "trustbank"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/trustbank"
+    razerfintech:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "razerfintech"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/razerfintech"
+    moneysmart:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "moneysmart"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/moneysmart"
+    coinhako:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "coinhako"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/coinhako"
+    zipmex:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "zipmex"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/zipmex"
+    tokenize:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "tokenize"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/tokenize"
+    matrixdock:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "matrixdock"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/matrixdock"
+    kybernetwork:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "kybernetwork"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/kybernetwork"
+    quantstamp:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "quantstamp"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/quantstamp"
+    silot:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "silot"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/silot"
+    validus:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "validus"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/validus"
+    fundingasia:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "fundingasia"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/fundingasia"
+    skymavis:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "skymavis"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/skymavis"
+    versa:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "versa"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/versa"
+    jenfi:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "jenfi"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/jenfi"
+    xfers:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "xfers"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/xfers"
+    hoolah:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "hoolah"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/hoolah"
+    pace:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "pace"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/pace"
+    atome:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "atome"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/atome"
+    aspire:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "aspire"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/aspire"
+    codapayments:
+      sources:
+        workable:
+          enabled: true
+          options:
+            company: "codapayments"
+            baseUrl: "https://apply.workable.com/api/v3/accounts/codapayments"
+    welab:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "welab"
+            baseUrl: "https://welab.recruitee.com/api"
+    onedegree:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "onedegree"
+            baseUrl: "https://onedegree.recruitee.com/api"
+    bowtie:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bowtie"
+            baseUrl: "https://bowtie.recruitee.com/api"
+    weaveliving:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "weaveliving"
+            baseUrl: "https://weaveliving.recruitee.com/api"
+    daydaycook:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "daydaycook"
+            baseUrl: "https://daydaycook.recruitee.com/api"
+    preface:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "preface"
+            baseUrl: "https://preface.recruitee.com/api"
+    aftership:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "aftership"
+            baseUrl: "https://aftership.recruitee.com/api"
+    pickupp:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "pickupp"
+            baseUrl: "https://pickupp.recruitee.com/api"
+    kpay:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kpay"
+            baseUrl: "https://kpay.recruitee.com/api"
+    particlex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "particlex"
+            baseUrl: "https://particlex.recruitee.com/api"
+    kkday:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kkday"
+            baseUrl: "https://kkday.recruitee.com/api"
+    kkcompany:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "kkcompany"
+            baseUrl: "https://kkcompany.recruitee.com/api"
+    appier:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "appier"
+            baseUrl: "https://appier.recruitee.com/api"
+    gogoro:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "gogoro"
+            baseUrl: "https://gogoro.recruitee.com/api"
+    ninetyoneapp:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "91APP"
+            baseUrl: "https://ninetyoneapp.recruitee.com/api"
+    seventeenlive:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "17LIVE"
+            baseUrl: "https://seventeenlive.recruitee.com/api"
+    coolbitx:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "coolbitx"
+            baseUrl: "https://coolbitx.recruitee.com/api"
+    xrex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "xrex"
+            baseUrl: "https://xrex.recruitee.com/api"
+    bitgin:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bitgin"
+            baseUrl: "https://bitgin.recruitee.com/api"
+    bitoex:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "bitoex"
+            baseUrl: "https://bitoex.recruitee.com/api"
+    maicoin:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "maicoin"
+            baseUrl: "https://maicoin.recruitee.com/api"
+    fanolabs:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "fanolabs"
+            baseUrl: "https://fanolabs.recruitee.com/api"
+    presslogic:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "presslogic"
+            baseUrl: "https://presslogic.recruitee.com/api"
+    privetech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "Prive Technologies"
+            baseUrl: "https://privetech.recruitee.com/api"
+    tutorme:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "tutorme"
+            baseUrl: "https://tutorme.recruitee.com/api"
+    welendtech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "welendtech"
+            baseUrl: "https://welendtech.recruitee.com/api"
+    snapask:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "snapask"
+            baseUrl: "https://snapask.recruitee.com/api"
+    zeek:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "zeek"
+            baseUrl: "https://zeek.recruitee.com/api"
+    prenetics:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "prenetics"
+            baseUrl: "https://prenetics.recruitee.com/api"
+    innoage:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "innoage"
+            baseUrl: "https://innoage.recruitee.com/api"
+    viu:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "viu"
+            baseUrl: "https://viu.recruitee.com/api"
+    wristcheck:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "wristcheck"
+            baseUrl: "https://wristcheck.recruitee.com/api"
+    tappytech:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "tappytech"
+            baseUrl: "https://tappytech.recruitee.com/api"
+    onechain:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "onechain"
+            baseUrl: "https://onechain.recruitee.com/api"
+    taospace:
+      sources:
+        recruitee:
+          enabled: true
+          options:
+            company: "taospace"
+            baseUrl: "https://taospace.recruitee.com/api"
+
+
 auth:
   email:
     challengeTtl: PT10M

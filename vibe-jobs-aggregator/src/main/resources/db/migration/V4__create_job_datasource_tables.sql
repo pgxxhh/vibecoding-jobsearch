@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS job_data_source_company (
     override_options TEXT,
     CONSTRAINT fk_job_data_source_company_source FOREIGN KEY (data_source_id) REFERENCES job_data_source (id) ON DELETE CASCADE
 );
-CREATE INDEX idx_job_data_source_company_source ON job_data_source_company (data_source_id);
+CREATE INDEX IF NOT EXISTS idx_job_data_source_company_source ON job_data_source_company (data_source_id);
 
 CREATE TABLE IF NOT EXISTS job_data_source_category (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -31,4 +31,4 @@ CREATE TABLE IF NOT EXISTS job_data_source_category (
     facets TEXT,
     CONSTRAINT fk_job_data_source_category_source FOREIGN KEY (data_source_id) REFERENCES job_data_source (id) ON DELETE CASCADE
 );
-CREATE INDEX idx_job_data_source_category_source ON job_data_source_category (data_source_id);
+CREATE INDEX IF NOT EXISTS idx_job_data_source_category_source ON job_data_source_category (data_source_id);

@@ -23,7 +23,6 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
-    @Transactional
     public List<JobDataSource> findAllEnabled() {
         return delegate.findAllEnabled().stream()
                 .map(this::toDomain)
@@ -32,7 +31,6 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
-    @Transactional
     public List<JobDataSource> findAll() {
         return delegate.findAll().stream()
                 .map(this::toDomain)
