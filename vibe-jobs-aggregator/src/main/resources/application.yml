@@ -32,395 +32,120 @@ server:
 ingestion:
   fixedDelayMs: 180000
   initialDelayMs: 10000
-  pageSize: 50
-  concurrency: 4
-  mode: companies
-  companies:
-    - "akunacapital"     # 8 total jobs - Trading firm with Asian offices
-    - "adyen"            # Payment processor with strong APAC presence  
-    - "affirm"           # Fintech expanding to Asia
-    - "afterpay"         # Now owned by Block, strong in Australia/Asia
-    - "airwallex"        # Australia-based fintech, heavy Asia focus
-    - "airtable"         # Global SaaS with Asian offices
-    - "algolia"          # Search-as-a-service, global presence
-    - "alphasense"       # 10 Singapore jobs - Financial tech
-    - "alphasights"      # 17 total jobs, 14 Hong Kong - Expert network
-    - "ambergroup"       # Crypto company based in Asia
-    - "anchorage"        # Crypto custody, expanding globally
-    - "appsflyer"        # Mobile attribution, Israel-based with APAC
-    - "asana"            # Work management, global offices
-    - "atlassian"        # Australian tech giant, major APAC presence
-    - "binance"          # 90 total jobs, 21 Hong Kong - Major crypto exchange
-    - "bitgo"            # Crypto infrastructure, global
-    - "bitmex"           # 8 total jobs, 7 Hong Kong - Crypto derivatives
-    - "bitpanda"         # European crypto exchange expanding
-    - "block"            # Square/Cash App, global fintech
-    - "blockdaemon"      # Blockchain infrastructure
-    - "blockchain"       # Crypto services company
-    - "blockfi"          # Crypto lending platform
-    - "blockstream"      # Bitcoin technology company
-    - "bolt"             # Estonian mobility/delivery platform
-    - "brex"             # Corporate fintech, expanding globally
-    - "bybit"            # Crypto derivatives exchange, Asia-focused
-    - "canva"            # Australian design platform, huge in APAC
-    - "carta"            # Equity management, global presence
-    - "chainalysis"      # Blockchain analytics, global compliance
-    - "chainstack"       # Blockchain infrastructure
-    - "checkoutcom"      # Payment processor, global expansion
-    - "chime"            # Digital banking, US-focused but expanding
-    - "chippercash"      # African fintech, expanding regionally
-    - "circle"           # Stablecoin issuer, global presence
-    - "codapayments"     # Southeast Asian payment platform
-    - "coinbase"         # 9 total jobs, 8 Remote Singapore - Major crypto exchange
-    - "coinlist"         # Crypto platform for institutions
-    - "crypto"           # 123 total jobs, 78 Hong Kong/Singapore - Crypto.com
-    - "currencycloud"    # Cross-border payments, global
-    - "databricks"       # 26 total jobs, 25 Singapore - Data analytics platform
-    - "datadog"          # 6 Singapore jobs - Monitoring platform
-    - "dataminr"         # Real-time information discovery
-    - "deliveroo"        # Food delivery, strong in Asia-Pacific
-    - "dlocal"           # Emerging markets payments
-    - "doordash"         # Food delivery expanding globally
-    - "drw"              # Trading firm with global presence
-    - "elliptic"         # Blockchain analytics, global compliance
-    - "figma"            # Design collaboration tool, global
-    - "fireblocks"       # 8 total jobs, 7 Singapore - Crypto infrastructure
-    - "flowtraders"      # 19 total jobs, 19 Hong Kong office - Algorithmic trading
-    - "flexport"         # 9 total jobs - Logistics platform
-    - "five-rings"       # Quantitative trading firm
-    - "gojek"            # Indonesian super-app (if available)
-    - "grab"             # Southeast Asian super-app (if available)  
-    - "gocardless"       # Direct debit platform, expanding globally
-    - "gusto"            # HR/payroll platform
-    - "hashicorp"        # Infrastructure automation, global
-    - "hudsonrivertrading" # Trading firm with Asian offices
-    - "imcfinancialmarkets" # Market maker with global presence
-    - "intercom"         # Customer messaging platform
-    - "janestreet"       # 38 total jobs, 33 Hong Kong - Quantitative trading
-    - "jumptrading"      # 25 total jobs, 6 Hong Kong - Trading firm
-    - "klarna"           # Buy now pay later, expanding to Asia
-    - "klook"            # Asian travel platform
-    - "kraken"           # Crypto exchange with global presence
-    - "lalamove"         # 38 total jobs, 33 Hong Kong/Singapore - Asian logistics
-    - "ledger"           # Hardware wallet company
-    - "lendingclub"      # Peer-to-peer lending
-    - "liveramp"         # Data connectivity platform
-    - "luno"             # Crypto exchange focused on emerging markets
-    - "mambu"            # Banking platform, expanding globally
-    - "marqeta"          # Modern card issuing platform
-    - "mastercard"       # Global payment processor
-    - "mongodb"          # 15 total jobs, 12 Singapore - Database platform
-    - "monzo"            # Digital bank expanding internationally
-    - "n26"              # European neobank expanding globally
-    - "nium"             # Global payments infrastructure
-    - "notion"           # Productivity platform
-    - "nubank"           # Brazilian neobank, may expand to Asia
-    - "okx"              # 197 total jobs, 196 Hong Kong/Singapore - Major crypto exchange
-    - "onfido"           # Identity verification, global compliance
-    - "opensea"          # NFT marketplace
-    - "optiver"          # Market maker with Asian operations
-    - "palantir"         # Data analytics, government and enterprise
-    - "patsnap"          # 16 total jobs, 16 Singapore - IP intelligence platform
-    - "paxos"            # Regulated blockchain infrastructure
-    - "paypal"           # Global payments, strong Asian presence
-    - "pipedrive"        # Sales CRM platform
-    - "plaid"            # Fintech infrastructure
-    - "point72"          # 21 total jobs, 18 Hong Kong/Singapore - Hedge fund
-    - "rapyd"            # Fintech-as-a-service platform
-    - "reddit"           # Social media platform
-    - "remitly"          # Cross-border remittances
-    - "revolut"          # European neobank expanding globally
-    - "ripple"           # Blockchain payments
-    - "rippling"         # HR and IT management platform
-    - "robinhood"        # Commission-free trading platform
-    - "rokt"             # Australian adtech platform
-    - "shopback"         # Cashback platform, strong in APAC
-    - "shopify"          # E-commerce platform
-    - "shopee"           # Southeast Asian e-commerce platform
-    - "snowflake"        # Cloud data platform
-    - "sofi"             # Digital personal finance
-    - "squareup"         # Point-of-sale and financial services
-    - "stripe"           # Payment processing infrastructure
-    - "sumup"            # Point-of-sale solutions
-    - "taboola"          # Content discovery platform
-    - "tala"             # Emerging markets fintech
-    - "thoughtmachine"   # Cloud-native banking technology
-    - "thunes"           # 8 total jobs - Cross-border payments, Asia focus
-    - "transfergo"       # International money transfers
-    - "trmlabs"          # Blockchain compliance
-    - "truelayer"        # Open banking infrastructure
-    - "twosigma"         # Quantitative investment firm
-    - "uber"             # Ride-sharing and delivery, global presence
-    - "upwork"           # Freelance platform
-    - "visa"             # Global payment network
-    - "virtu"            # 17 total jobs, 17 Singapore - Market maker
-    - "wework"           # Shared workspace provider
-    - "wise"             # International money transfers
-    - "worldquant"       # 16 total jobs, 10 Singapore - Quantitative hedge fund
-    - "xendit"           # Indonesian payment gateway
-    - "xero"             # Cloud accounting software
-    - "yelp"             # Local business reviews
-    - "zendesk"          # Customer service platform
-    - "zillow"           # Real estate platform
-    - "klarna"
-    - "klook"
-    - "kraken"
-    - "lalamove"
-    - "ledger"
-    - "lendingclub"
-    - "liveramp"
-    - "luno"
-    - "mambu"
-    - "marqeta"
-    - "mastercard"
-    - "mongodb"
-    - "monzo"
-    - "n26"
-    - "nium"
-    - "notion"
-    - "nubank"
-    - "okx"
-    - "onfido"
-    - "opensea"
-    - "optiver"
-    - "palantir"
-    - "patsnap"
-    - "paxos"
-    - "paypal"
-    - "pipedrive"
-    - "plaid"
-    - "point72"
-    - "rapyd"
-    - "reddit"
-    - "remitly"
-    - "revolut"
-    - "ripple"
-    - "rippling"
-    - "robinhood"
-    - "rokt"
-    - "shopback"
-    - "shopify"
-    - "shopee"
-    - "snowflake"
-    - "sofi"
-    - "squareup"
-    - "stripe"
-    - "sumup"
-    - "taboola"
-    - "tala"
-    - "thoughtmachine"
-    - "thunes"
-    - "transfergo"
-    - "trmlabs"
-    - "truelayer"
-    - "twosigma"
-    - "uber"
-    - "upwork"
-    - "visa"
-    - "virtu"
-    - "wework"
-    - "wise"
-    - "worldquant"
-    - "xendit"
-    - "xero"
-    - "yelp"
-    - "zendesk"
-    - "zillow"
-  recentDays: 7
+  pageSize: 100
+  concurrency: 6
+
+  recentDays: 45
   locationFilter:
     enabled: ${LOCATION_FILTER_ENABLED:true}
     includeCountries:
       - "china"
-      - "singapore" 
+      - "中国"
       - "hong kong"
+      - "香港"
       - "taiwan"
-      - "japan"
-      - "south korea"
-      - "korea"
-      - "india"
-      - "australia"
-      - "new zealand"
-      - "thailand"
+      - "singapore"
       - "malaysia"
-      - "indonesia" 
-      - "philippines"
-      - "vietnam"
+      - "thailand"
     includeCities:
       - "beijing"
+      - "北京"
       - "shanghai"
+      - "上海"
       - "shenzhen"
+      - "深圳"
       - "guangzhou"
+      - "广州"
       - "hangzhou"
+      - "杭州"
       - "chengdu"
+      - "成都"
       - "nanjing"
+      - "南京"
       - "suzhou"
-      - "singapore"
+      - "苏州"
+      - "tianjin"
+      - "天津"
+      - "wuhan"
+      - "武汉"
+      - "chongqing"
+      - "重庆"
+      - "xi'an"
+      - "西安"
+      - "qingdao"
+      - "青岛"
+      - "dalian"
+      - "大连"
       - "hong kong"
-      - "taipei"
-      - "tokyo"
-      - "osaka"
-      - "seoul"
-      - "busan"
-      - "mumbai"
-      - "bangalore"
-      - "delhi"
-      - "hyderabad"
-      - "chennai"
-      - "pune"
-      - "sydney"
-      - "melbourne"
-      - "brisbane"
-      - "auckland"
-      - "bangkok"
-      - "kuala lumpur"
-      - "jakarta"
-      - "manila"
-      - "ho chi minh"
-      - "hanoi"
+      - "hong-kong"
+      - "singapore"
+      - "remote - china"
+      - "remote china"
+      - "greater china"
     includeKeywords:
-      - "remote - asia"
-      - "remote - apac"
+      - "china"
+      - "中国"
+      - "hong kong"
+      - "香港"
       - "asia pacific"
       - "apac"
-      - "remote - singapore"
-      - "remote - hong kong"
-      - "remote - australia"
-      - "remote - india"
+      - "大陆"
+      - "大中华"
     excludeKeywords:
-      - "remote - us"
-      - "remote - usa" 
-      - "remote - canada"
-      - "remote - europe"
-      - "remote - uk"
-      - "remote - emea"
-  sources:
-    - id: greenhouse
-      type: greenhouse
-      enabled: true
-      runOnStartup: true
-      options:
-        slug: "{{slug}}"
-    - id: lever
-      type: lever
-      enabled: true
-      runOnStartup: true
-      options:
-        company: "{{slug}}"
-    - id: workday
-      type: workday
-      enabled: true
-      runOnStartup: true
-      requireOverride: true
-      options:
-        baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
-        tenant: "{{slug}}"
-        site: "{{slugUpper}}"
-  companyOverrides:
-    adyen:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://adyen.wd3.myworkdayjobs.com"
-            tenant: "adyen"
-            site: "AdyenCareers"
-    grab:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://grab.wd3.myworkdayjobs.com"
-            tenant: "grab"
-            site: "GrabCareers"
-    mastercard:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://mastercard.wd1.myworkdayjobs.com"
-            tenant: "mastercard"
-            site: "CorporateCareers"
-    paypal:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://paypal.wd1.myworkdayjobs.com"
-            tenant: "paypal"
-            site: "External"
-    revolut:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://revolut.wd3.myworkdayjobs.com"
-            tenant: "revolut"
-            site: "RevolutCareers"
-    stripe:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://stripe.wd1.myworkdayjobs.com"
-            tenant: "stripe"
-            site: "Stripe_Careers"
-    visa:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://visa.wd1.myworkdayjobs.com"
-            tenant: "visa"
-            site: "External"
-    wise:
-      sources:
-        greenhouse:
-          enabled: false
-        lever:
-          enabled: false
-        workday:
-          options:
-            baseUrl: "https://wise.wd3.myworkdayjobs.com"
-            tenant: "wise"
-            site: "Wise"
-      categories:
-        - name: "{{company}} Engineering"
-          limit: 40
-          tags:
-            - engineering
-            - software
-          facets:
-            jobFamily:
-              - Engineering
-              - "{{companyUpper}} Technology"
-        - name: "{{company}} Financial"
-          limit: 20
-          tags:
-            - finance
-            - financial
-
-
+      - "us only"
+      - "usa only"
+      - "north america only"
+      - "europe only"
+      - "must be located in us"
+      - "require us work authorization"
+      - "eu citizens only"
+      - "sales"
+      - "marketing"
+      - "hr"
+      - "legal"
+      - "customer success"
+  roleFilter:
+    enabled: ${ROLE_FILTER_ENABLED:true}
+    searchDescription: true
+    includeKeywords:
+      - "financial"
+      - "finance"
+      - "analyst"
+      - "investment"
+      - "accounting"
+      - "treasury"
+      - "财务"
+      - "金融"
+      - "分析师"
+      - "投资"
+      - "engineer"
+      - "工程师"
+      - "developer"
+      - "软件"
+      - "后端"
+      - "前端"
+      - "全栈"
+      - "数据"
+      - "算法"
+      - "machine learning"
+      - "devops"
+      - "sre"
+      - "platform"
+      - "云计算"
+      - "ai"
+    excludeKeywords:
+      - "intern"
+      - "internship"
+      - "graduate program"
+      - "校园"
+      - "campus"
+      - "实习"
+      - "temporary"
+      - "sales"
+      - "marketing"
+      - "hr"
+      - "legal"
+      - "customer success"
 auth:
   email:
     challengeTtl: PT10M

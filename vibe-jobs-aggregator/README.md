@@ -2,51 +2,101 @@
 
 Spring Boot service that ingests external job boards on a schedule and upserts them into the local database.
 
-## Supported data sources
-- **Greenhouse** — `https://boards-api.greenhouse.io/v1/boards/{slug}/jobs`
-- **Lever** — `https://api.lever.co/v0/postings/{company}?mode=json`
-- **Workday** — `https://{tenant-domain}/wday/cxs/{tenant}/{site}/jobs`
+## 🌟 Supported Data Sources
+
+- **Workday** — `/wday/cxs/{tenant}/{site}/jobs` (POST, supports facets & Chinese content)
+- **Greenhouse** — `https://boards.greenhouse.io/{org}.json`
+- **Ashby ATS** — Modern tech companies (Notion, Figma, Linear, etc.)
+- **Amazon Jobs API** — Official APAC feed from `https://www.amazon.jobs/en/search.json`
+- **Generic ATS (Moka/Beisen)** — Unified client covering Moka智聘、北森Beisen 等中国本土 ATS（现已为小红书、知乎、快手、美团、PingCAP 启用）
+- **Crawler Blueprints** — Configurable crawler domain that renders career sites via HTTP/Playwright-like flows and parses them with reusable parser templates.
 
 Each connector implements `SourceClient` and is wired through a factory so new providers can be added with minimal code.
 
-## Configuration
+📖 **[完整数据源配置指南 →](DATA-SOURCES.md)**
+
+## ⚡ Quick Start
+
+### Configuration
 Edit `src/main/resources/application.yml` under the `ingestion` section:
 
 ```yaml
 ingestion:
-  fixedDelayMs: 3600000
-  initialDelayMs: 10000
-  pageSize: 20
-  concurrency: 4
-  mode: companies # or recent
+  fixedDelayMs: 180000    # 3 minutes interval
+  initialDelayMs: 10000   # 10 seconds startup delay
+  pageSize: 100           # Jobs per page
+  concurrency: 6          # Parallel threads
+  mode: companies         # Filter against the curated list below
   companies:
-    - Stripe
-    - Ramp
-    - Deloitte
-    - Datadog
-  recentDays: 7
-  sources:
-    - id: greenhouse
-      type: greenhouse
-      enabled: true
-      runOnStartup: true
-      options:
-        slug: "{{slug}}"
-    - id: lever
-      type: lever
-      enabled: true
-      runOnStartup: true
-      options:
-        company: "{{slug}}"
-    - id: workday
-      type: workday
-      enabled: true
-      runOnStartup: true
-      options:
-        baseUrl: "https://{{slug}}.wd1.myworkdayjobs.com"
-        tenant: "{{slug}}"
-        site: "{{slugUpper}}"
+    - "binance"
+    - "okx"
+    - "grab"
+    - "stripe"
+    - "notion"
+  recentDays: 14
+
+  # 🇨🇳 China-Optimized Filtering (Location + Role)
+  locationFilter:
+    enabled: true
+    includeCities:
+      - "beijing" / "北京"
+      - "shanghai" / "上海"
+      - "shenzhen" / "深圳"
+      - "guangzhou" / "广州"
+      - "hong kong" / "香港"
+      - "singapore"
+    includeKeywords:
+      - "china" / "中国"
+      - "apac"
+      - "greater china" / "大中华"
+  roleFilter:
+    enabled: true
+    includeKeywords:
+      - "financial" / "财务"
+      - "analyst" / "分析师"
+      - "investment" / "投资"
+      - "engineer" / "工程师"
+      - "software" / "软件"
+    excludeKeywords:
+      - "intern" / "实习"
+      - "campus" / "校园"
 ```
+
+### Running Locally
+```bash
+mvn spring-boot:run
+```
+
+### Docker Deployment
+```bash
+# Start with MySQL
+docker compose up -d
+
+# Or with custom environment
+./deploy.sh
+```
+
+## 🎯 China Market Optimization
+
+This system is optimised for **financial analyst & engineering roles across Mainland China and Greater China**:
+
+✅ **Dual filters** — Location + role keyword filters keep only China/APAC finance & engineering roles.
+✅ **Curated connectors** — Workday, Greenhouse, Ashby and Amazon feeds preconfigured for 30+ fintech & tech companies with Mainland teams.
+✅ **Mainland ATS coverage** — Generic Moka / Beisen 客户端连接小红书、知乎、快手、美团、PingCAP 等中国公司的人才系统。
+✅ **Bilingual keywords** — Chinese + English synonyms for major job families (财务分析师 / Financial Analyst, 软件工程师 / Software Engineer, etc.).
+✅ **Major cities** — Beijing, Shanghai, Shenzhen, Guangzhou, Hangzhou, Hong Kong, Singapore and more.
+
+**Expected Output**: 2000+ China-focused engineer & financial openings (sampled from 35+ organisations).
+
+## 📊 Data Source Priority
+
+| Priority | Source | Status | Est. Jobs | Features |
+|----------|--------|--------|-----------|----------|
+| 🥇 P1 | **Workday** | ✅ Active | 900+ | Faceted search, strong APAC coverage |
+| 🥈 P2 | **Greenhouse** | ✅ Active | 800+ | Stable JSON API |
+| 🥉 P3 | **Ashby** | ✅ Active | 400+ | Modern tech companies |
+| 🏆 P4 | **Amazon Jobs API** | ✅ Active | 300+ | Official APAC feed, finance & engineering search |
+| 🆕 P5 | **Generic ATS** | ✅ Active | 1500+ | Moka, Beisen (Mainland-focused connectors) |
 
 - Set `enabled: false` to skip a connector entirely.
 - `runOnStartup: false` keeps the source scheduled but excludes it from the startup runner.
@@ -58,6 +108,49 @@ ingestion:
 - Companies define provider-specific overrides under `sources`. Each enabled provider spawns one client per company; placeholders like `{{company}}`, `{{slug}}`, `{{slugUpper}}` are resolved automatically.
 - `concurrency` controls how many provider/company tasks run in parallel (default 4).
 - Each source entry supports `enabled` (toggle ingestion entirely) and `runOnStartup` (include/exclude from the startup runner).
+
+## 🕸️ Crawler Blueprints
+
+The new `crawler` source type treats each career site as a standalone blueprint. A blueprint describes:
+
+- **Entry point** — base URL or HTTP request template, plus paging rules (query, offset, or path-based).
+- **Flow DSL** — optional steps such as `REQUEST`, `WAIT`, `SCROLL`, `EXTRACT_LIST`, etc. for JavaScript-heavy pages.
+- **Parser profile** — reusable templates (`crawler_parser_template` table) define CSS selectors or attributes for `title`, `url`, `externalId`, `location`, tags, and details.
+- **Rate limit & concurrency** — per-blueprint restrictions to respect robots.txt and throttle sessions.
+
+Blueprint metadata is persisted in four new tables managed by Flyway migration `V7__crawler_tables.sql`:
+
+- `crawler_blueprint`
+- `crawler_parser_template`
+- `crawler_run_log`
+- `crawler_cache`
+
+### Configuring a crawler source
+
+Add a data source with `type: crawler` and point it to a blueprint code:
+
+```yaml
+code: example-crawler
+type: crawler
+enabled: true
+baseOptions:
+  blueprintCode: example-careers
+  entryUrl: https://example.com/careers
+  sourceName: crawler:example
+companies:
+  - displayName: Example Company
+    reference: example
+    overrideOptions:
+      entryUrl: https://example.com/careers?location=shanghai
+categories:
+  - name: engineering
+    limit: 120
+    tags: [engineering, software]
+```
+
+When the scheduler resolves this source, `SourceClientFactory` instantiates a `CrawlerSourceClient`, which delegates to `CrawlerOrchestrator`. The orchestrator loads the blueprint, spins up an execution session via `HttpCrawlerExecutionEngine`, parses the HTML with `DefaultCrawlerParserEngine`, converts the results into `FetchedJob`, and records metrics to `crawler_run_log`.
+
+Blueprint parser templates can be reused across companies. Updating `crawler_blueprint.config_json` or the referenced template allows hot swaps without redeploying the application.
 
 ## Running locally
 ```
@@ -90,20 +183,18 @@ To deliver login verification codes, configure an SMTP server using Spring Boot'
 ```yaml
 spring:
   mail:
-    host: smtp.example.com
-    port: 587
-    username: your-smtp-username
-    password: ${SMTP_PASSWORD}
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+      mail.smtp.auth: ${SPRING_MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_SMTP_STARTTLS:true}
 
 auth:
   email:
-    senderAddress: no-reply@example.com
+    fromAddress: ${AUTH_EMAIL_FROM:no-reply@example.com}
+    sender: ${AUTH_EMAIL_SENDER:smtp}
 ```
 
 If no SMTP configuration is supplied, the application falls back to logging verification codes to the console.

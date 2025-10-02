@@ -1,0 +1,270 @@
+package com.vibe.jobs.datasource.domain;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+public class JobDataSource {
+
+    private final Long id;
+    private final String code;
+    private final String type;
+    private final boolean enabled;
+    private final boolean runOnStartup;
+    private final boolean requireOverride;
+    private final Flow flow;
+    private final Map<String, String> baseOptions;
+    private final List<CategoryQuotaDefinition> categories;
+    private final List<DataSourceCompany> companies;
+
+    public JobDataSource(Long id,
+                         String code,
+                         String type,
+                         boolean enabled,
+                         boolean runOnStartup,
+                         boolean requireOverride,
+                         Flow flow,
+                         Map<String, String> baseOptions,
+                         List<CategoryQuotaDefinition> categories,
+                         List<DataSourceCompany> companies) {
+        this.id = id;
+        this.code = sanitize(code);
+        this.type = sanitize(type);
+        this.enabled = enabled;
+        this.runOnStartup = runOnStartup;
+        this.requireOverride = requireOverride;
+        this.flow = flow == null ? Flow.UNLIMITED : flow;
+        this.baseOptions = baseOptions == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(baseOptions));
+        this.categories = categories == null ? List.of() : List.copyOf(categories);
+        this.companies = companies == null ? List.of() : List.copyOf(companies);
+    }
+
+    private String sanitize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public boolean isRunOnStartup() {
+        return runOnStartup;
+    }
+
+    public boolean isRequireOverride() {
+        return requireOverride;
+    }
+
+    public Flow getFlow() {
+        return flow;
+    }
+
+    public boolean isLimitedFlow() {
+        return flow == Flow.LIMITED;
+    }
+
+    public Map<String, String> getBaseOptions() {
+        return baseOptions;
+    }
+
+    public List<CategoryQuotaDefinition> getCategories() {
+        return categories;
+    }
+
+    public List<DataSourceCompany> getCompanies() {
+        return companies;
+    }
+
+    public boolean supportsCompanies() {
+        return !companies.isEmpty();
+    }
+
+    public JobDataSource withCompanies(List<DataSourceCompany> updatedCompanies) {
+        return new JobDataSource(
+                id,
+                code,
+                type,
+                enabled,
+                runOnStartup,
+                requireOverride,
+                flow,
+                baseOptions,
+                categories,
+                updatedCompanies
+        );
+    }
+
+    public JobDataSource withId(Long newId) {
+        return new JobDataSource(
+                newId,
+                code,
+                type,
+                enabled,
+                runOnStartup,
+                requireOverride,
+                flow,
+                baseOptions,
+                categories,
+                companies
+        );
+    }
+
+    public JobDataSource ensureDefaultCategories() {
+        List<CategoryQuotaDefinition> normalized = new ArrayList<>();
+        for (CategoryQuotaDefinition category : categories) {
+            if (category == null) {
+                continue;
+            }
+            if (category.limit() <= 0) {
+                continue;
+            }
+            normalized.add(category);
+        }
+        return new JobDataSource(
+                id,
+                code,
+                type,
+                enabled,
+                runOnStartup,
+                requireOverride,
+                flow,
+                baseOptions,
+                normalized,
+                companies
+        );
+    }
+
+    public JobDataSource normalized() {
+        List<DataSourceCompany> normalizedCompanies = new ArrayList<>();
+        for (DataSourceCompany company : companies) {
+            if (company == null) {
+                continue;
+            }
+            normalizedCompanies.add(company.normalized());
+        }
+        return new JobDataSource(
+                id,
+                code,
+                type,
+                enabled,
+                runOnStartup,
+                requireOverride,
+                flow,
+                baseOptions,
+                ensureCategoryNames(categories),
+                normalizedCompanies
+        );
+    }
+
+    private List<CategoryQuotaDefinition> ensureCategoryNames(List<CategoryQuotaDefinition> definitions) {
+        if (definitions == null || definitions.isEmpty()) {
+            return List.of();
+        }
+        List<CategoryQuotaDefinition> normalized = new ArrayList<>();
+        int index = 1;
+        for (CategoryQuotaDefinition definition : definitions) {
+            if (definition == null || definition.limit() <= 0) {
+                continue;
+            }
+            String name = definition.name();
+            if (name == null || name.isBlank()) {
+                name = "category-" + index++;
+            }
+            normalized.add(definition.withName(name));
+        }
+        return List.copyOf(normalized);
+    }
+
+    public enum Flow {
+        LIMITED,
+        UNLIMITED
+    }
+
+    public record CategoryQuotaDefinition(String name,
+                                          int limit,
+                                          List<String> tags,
+                                          Map<String, List<String>> facets) {
+
+        public CategoryQuotaDefinition {
+            limit = Math.max(limit, 0);
+            tags = tags == null ? List.of() : List.copyOf(tags);
+            Map<String, List<String>> normalized = new LinkedHashMap<>();
+            if (facets != null) {
+                facets.forEach((key, values) -> {
+                    if (key == null || key.isBlank()) {
+                        return;
+                    }
+                    List<String> copy = values == null ? List.of() : List.copyOf(values);
+                    normalized.put(key, copy);
+                });
+            }
+            facets = normalized.isEmpty() ? Map.of() : Map.copyOf(normalized);
+        }
+
+        public CategoryQuotaDefinition withName(String newName) {
+            return new CategoryQuotaDefinition(newName, limit, tags, facets);
+        }
+    }
+
+    public record DataSourceCompany(Long id,
+                                    String reference,
+                                    String displayName,
+                                    String slug,
+                                    boolean enabled,
+                                    Map<String, String> placeholderOverrides,
+                                    Map<String, String> overrideOptions) {
+
+        public DataSourceCompany {
+            reference = sanitize(reference);
+            displayName = sanitize(displayName);
+            slug = sanitize(slug);
+            placeholderOverrides = placeholderOverrides == null
+                    ? Map.of()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(placeholderOverrides));
+            overrideOptions = overrideOptions == null
+                    ? Map.of()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(overrideOptions));
+        }
+
+        private static String sanitize(String value) {
+            if (value == null) {
+                return "";
+            }
+            return value.trim();
+        }
+
+        public DataSourceCompany normalized() {
+            Map<String, String> placeholders = new LinkedHashMap<>(placeholderOverrides);
+            placeholders.values().removeIf(Objects::isNull);
+            Map<String, String> overrides = new LinkedHashMap<>(overrideOptions);
+            overrides.values().removeIf(Objects::isNull);
+            return new DataSourceCompany(
+                    id,
+                    reference,
+                    displayName,
+                    slug,
+                    enabled,
+                    placeholders,
+                    overrides
+            );
+        }
+    }
+}

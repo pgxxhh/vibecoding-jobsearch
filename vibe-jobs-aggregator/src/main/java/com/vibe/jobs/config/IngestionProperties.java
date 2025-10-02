@@ -22,6 +22,7 @@ public class IngestionProperties {
     private List<Source> sources = new ArrayList<>();
     private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
     private LocationFilter locationFilter = new LocationFilter();
+    private RoleFilter roleFilter = new RoleFilter();
 
     public enum Mode {
         COMPANIES,
@@ -119,6 +120,14 @@ public class IngestionProperties {
         this.locationFilter = locationFilter == null ? new LocationFilter() : locationFilter;
     }
 
+    public RoleFilter getRoleFilter() {
+        return roleFilter;
+    }
+
+    public void setRoleFilter(RoleFilter roleFilter) {
+        this.roleFilter = roleFilter == null ? new RoleFilter() : roleFilter;
+    }
+
     public Map<String, String> getPlaceholderOverrides(String companyName) {
         CompanyOverride override = findCompanyOverride(companyName);
         if (override == null) {
@@ -171,6 +180,7 @@ public class IngestionProperties {
         private boolean requireOverride = false;
         private Map<String, String> options = new HashMap<>();
         private List<CategoryQuota> categories = new ArrayList<>();
+        private Flow flow = Flow.UNLIMITED;
 
         public String getId() {
             return id;
@@ -228,6 +238,18 @@ public class IngestionProperties {
             this.categories = categories == null ? new ArrayList<>() : new ArrayList<>(categories);
         }
 
+        public Flow getFlow() {
+            return flow;
+        }
+
+        public void setFlow(Flow flow) {
+            this.flow = flow == null ? Flow.UNLIMITED : flow;
+        }
+
+        public boolean isLimitedFlow() {
+            return flow == Flow.LIMITED;
+        }
+
         public String key() {
             if (id != null && !id.isBlank()) {
                 return id;
@@ -244,6 +266,11 @@ public class IngestionProperties {
                 return "unknown";
             }
             return type.toLowerCase();
+        }
+
+        public enum Flow {
+            LIMITED,
+            UNLIMITED
         }
 
         public static class CategoryQuota {
@@ -518,6 +545,45 @@ public class IngestionProperties {
             return keywords.stream()
                     .filter(keyword -> keyword != null && !keyword.isBlank())
                     .anyMatch(keyword -> location.contains(keyword.toLowerCase().trim()));
+        }
+    }
+
+    public static class RoleFilter {
+        private boolean enabled = false;
+        private boolean searchDescription = true;
+        private List<String> includeKeywords = new ArrayList<>();
+        private List<String> excludeKeywords = new ArrayList<>();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isSearchDescription() {
+            return searchDescription;
+        }
+
+        public void setSearchDescription(boolean searchDescription) {
+            this.searchDescription = searchDescription;
+        }
+
+        public List<String> getIncludeKeywords() {
+            return includeKeywords;
+        }
+
+        public void setIncludeKeywords(List<String> includeKeywords) {
+            this.includeKeywords = includeKeywords == null ? new ArrayList<>() : new ArrayList<>(includeKeywords);
+        }
+
+        public List<String> getExcludeKeywords() {
+            return excludeKeywords;
+        }
+
+        public void setExcludeKeywords(List<String> excludeKeywords) {
+            this.excludeKeywords = excludeKeywords == null ? new ArrayList<>() : new ArrayList<>(excludeKeywords);
         }
     }
 

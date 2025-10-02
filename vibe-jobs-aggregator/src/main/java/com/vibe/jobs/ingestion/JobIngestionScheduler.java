@@ -5,6 +5,7 @@ import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
+import com.vibe.jobs.service.RoleFilterService;
 import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.WorkdaySourceClient;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +33,7 @@ public class JobIngestionScheduler {
     private final JobIngestionFilter jobFilter;
     private final JobDetailService jobDetailService;
     private final LocationFilterService locationFilterService;
+    private final RoleFilterService roleFilterService;
     private final ExecutorService executor;
 
     public JobIngestionScheduler(JobService jobService,
@@ -39,6 +42,7 @@ public class JobIngestionScheduler {
                                  JobIngestionFilter jobFilter,
                                  JobDetailService jobDetailService,
                                  LocationFilterService locationFilterService,
+                                 RoleFilterService roleFilterService,
                                  ExecutorService executor) {
         this.jobService = jobService;
         this.ingestionProperties = ingestionProperties;
@@ -46,6 +50,7 @@ public class JobIngestionScheduler {
         this.jobFilter = jobFilter;
         this.jobDetailService = jobDetailService;
         this.locationFilterService = locationFilterService;
+        this.roleFilterService = roleFilterService;
         this.executor = executor;
     }
 
@@ -58,12 +63,26 @@ public class JobIngestionScheduler {
         }
 
         int pageSize = Math.max(1, ingestionProperties.getPageSize());
-        CompletableFuture<?>[] tasks = sources.stream()
+        List<SourceRegistry.ConfiguredSource> limited = new ArrayList<>();
+        List<SourceRegistry.ConfiguredSource> unlimited = new ArrayList<>();
+        for (SourceRegistry.ConfiguredSource source : sources) {
+            if (source.isLimitedFlow()) {
+                limited.add(source);
+            } else {
+                unlimited.add(source);
+            }
+        }
+
+        CompletableFuture<?>[] tasks = unlimited.stream()
                 .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executor))
                 .toArray(CompletableFuture[]::new);
 
         if (tasks.length > 0) {
             CompletableFuture.allOf(tasks).join();
+        }
+
+        for (SourceRegistry.ConfiguredSource source : limited) {
+            processSource(source, pageSize);
         }
     }
 
@@ -103,8 +122,9 @@ public class JobIngestionScheduler {
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
-            int persisted = storeJobs(locationFiltered);
-            if (locationFiltered.isEmpty() || persisted == 0) {
+            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            int persisted = storeJobs(roleFiltered);
+            if (roleFiltered.isEmpty() || persisted == 0) {
                 log.debug("All jobs filtered out for source {} ({}) on page {}", sourceName, companyName, page);
             }
             page++;
@@ -148,8 +168,9 @@ public class JobIngestionScheduler {
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
-            int persisted = matchAndStore(locationFiltered, configuredSource, remaining, null, page);
-            if (filtered.isEmpty() || persisted == 0) {
+            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            int persisted = matchAndStore(roleFiltered, configuredSource, remaining, null, page);
+            if (roleFiltered.isEmpty() || persisted == 0) {
                 log.debug("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
             }
             page++;
@@ -171,8 +192,9 @@ public class JobIngestionScheduler {
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
-            int persisted = matchAndStore(locationFiltered, configuredSource, remaining, category, page);
-            if (filtered.isEmpty() || persisted == 0) {
+            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            int persisted = matchAndStore(roleFiltered, configuredSource, remaining, category, page);
+            if (roleFiltered.isEmpty() || persisted == 0) {
                 log.debug("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
             }
             if (allQuotasMet(remaining)) {

@@ -67,13 +67,25 @@ public class WorkdaySourceClient implements SourceClient {
 
         this.client = WebClient.builder()
                 .baseUrl(this.baseUrl)
-                // 模拟浏览器，避免部分租户对爬虫 UA 403
-                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .defaultHeader(HttpHeaders.USER_AGENT, desktopUserAgent())
-                .defaultHeader(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9")
-                .defaultHeader("X-Workday-Client", "Workday Web Client") // ✅ 正确头
-                .defaultHeader("X-Requested-With", "XMLHttpRequest")     // 避免部分租户反爬
+                // 2024年Workday要求更精确的浏览器模拟
+                .defaultHeader(HttpHeaders.ACCEPT, "application/json")
+                .defaultHeader(HttpHeaders.ACCEPT_ENCODING, "gzip, deflate, br")
+                .defaultHeader(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9") // 改回英文避免地区检测
+                .defaultHeader(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .defaultHeader(HttpHeaders.CONNECTION, "keep-alive")
+                .defaultHeader(HttpHeaders.USER_AGENT, modernBrowserUserAgent()) // 使用最新UA
+                .defaultHeader("Sec-Ch-Ua", "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"")
+                .defaultHeader("Sec-Ch-Ua-Mobile", "?0")
+                .defaultHeader("Sec-Ch-Ua-Platform", "\"Windows\"") // Windows更通用
+                .defaultHeader("Sec-Fetch-Dest", "empty")
+                .defaultHeader("Sec-Fetch-Mode", "cors")
+                .defaultHeader("Sec-Fetch-Site", "same-origin")
+                .defaultHeader("X-Requested-With", "XMLHttpRequest")
+                // 关键：添加Workday 2024年需要的新头部
+                .defaultHeader("X-Workday-Client", "wd-prod")
+                .defaultHeader("Content-Type", "application/json;charset=UTF-8")
                 .filter(sessionCookies())
+                .filter(addDynamicHeaders())
                 .build();
 
         seedBrowserCookies();
@@ -250,36 +262,85 @@ public class WorkdaySourceClient implements SourceClient {
         }
     }
 
-    /** 仅在 facet key 合法且 value 非空时才下发；不发 utm_source/空数组。 */
+    /** 基于2024年Workday API最新格式构建请求payload */
     private Map<String, Object> buildRequestPayload(int limit, int offset, Map<String, List<String>> customFacets) {
         Map<String, Object> payload = new LinkedHashMap<>();
+        
+        // 2024年新的必需字段结构
         payload.put("limit", limit);
         payload.put("offset", offset);
-        payload.put("searchText", "");
-
+        
+        // 搜索配置 - 新的2024格式
+        Map<String, Object> searchOptions = new LinkedHashMap<>();
+        searchOptions.put("searchText", "");
+        searchOptions.put("locations", Collections.emptyList());
+        searchOptions.put("locationHierarchy", Collections.emptyList());
+        searchOptions.put("facets", Collections.emptyMap());
+        payload.put("searchOptions", searchOptions);
+        
+        // 应用facets（如果提供）
         if (customFacets != null && !customFacets.isEmpty()) {
-            Map<String, List<String>> applied = new LinkedHashMap<>();
-            for (Map.Entry<String, List<String>> e : customFacets.entrySet()) {
-                String k = e.getKey();
-                List<String> v = e.getValue();
-                if (ALLOWED_FACETS.contains(k) && v != null && !v.isEmpty()) {
-                    applied.put(k, v);
+            Map<String, Object> appliedFacets = new LinkedHashMap<>();
+            for (Map.Entry<String, List<String>> entry : customFacets.entrySet()) {
+                if (ALLOWED_FACETS.contains(entry.getKey()) && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                    appliedFacets.put(entry.getKey(), entry.getValue());
                 }
             }
-            if (!applied.isEmpty()) {
-                payload.put("appliedFacets", applied);
+            if (!appliedFacets.isEmpty()) {
+                searchOptions.put("facets", appliedFacets);
             }
         }
-
-        // 通用排序；若触发 422，会在降级重试中移除
-        payload.put("sortOrder", "MOST_RECENT");
+        
+        // 2024年新增的排序和过滤配置
+        Map<String, Object> sortConfig = new LinkedHashMap<>();
+        sortConfig.put("sortOrder", List.of(Map.of("field", "postedOn", "sortDirection", "DESC")));
+        payload.put("sortOrder", sortConfig.get("sortOrder"));
+        
+        // 添加客户端信息 - 2024年反爬虫要求
+        Map<String, Object> clientInfo = new LinkedHashMap<>();
+        clientInfo.put("source", "WEB");
+        clientInfo.put("version", "2024.44.0"); // 当前Workday版本
+        clientInfo.put("locale", "en_US"); // 固定英文避免地区检测
+        payload.put("clientApplicationInfo", clientInfo);
+        
         return payload;
     }
 
     private String desktopUserAgent() {
         return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 + "AppleWebKit/537.36 (KHTML, like Gecko) "
-                + "Chrome/122.0.0.0 Safari/537.36";
+                + "Chrome/128.0.0.0 Safari/537.36";
+    }
+    
+    // 2024年最新的现代浏览器UA
+    private String modernBrowserUserAgent() {
+        return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                + "AppleWebKit/537.36 (KHTML, like Gecko) "
+                + "Chrome/129.0.0.0 Safari/537.36";
+    }
+    
+    // 添加动态请求头过滤器
+    private ExchangeFilterFunction addDynamicHeaders() {
+        return (request, next) -> {
+            ClientRequest.Builder builder = ClientRequest.from(request);
+            
+            // 添加时间戳相关头部 - Workday 2024反爬虫检测
+            long timestamp = System.currentTimeMillis();
+            builder.header("X-Request-Timestamp", String.valueOf(timestamp));
+            
+            // 添加随机化的窗口尺寸 - 模拟真实浏览器
+            int screenWidth = 1920 + (int)(Math.random() * 100);
+            int screenHeight = 1080 + (int)(Math.random() * 100);
+            builder.header("X-Screen-Resolution", screenWidth + "x" + screenHeight);
+            
+            // 根据请求方法添加不同的头部
+            if ("POST".equals(request.method().name())) {
+                builder.header("Origin", origin);
+                builder.header("DNT", "1"); // Do Not Track
+            }
+            
+            return next.exchange(builder.build());
+        };
     }
 
     /* ========================= 执行请求（含 422/404 处理 & GET 回退） ========================= */
@@ -358,16 +419,35 @@ public class WorkdaySourceClient implements SourceClient {
                 .block();
     }
 
+    /** 2024年增强的GET方法 - 当POST被拒绝时的备选方案 */
     private Map<String, Object> getJson(String path, int limit, int offset) {
-        return client.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path(path)
-                        .queryParam("offset", offset)
-                        .queryParam("limit", limit)
-                        .build())
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        try {
+            // 使用GET方式访问，模拟浏览器直接访问
+            return client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path(path)
+                            .queryParam("limit", limit)
+                            .queryParam("offset", offset)
+                            .queryParam("searchText", "")
+                            .queryParam("appliedFacets", "{}")
+                            .queryParam("sortOrder", "postedOn:desc")
+                            // 2024年新增参数
+                            .queryParam("source", "WEB")
+                            .queryParam("version", "2024.44.0")
+                            .queryParam("locale", "en_US")
+                            .build())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .header("Cache-Control", "max-age=0") // 强制刷新
+                    .header("Pragma", "no-cache")
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .doOnError(ex -> log.warn("GET fallback also failed for {}: {}", path, ex.getMessage()))
+                    .onErrorReturn(Collections.emptyMap())
+                    .block();
+        } catch (Exception e) {
+            log.warn("GET fallback failed for {}: {}", path, e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 
     /** 探测常见 site，返回可用的一个（最小 payload），失败则返回 null */
@@ -389,8 +469,21 @@ public class WorkdaySourceClient implements SourceClient {
         Map<String, Object> minimal = new LinkedHashMap<>();
         minimal.put("limit", limit);
         minimal.put("offset", offset);
-        minimal.put("searchText", "");
-        // 不带 facets/sortOrder，最大兼容
+        
+        // 2024年最小化payload结构
+        Map<String, Object> searchOptions = new LinkedHashMap<>();
+        searchOptions.put("searchText", "");
+        searchOptions.put("locations", Collections.emptyList());
+        searchOptions.put("facets", Collections.emptyMap());
+        minimal.put("searchOptions", searchOptions);
+        
+        // 必需的客户端信息
+        Map<String, Object> clientInfo = new LinkedHashMap<>();
+        clientInfo.put("source", "WEB");
+        clientInfo.put("version", "2024.44.0");
+        clientInfo.put("locale", "en_US");
+        minimal.put("clientApplicationInfo", clientInfo);
+        
         return minimal;
     }
 
@@ -407,34 +500,143 @@ public class WorkdaySourceClient implements SourceClient {
 
     /* ========================= 会话/CSRF ========================= */
 
-    /** 预热：GET 一次拿 cookie/CSRF；使用当前 activeSite */
+    /** 2024年增强的会话初始化 - 必须先获取正确的会话状态 */
     private void ensureSession() {
         if (initialized.compareAndSet(false, true)) {
             String site = activeSite.get();
+            
+            // Step 1: 访问主页建立基础会话
+            warmUpMainPage();
+            
+            // Step 2: 访问careers页面获取应用状态
             warmUpLandingPage(site);
+            
+            // Step 3: 预热API端点获取CSRF令牌
             warmUpApiSession(site);
+            
+            // Step 4: 验证会话有效性
+            validateSession(site);
+        }
+    }
+    
+    /** 新增：访问Workday主页建立基础会话 */
+    private void warmUpMainPage() {
+        try {
+            String mainPageUrl = baseUrl.replace("/wday/cxs", "");
+            client.get()
+                    .uri(mainPageUrl)
+                    .accept(MediaType.TEXT_HTML)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .onErrorResume(ex -> {
+                        log.debug("Main page warm-up ignored: {}", ex.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+            
+            // 短暂延迟模拟真实用户行为
+            Thread.sleep(500 + (long)(Math.random() * 1000));
+            
+        } catch (Exception e) {
+            log.debug("Main page warm-up failed but continues: {}", e.toString());
+        }
+    }
+    
+    /** 新增：验证会话有效性 */
+    private void validateSession(String site) {
+        try {
+            // 发送一个简单的OPTIONS请求验证CORS配置
+            String path = buildPath(site);
+            client.options()
+                    .uri(path)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .onErrorResume(ex -> {
+                        log.debug("Session validation ignored: {}", ex.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+                    
+        } catch (Exception e) {
+            log.debug("Session validation completed: {}", e.getMessage());
         }
     }
 
     private void warmUpLandingPage(String site) {
         String landing = landingPath(site);
         try {
-            client.get()
+            String response = client.get()
                     .uri(landing)
                     .accept(MediaType.TEXT_HTML)
+                    .header("Upgrade-Insecure-Requests", "1") // 2024年新增安全头
+                    .header("Sec-Purpose", "prefetch") // 预取标识
                     .retrieve()
-                    .toBodilessEntity()
+                    .bodyToMono(String.class)
                     .onErrorResume(WebClientResponseException.class, ex -> {
                         log.debug("Landing warm-up ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
-                        return Mono.empty();
+                        return Mono.just("");
                     })
                     .onErrorResume(t -> {
                         log.debug("Landing warm-up ignored: {}", t.toString());
-                        return Mono.empty();
+                        return Mono.just("");
                     })
                     .block();
+                    
+            // 增强的CSRF令牌提取 - 2024年模式
+            if (response != null && !response.isEmpty()) {
+                extractEnhancedCsrfFromHtml(response);
+            }
+            
+            // 模拟用户停留时间
+            Thread.sleep(1000 + (long)(Math.random() * 2000));
+            
         } catch (Exception e) {
             log.debug("Landing warm-up threw but continues: {}", e.toString());
+        }
+    }
+    
+    /** 2024年增强的CSRF令牌提取 - 支持多种新格式 */
+    private void extractEnhancedCsrfFromHtml(String html) {
+        // 2024年新的CSRF令牌模式
+        String[] patterns = {
+            "\"csrfToken\"\\s*:\\s*\"([^\"]+)\"",
+            "csrf[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            "CSRF_TOKEN[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            "_token[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            "authenticity_token[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            "data-csrf-token[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            // 2024年新增的Workday特定模式
+            "wd-csrf[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']",
+            "workday-token[\"']?\\s*[:=]\\s*[\"']([^\"']+)[\"']"
+        };
+        
+        for (String pattern : patterns) {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher m = p.matcher(html);
+            if (m.find()) {
+                String token = m.group(1);
+                if (token != null && token.length() > 10) { // 最小长度验证
+                    csrfToken.set(token);
+                    log.debug("Extracted enhanced CSRF token ({}chars): {}...", token.length(), token.substring(0, Math.min(8, token.length())));
+                    break;
+                }
+            }
+        }
+        
+        // 备用：查找隐藏的input字段
+        if (csrfToken.get() == null) {
+            java.util.regex.Pattern inputPattern = java.util.regex.Pattern.compile(
+                "<input[^>]+name=[\"']([^\"']*(?:csrf|token)[^\"']*)[\"'][^>]+value=[\"']([^\"']+)[\"'][^>]*>",
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            java.util.regex.Matcher m = inputPattern.matcher(html);
+            if (m.find()) {
+                String token = m.group(2);
+                if (token != null && token.length() > 10) {
+                    csrfToken.set(token);
+                    log.debug("Extracted CSRF from input field: {}...", token.substring(0, Math.min(8, token.length())));
+                }
+            }
         }
     }
 
@@ -468,10 +670,15 @@ public class WorkdaySourceClient implements SourceClient {
         return (request, next) -> {
             ClientRequest.Builder builder = ClientRequest.from(request);
             cookieStore.forEach(builder::cookie);
+            
             String token = csrfToken.get();
             if (token != null && !token.isBlank()) {
+                // 尝试多种CSRF头字段名称
                 builder.header("x-calypso-csrf-token", token);
+                builder.header("X-CSRF-Token", token);
+                builder.header("csrf-token", token);
             }
+            
             String site = activeSite.get();
             String referer = buildReferer(baseUrl, site);
             builder.headers(headers -> {
@@ -479,7 +686,12 @@ public class WorkdaySourceClient implements SourceClient {
                 if (!origin.isBlank()) {
                     headers.set("Origin", origin);
                 }
+                // 添加额外的安全头
+                headers.set("Sec-Ch-Ua", "\"Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Google Chrome\";v=\"128\"");
+                headers.set("Sec-Ch-Ua-Mobile", "?0");
+                headers.set("Sec-Ch-Ua-Platform", "\"macOS\"");
             });
+            
             String previous = lastAppliedReferer.getAndSet(referer);
             if (!Objects.equals(previous, referer) && log.isDebugEnabled()) {
                 log.debug("Updated Workday referer header to '{}' for site '{}'", referer, site);
@@ -494,8 +706,32 @@ public class WorkdaySourceClient implements SourceClient {
             if (!values.isEmpty()) {
                 String value = values.get(0).getValue();
                 cookieStore.put(name, value);
-                if ("CALYPSO_CSRF_TOKEN".equalsIgnoreCase(name)) {
-                    csrfToken.set(value);
+                
+                // 2024年Workday新的CSRF令牌cookie模式
+                String lowerName = name.toLowerCase();
+                if (lowerName.contains("csrf") || lowerName.contains("token") || 
+                    "CALYPSO_CSRF_TOKEN".equalsIgnoreCase(name) ||
+                    "XSRF-TOKEN".equalsIgnoreCase(name) ||
+                    "X-CSRF-TOKEN".equalsIgnoreCase(name) ||
+                    // 2024年新增的Workday特定cookie
+                    "WD_CSRF_TOKEN".equalsIgnoreCase(name) ||
+                    "WORKDAY_CSRF".equalsIgnoreCase(name) ||
+                    "wd-session-token".equalsIgnoreCase(name) ||
+                    "wday_vps_cookie".equalsIgnoreCase(name)) {
+                    
+                    // 验证token有效性（长度、格式等）
+                    if (value != null && value.length() >= 10 && !value.equals("deleted")) {
+                        csrfToken.set(value);
+                        log.debug("Captured CSRF token from cookie '{}' ({}chars): {}...", 
+                                name, value.length(), value.substring(0, Math.min(8, value.length())));
+                    }
+                }
+                
+                // 记录重要的会话cookie
+                if (lowerName.contains("session") || lowerName.contains("jsessionid") || 
+                    lowerName.contains("wday") || lowerName.startsWith("wd_")) {
+                    log.debug("Captured session cookie: {} = {}...", name, 
+                            value.substring(0, Math.min(10, value.length())));
                 }
             }
         });
