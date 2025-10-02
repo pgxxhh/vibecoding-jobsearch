@@ -52,7 +52,7 @@ ingestion:
   roleFilter:
     enabled: true
     includeKeywords:
-      - "financial" / "财务"
+      - "financial" / "财务"2
       - "analyst" / "分析师"
       - "investment" / "投资"
       - "engineer" / "工程师"

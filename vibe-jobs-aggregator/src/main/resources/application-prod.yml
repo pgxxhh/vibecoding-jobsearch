@@ -2,3 +2,26 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        # 优化查询性能
+        jdbc:
+          batch_size: 25
+          fetch_size: 25
+        # 降低内存使用
+        cache:
+          use_query_cache: false
+          use_second_level_cache: false
+  datasource:
+    hikari:
+      # 2GB机器优化连接池配置
+      maximum-pool-size: 8
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# 为2GB内存机器优化的并发配置
+ingestion:
+  concurrency: 4  # 从6降到4，减少内存压力
+  pageSize: 50    # 从100降到50，减少单次处理的内存占用

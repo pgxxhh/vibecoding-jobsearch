@@ -1,6 +1,7 @@
 package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
@@ -48,6 +49,9 @@ class JobIngestionSchedulerTest {
     @Mock
     private RoleFilterService roleFilterService;
 
+    @Mock
+    private DataSourceQueryService dataSourceQueryService;
+
     private ExecutorService executor;
 
     @BeforeEach
@@ -65,7 +69,7 @@ class JobIngestionSchedulerTest {
         IngestionProperties properties = new IngestionProperties();
         properties.setPageSize(2);
 
-        JobIngestionFilter filter = new JobIngestionFilter(properties);
+        JobIngestionFilter filter = new JobIngestionFilter(properties, dataSourceQueryService);
 
         StubSourceClient client = new StubSourceClient();
         client.addPage(List.of(
