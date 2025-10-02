@@ -21,5 +21,6 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     baseline-description: "Baseline existing schema"
+    out-of-order: true
     schemas: ${SPRING_FLYWAY_SCHEMAS:${DB_SCHEMA:vibejobs}}
     clean-disabled: true
