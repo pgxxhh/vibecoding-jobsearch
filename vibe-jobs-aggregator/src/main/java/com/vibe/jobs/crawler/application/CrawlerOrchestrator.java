@@ -4,7 +4,7 @@ import com.vibe.jobs.crawler.application.dto.CrawlPageRequest;
 import com.vibe.jobs.crawler.application.dto.CrawlPageResult;
 import com.vibe.jobs.crawler.domain.*;
 import com.vibe.jobs.crawler.infrastructure.engine.CrawlPageSnapshot;
-import com.vibe.jobs.crawler.infrastructure.engine.CrawlerExecutionEngine;
+import com.vibe.jobs.crawler.infrastructure.engine.HybridCrawlerExecutionEngine;
 import com.vibe.jobs.crawler.infrastructure.parser.CrawlerParserEngine;
 import com.vibe.jobs.sources.FetchedJob;
 import org.slf4j.Logger;
@@ -25,13 +25,13 @@ public class CrawlerOrchestrator {
 
     private final CrawlerBlueprintRepository blueprintRepository;
     private final CrawlRunRepository runRepository;
-    private final CrawlerExecutionEngine executionEngine;
+    private final HybridCrawlerExecutionEngine executionEngine;
     private final CrawlerParserEngine parserEngine;
     private final Clock clock;
 
     public CrawlerOrchestrator(CrawlerBlueprintRepository blueprintRepository,
                                CrawlRunRepository runRepository,
-                               CrawlerExecutionEngine executionEngine,
+                               HybridCrawlerExecutionEngine executionEngine,
                                CrawlerParserEngine parserEngine,
                                java.util.Optional<Clock> clock) {
         this.blueprintRepository = blueprintRepository;

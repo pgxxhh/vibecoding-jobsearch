@@ -130,18 +130,18 @@ Blueprint metadata is persisted in four new tables managed by Flyway migration `
 Add a data source with `type: crawler` and point it to a blueprint code:
 
 ```yaml
-code: riot-games-crawler
+code: example-crawler
 type: crawler
 enabled: true
 baseOptions:
-  blueprintCode: riot-careers
-  entryUrl: https://www.riotgames.com/en/work-with-us
-  sourceName: crawler:riot
+  blueprintCode: example-careers
+  entryUrl: https://example.com/careers
+  sourceName: crawler:example
 companies:
-  - displayName: Riot Games
-    reference: riot
+  - displayName: Example Company
+    reference: example
     overrideOptions:
-      entryUrl: https://www.riotgames.com/en/work-with-us?location=shanghai
+      entryUrl: https://example.com/careers?location=shanghai
 categories:
   - name: engineering
     limit: 120

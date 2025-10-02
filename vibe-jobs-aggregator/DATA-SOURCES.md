@@ -114,8 +114,98 @@ categories:
 ### 调度与执行
 
 - `SourceClientFactory` 根据 `type: crawler` 创建 `CrawlerSourceClient`，内部持有 `CrawlerOrchestrator`。
-- `CrawlerOrchestrator` 读取蓝图 → 调用 `HttpCrawlerExecutionEngine` 获取 HTML → 用 `DefaultCrawlerParserEngine` 解析为 `FetchedJob` → 将执行信息写入 `crawler_run_log`。
+- `CrawlerOrchestrator` 读取蓝图 → 调用 `HybridCrawlerExecutionEngine` 获取 HTML → 用 `DefaultCrawlerParserEngine` 解析为 `FetchedJob` → 将执行信息写入 `crawler_run_log`。
 - 支持通过蓝图的 `rateLimit` 与 `concurrencyLimit` 控制爬虫节奏，避免 403/429。
+
+### JavaScript 渲染支持 🆕
+
+对于 **SPA (单页应用)** 或需要 **JavaScript 渲染** 的网站（如 React/Vue 构建的 Career Page），系统提供了 Selenium WebDriver 支持：
+
+#### 引擎选择
+- **HttpCrawlerExecutionEngine**: 静态 HTML 页面（默认）
+- **JsCrawlerExecutionEngine**: JavaScript 渲染页面（Selenium WebDriver）
+- **HybridCrawlerExecutionEngine**: 根据配置自动选择引擎
+
+#### JavaScript 配置示例
+
+```json
+{
+  "jsEnabled": true,
+  "waitSelector": ".job-tile",
+  "waitSeconds": 10,
+  "additionalWaitMs": 2000,
+  "pageLoadTimeoutSeconds": 30,
+  "chromeOptions": "--disable-blink-features=AutomationControlled,--disable-extensions"
+}
+```
+
+#### 配置参数说明
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `jsEnabled` | boolean | false | 启用 JavaScript 渲染 |
+| `waitSelector` | string | null | 等待的 CSS 选择器，页面加载完成标志 |
+| `waitSeconds` | integer | 10 | 等待动态内容的最大秒数 |
+| `additionalWaitMs` | integer | 0 | 页面就绪后额外等待的毫秒数 |
+| `pageLoadTimeoutSeconds` | integer | 30 | 初始页面加载超时秒数 |
+| `chromeOptions` | string | null | Chrome 选项，逗号分隔 |
+
+#### JavaScript配置示例
+
+```sql
+INSERT INTO crawler_blueprint (
+    code, name, enabled, entry_url, concurrency_limit, config_json, parser_template_code
+) VALUES (
+    'example-js-crawler', 'Example JavaScript Crawler', 1, 
+    'https://example.com/careers', 1,
+    '{
+        "metadata": {
+            "jsEnabled": true,
+            "waitSelector": ".job-listing",
+            "waitSeconds": 10,
+            "additionalWaitMs": 2000,
+            "chromeOptions": "--disable-blink-features=AutomationControlled"
+        },
+        "paging": {"mode": "NONE"},
+        "rateLimit": {"requestsPerMinute": 6, "burst": 1}
+    }',
+    'example-js-parser'
+);
+```
+
+#### 性能优化建议
+
+1. **WebDriver 池管理**: 系统自动复用 Chrome 实例（最大5个）
+2. **资源考虑**: JS 渲染比 HTTP 消耗更多 CPU/内存，建议降低 `concurrencyLimit`
+3. **选择器优化**: 使用具体的 `waitSelector` 而非通用超时
+4. **Chrome 选项**: 禁用不必要的功能以提升性能
+
+#### 常见用例
+
+```json
+// SPA 应用
+{
+  "jsEnabled": true,
+  "waitSelector": "[data-testid='job-list']",
+  "waitSeconds": 15
+}
+
+// AJAX 加载
+{
+  "jsEnabled": true,
+  "waitSelector": ".loading-complete",
+  "waitSeconds": 10,
+  "additionalWaitMs": 1000
+}
+
+// 反爬虫保护
+{
+  "jsEnabled": true,
+  "waitSeconds": 20,
+  "additionalWaitMs": 5000,
+  "chromeOptions": "--disable-blink-features=AutomationControlled,--no-first-run"
+}
+```
 
 > 提示：如果多个公司共用同一职业站，只需在 `crawler_blueprint` 中维护一次解析模板，再通过不同 `JobDataSource.company.overrideOptions.entryUrl` 定位到具体公司页面。
 
