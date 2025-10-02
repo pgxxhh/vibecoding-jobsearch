@@ -1,0 +1,6 @@
+.git
+.idea
+target/surefire*
+target/test-classes
+*.log
+.DS_Store

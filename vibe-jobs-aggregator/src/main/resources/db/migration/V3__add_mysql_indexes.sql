@@ -1,4 +1,3 @@
--- Add composite and supporting indexes for common job queries
 -- Using simple CREATE INDEX IF NOT EXISTS for better compatibility
 
 -- jobs(posted_at DESC, id DESC)
