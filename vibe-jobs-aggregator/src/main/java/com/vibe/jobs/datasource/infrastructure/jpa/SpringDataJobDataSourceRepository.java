@@ -9,16 +9,13 @@ import java.util.Optional;
 
 public interface SpringDataJobDataSourceRepository extends JpaRepository<JobDataSourceEntity, Long> {
 
-    @EntityGraph(attributePaths = {"companies", "categories"})
-    @Query("select distinct ds from JobDataSourceEntity ds where ds.enabled = true")
+    @Query("select ds from JobDataSourceEntity ds where ds.enabled = true")
     List<JobDataSourceEntity> findAllEnabled();
 
     @Override
-    @EntityGraph(attributePaths = {"companies", "categories"})
     List<JobDataSourceEntity> findAll();
 
     boolean existsByCode(String code);
 
-    @EntityGraph(attributePaths = {"companies", "categories"})
     Optional<JobDataSourceEntity> findByCode(String code);
 }
