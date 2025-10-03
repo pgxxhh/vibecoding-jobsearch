@@ -27,7 +27,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     private final RoleFilterService roleFilterService;
     private final JobService jobService;
     private final JobDetailService jobDetailService;
-    private final ExecutorService executor;
+    private final IngestionExecutorManager executorManager;
 
     public CareersApiStartupRunner(SourceRegistry sourceRegistry,
                                    IngestionProperties ingestionProperties,
@@ -36,7 +36,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
                                    RoleFilterService roleFilterService,
                                    JobService jobService,
                                    JobDetailService jobDetailService,
-                                   ExecutorService executor) {
+                                   IngestionExecutorManager executorManager) {
         this.sourceRegistry = sourceRegistry;
         this.ingestionProperties = ingestionProperties;
         this.jobFilter = jobFilter;
@@ -44,7 +44,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
         this.roleFilterService = roleFilterService;
         this.jobService = jobService;
         this.jobDetailService = jobDetailService;
-        this.executor = executor;
+        this.executorManager = executorManager;
     }
 
     @Override
@@ -70,6 +70,7 @@ public class CareersApiStartupRunner implements ApplicationRunner {
             }
         }
 
+        ExecutorService executor = executorManager.getExecutor();
         CompletableFuture<?>[] tasks = unlimited.stream()
                 .map(source -> CompletableFuture.runAsync(() -> fetchOnce(source, pageSize), executor))
                 .toArray(CompletableFuture[]::new);

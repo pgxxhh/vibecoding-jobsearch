@@ -96,6 +96,11 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         return delegate.findByCode(code).map(this::toDomain);
     }
 
+    @Override
+    public void deleteById(Long id) {
+        delegate.deleteById(id);
+    }
+
     private JobDataSource toDomain(JobDataSourceEntity entity) {
         // Load companies and categories separately
         List<JobDataSourceCompanyEntity> companyEntities = companyRepository.findByDataSourceCodeOrderByReference(entity.getCode());
