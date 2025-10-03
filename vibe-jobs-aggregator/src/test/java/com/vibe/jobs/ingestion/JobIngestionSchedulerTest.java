@@ -1,5 +1,6 @@
 package com.vibe.jobs.ingestion;
 
+import com.vibe.jobs.admin.application.IngestionSettingsService;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -50,6 +52,15 @@ class JobIngestionSchedulerTest {
 
     @Mock
     private RoleFilterService roleFilterService;
+
+    @Mock
+    private IngestionExecutorManager executorManager;
+
+    @Mock
+    private TaskScheduler taskScheduler;
+
+    @Mock
+    private IngestionSettingsService settingsService;
 
     @Mock
     private DataSourceQueryService dataSourceQueryService;
@@ -127,7 +138,9 @@ class JobIngestionSchedulerTest {
                 jobDetailService,
                 locationFilterService,
                 roleFilterService,
-                executor
+                executorManager,
+                taskScheduler,
+                settingsService
         );
 
         scheduler.runIngestion();

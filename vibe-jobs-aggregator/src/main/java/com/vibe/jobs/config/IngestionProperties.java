@@ -3,7 +3,9 @@ package com.vibe.jobs.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @ConfigurationProperties(prefix = "ingestion")
 public class IngestionProperties {
@@ -14,6 +16,8 @@ public class IngestionProperties {
     private Mode mode = Mode.RECENT;
     private int recentDays = 7;
     private int concurrency = 4;
+    private List<String> companies = new ArrayList<>();
+    private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
     private LocationFilter locationFilter = new LocationFilter();
     private RoleFilter roleFilter = new RoleFilter();
 
@@ -86,6 +90,22 @@ public class IngestionProperties {
 
     public void setRoleFilter(RoleFilter roleFilter) {
         this.roleFilter = roleFilter == null ? new RoleFilter() : roleFilter;
+    }
+
+    public List<String> getCompanies() {
+        return companies;
+    }
+
+    public void setCompanies(List<String> companies) {
+        this.companies = companies == null ? new ArrayList<>() : new ArrayList<>(companies);
+    }
+
+    public Map<String, CompanyOverride> getCompanyOverrides() {
+        return companyOverrides;
+    }
+
+    public void setCompanyOverrides(Map<String, CompanyOverride> companyOverrides) {
+        this.companyOverrides = companyOverrides == null ? new HashMap<>() : new HashMap<>(companyOverrides);
     }
 
     public static class LocationFilter {
@@ -242,6 +262,64 @@ public class IngestionProperties {
 
         public void setExcludeKeywords(List<String> excludeKeywords) {
             this.excludeKeywords = excludeKeywords == null ? new ArrayList<>() : new ArrayList<>(excludeKeywords);
+        }
+
+        // Helper methods for RoleFilter
+        public List<String> getAllowKeywords() { return includeKeywords; }
+        public void setAllowKeywords(List<String> allowKeywords) { setIncludeKeywords(allowKeywords); }
+        public List<String> getBlockKeywords() { return excludeKeywords; }
+        public void setBlockKeywords(List<String> blockKeywords) { setExcludeKeywords(blockKeywords); }
+        public List<String> getAllowLevels() { return new ArrayList<>(); }
+        public void setAllowLevels(List<String> allowLevels) { /* Not implemented */ }
+        public List<String> getBlockLevels() { return new ArrayList<>(); }
+        public void setBlockLevels(List<String> blockLevels) { /* Not implemented */ }
+        public List<String> getAllowCategories() { return new ArrayList<>(); }
+        public void setAllowCategories(List<String> allowCategories) { /* Not implemented */ }
+        public List<String> getBlockCategories() { return new ArrayList<>(); }
+        public void setBlockCategories(List<String> blockCategories) { /* Not implemented */ }
+    }
+
+    public static class CompanyOverride {
+        private boolean enabled = true;
+        private String displayName;
+        private Map<String, Object> sourceSpecificOptions = new HashMap<>();
+
+        public CompanyOverride() {}
+
+        public CompanyOverride(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public void setDisplayName(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public Map<String, Object> getSourceSpecificOptions() {
+            return sourceSpecificOptions;
+        }
+
+        public void setSourceSpecificOptions(Map<String, Object> sourceSpecificOptions) {
+            this.sourceSpecificOptions = sourceSpecificOptions == null ? new HashMap<>() : new HashMap<>(sourceSpecificOptions);
+        }
+
+        public CompanyOverride normalized() {
+            CompanyOverride normalized = new CompanyOverride();
+            normalized.setEnabled(this.enabled);
+            normalized.setDisplayName(this.displayName != null ? this.displayName.trim() : null);
+            normalized.setSourceSpecificOptions(new HashMap<>(this.sourceSpecificOptions));
+            return normalized;
         }
     }
 }

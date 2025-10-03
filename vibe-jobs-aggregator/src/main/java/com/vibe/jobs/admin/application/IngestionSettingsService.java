@@ -91,14 +91,14 @@ public class IngestionSettingsService {
     private IngestionSettingsSnapshot loadOrInitialize() {
         IngestionSettingsSnapshot snapshot = repository.findById(SETTINGS_ID)
                 .map(this::toSnapshot)
-                .map(snapshot -> {
-                    snapshot.applyTo(ingestionProperties);
-                    return snapshot;
+                .map(existingSnapshot -> {
+                    existingSnapshot.applyTo(ingestionProperties);
+                    return existingSnapshot;
                 })
                 .orElseGet(() -> {
-                    IngestionSettingsSnapshot snapshot = IngestionSettingsSnapshot.fromProperties(ingestionProperties, Instant.now());
-                    persist(snapshot);
-                    return snapshot;
+                    IngestionSettingsSnapshot newSnapshot = IngestionSettingsSnapshot.fromProperties(ingestionProperties, Instant.now());
+                    persist(newSnapshot);
+                    return newSnapshot;
                 });
         current.set(snapshot);
         return snapshot;
