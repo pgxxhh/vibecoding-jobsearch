@@ -1,0 +1,33 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/vibejobs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:vibejobs}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:vibejobs}}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.MySQLDialect}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: false
+
+# 本地测试专用配置
+auth:
+  email:
+    useFixedCode: true          # 启用固定验证码
+    fixedCode: "123456"         # 固定验证码
+    exposeCodeInResponse: true  # 在响应中显示验证码
+    fromAddress: "local-test@vibecoding.com"
+
+# 日志配置
+logging:
+  level:
+    com.vibe.jobs: DEBUG
+    org.springframework.security: DEBUG

@@ -27,6 +27,16 @@ public class EmailAuthProperties {
     private boolean exposeCodeInResponse = false;
 
     /**
+     * When true, use a fixed verification code for local testing (development only).
+     */
+    private boolean useFixedCode = false;
+
+    /**
+     * Fixed verification code to use when useFixedCode is true (development only).
+     */
+    private String fixedCode = "123456";
+
+    /**
      * Sender email address used in outbound OTP messages.
      */
     private String fromAddress;
@@ -70,5 +80,21 @@ public class EmailAuthProperties {
 
     public void setFromAddress(String fromAddress) {
         this.fromAddress = fromAddress;
+    }
+
+    public boolean isUseFixedCode() {
+        return useFixedCode;
+    }
+
+    public void setUseFixedCode(boolean useFixedCode) {
+        this.useFixedCode = useFixedCode;
+    }
+
+    public String getFixedCode() {
+        return fixedCode;
+    }
+
+    public void setFixedCode(String fixedCode) {
+        this.fixedCode = fixedCode;
     }
 }

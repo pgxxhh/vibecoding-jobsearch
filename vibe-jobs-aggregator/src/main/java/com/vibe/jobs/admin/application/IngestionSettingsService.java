@@ -89,7 +89,7 @@ public class IngestionSettingsService {
     }
 
     private IngestionSettingsSnapshot loadOrInitialize() {
-        IngestionSettingsSnapshot snapshot = repository.findById(SETTINGS_ID)
+        IngestionSettingsSnapshot snapshot = repository.findBySettingKey("main")
                 .map(this::toSnapshot)
                 .map(existingSnapshot -> {
                     existingSnapshot.applyTo(ingestionProperties);
@@ -106,16 +106,16 @@ public class IngestionSettingsService {
 
     private void persist(IngestionSettingsSnapshot snapshot) {
         String json = serialize(snapshot);
-        IngestionSettingsEntity entity = repository.findById(SETTINGS_ID)
+        IngestionSettingsEntity entity = repository.findBySettingKey("main")
                 .orElse(new IngestionSettingsEntity());
-        entity.setId(SETTINGS_ID);
-        entity.setSettingsJson(json);
+        entity.setSettingKey("main");
+        entity.setSettingValue(json);
         repository.save(entity);
     }
 
     private IngestionSettingsSnapshot toSnapshot(IngestionSettingsEntity entity) {
         try {
-            IngestionSettingsSnapshot snapshot = objectMapper.readValue(entity.getSettingsJson(), IngestionSettingsSnapshot.class);
+            IngestionSettingsSnapshot snapshot = objectMapper.readValue(entity.getSettingValue(), IngestionSettingsSnapshot.class);
             return new IngestionSettingsSnapshot(
                     snapshot.fixedDelayMs(),
                     snapshot.initialDelayMs(),

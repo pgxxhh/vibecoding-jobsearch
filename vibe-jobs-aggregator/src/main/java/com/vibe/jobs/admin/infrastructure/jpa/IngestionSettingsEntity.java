@@ -2,6 +2,8 @@ package com.vibe.jobs.admin.infrastructure.jpa;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -14,10 +16,20 @@ import java.time.Instant;
 public class IngestionSettingsEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "settings_json", nullable = false, columnDefinition = "TEXT")
-    private String settingsJson;
+    @Column(name = "setting_key", nullable = false, unique = true)
+    private String settingKey;
+
+    @Column(name = "setting_value", columnDefinition = "LONGTEXT")
+    private String settingValue;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "updated_by")
+    private String updatedBy;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -28,9 +40,9 @@ public class IngestionSettingsEntity {
     public IngestionSettingsEntity() {
     }
 
-    public IngestionSettingsEntity(Long id, String settingsJson) {
-        this.id = id;
-        this.settingsJson = settingsJson;
+    public IngestionSettingsEntity(String settingKey, String settingValue) {
+        this.settingKey = settingKey;
+        this.settingValue = settingValue;
     }
 
     @PrePersist
@@ -55,12 +67,36 @@ public class IngestionSettingsEntity {
         this.id = id;
     }
 
-    public String getSettingsJson() {
-        return settingsJson;
+    public String getSettingKey() {
+        return settingKey;
     }
 
-    public void setSettingsJson(String settingsJson) {
-        this.settingsJson = settingsJson;
+    public void setSettingKey(String settingKey) {
+        this.settingKey = settingKey;
+    }
+
+    public String getSettingValue() {
+        return settingValue;
+    }
+
+    public void setSettingValue(String settingValue) {
+        this.settingValue = settingValue;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
     }
 
     public Instant getCreatedAt() {

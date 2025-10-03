@@ -21,16 +21,16 @@ public class AdminChangeLogEntity {
     @Column(name = "actor_email", nullable = false)
     private String actorEmail;
 
-    @Column(name = "action", nullable = false)
+    @Column(name = "change_type", nullable = false)
     private String action;
 
-    @Column(name = "resource_type", nullable = false)
+    @Column(name = "entity_type", nullable = false)
     private String resourceType;
 
-    @Column(name = "resource_id")
+    @Column(name = "entity_id")
     private String resourceId;
 
-    @Column(name = "diff_json", columnDefinition = "TEXT")
+    @Column(name = "details", columnDefinition = "LONGTEXT")
     private String diffJson;
 
     @Column(name = "created_at", nullable = false)
