@@ -1,72 +1,84 @@
 package com.vibe.jobs.ingestion;
 
-import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.datasource.application.DataSourceQueryService;
+import com.vibe.jobs.datasource.domain.JobDataSource;
+import com.vibe.jobs.datasource.domain.JobDataSource.CategoryQuotaDefinition;
+import com.vibe.jobs.datasource.domain.JobDataSource.DataSourceCompany;
 import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.SourceClientFactory;
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SourceRegistryTest {
 
     @Test
     void shouldResolveCategoryConfiguration() {
-        IngestionProperties properties = new IngestionProperties();
-        properties.setCompanies(List.of("Acme Inc"));
+        DataSourceCompany company = new DataSourceCompany(
+                null,
+                "acme",
+                "Acme Inc",
+                "acme-inc",
+                true,
+                Map.of(),
+                Map.of()
+        );
 
-        IngestionProperties.Source source = new IngestionProperties.Source();
-        source.setId("workday-acme");
-        source.setType("workday");
+        CategoryQuotaDefinition engineers = new CategoryQuotaDefinition(
+                "{{company}} Engineers",
+                5,
+                List.of("Engineering", "Software"),
+                Map.of("jobFamily", List.of("Engineering", "{{companyUpper}} Dev"))
+        );
+        CategoryQuotaDefinition ignored = new CategoryQuotaDefinition(
+                "Zero quota",
+                0,
+                List.of(),
+                Map.of()
+        );
 
-        Map<String, String> options = new HashMap<>();
-        options.put("baseUrl", "https://{{slug}}.example.com");
-        options.put("tenant", "{{slug}}");
-        options.put("site", "{{slugUpper}}");
-        source.setOptions(options);
+        JobDataSource sourceDefinition = new JobDataSource(
+                null,
+                "workday-acme",
+                "workday",
+                true,
+                true,
+                false,
+                JobDataSource.Flow.UNLIMITED,
+                Map.of(),
+                List.of(engineers, ignored),
+                List.of(company)
+        );
 
-        IngestionProperties.Source.CategoryQuota engineers = new IngestionProperties.Source.CategoryQuota();
-        engineers.setName("{{company}} Engineers");
-        engineers.setLimit(5);
-        engineers.setTags(List.of("Engineering", "Software"));
-        Map<String, List<String>> facets = new HashMap<>();
-        facets.put("jobFamily", List.of("Engineering", "{{companyUpper}} Dev"));
-        engineers.setFacets(facets);
+        DataSourceQueryService queryService = mock(DataSourceQueryService.class);
+        when(queryService.fetchAllEnabled()).thenReturn(List.of(sourceDefinition));
 
-        IngestionProperties.Source.CategoryQuota ignored = new IngestionProperties.Source.CategoryQuota();
-        ignored.setName("Zero quota");
-        ignored.setLimit(0);
-
-        source.setCategories(List.of(engineers, ignored));
-        properties.setSources(List.of(source));
-
-        SourceClientFactory factory = new SourceClientFactory() {
+        SourceClientFactory factory = (type, opts) -> new SourceClient() {
             @Override
-            public SourceClient create(String type, Map<String, String> opts) {
-                return new SourceClient() {
-                    @Override
-                    public String sourceName() {
-                        return type;
-                    }
+            public String sourceName() {
+                return type;
+            }
 
-                    @Override
-                    public List<FetchedJob> fetchPage(int page, int size) {
-                        return List.of();
-                    }
-                };
+            @Override
+            public List<FetchedJob> fetchPage(int page, int size) {
+                return List.of();
             }
         };
 
-        SourceRegistry registry = new SourceRegistry(properties, factory);
+        SourceRegistry registry = new SourceRegistry(queryService, factory);
         List<SourceRegistry.ConfiguredSource> resolved = registry.getScheduledSources();
         assertThat(resolved).hasSize(1);
 
         SourceRegistry.ConfiguredSource configured = resolved.get(0);
+        assertThat(configured.definition().getCode()).isEqualTo("workday-acme");
         assertThat(configured.categories()).hasSize(1);
+
         SourceRegistry.CategoryQuota quota = configured.categories().get(0);
         assertThat(quota.name()).isEqualTo("Acme Inc Engineers");
         assertThat(quota.limit()).isEqualTo(5);

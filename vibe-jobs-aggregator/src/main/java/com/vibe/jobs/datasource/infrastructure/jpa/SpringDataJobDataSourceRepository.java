@@ -15,6 +15,6 @@ public interface SpringDataJobDataSourceRepository extends JpaRepository<JobData
     @Override
     @EntityGraph(attributePaths = {"companies", "categories"})
     List<JobDataSourceEntity> findAll();
-    
+
     boolean existsByCode(String code);
 }

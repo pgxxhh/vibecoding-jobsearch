@@ -2,6 +2,7 @@ package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
+import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,9 +83,18 @@ class JobIngestionSchedulerTest {
                 fetchedJob("eng2", Set.of("Engineering"))
         ));
 
-        IngestionProperties.Source definition = new IngestionProperties.Source();
-        definition.setId("stub");
-        definition.setType("greenhouse");
+        JobDataSource definition = new JobDataSource(
+                null,
+                "stub",
+                "greenhouse",
+                true,
+                true,
+                false,
+                JobDataSource.Flow.UNLIMITED,
+                Map.of(),
+                List.of(),
+                List.of()
+        );
 
         List<SourceRegistry.CategoryQuota> quotas = List.of(
                 new SourceRegistry.CategoryQuota("engineer", 1, List.of("engineering"), java.util.Map.of()),
