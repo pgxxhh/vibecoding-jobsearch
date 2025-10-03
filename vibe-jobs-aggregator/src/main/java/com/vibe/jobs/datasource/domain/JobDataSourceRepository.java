@@ -17,6 +17,8 @@ public interface JobDataSourceRepository {
     void saveAll(Collection<JobDataSource> sources);
 
     boolean existsAny();
-    
+
     boolean existsByCode(String code);
+
+    Optional<JobDataSource> findByCode(String code);
 }

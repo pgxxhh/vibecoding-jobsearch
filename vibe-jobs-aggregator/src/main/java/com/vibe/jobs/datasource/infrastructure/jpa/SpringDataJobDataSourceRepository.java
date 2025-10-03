@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SpringDataJobDataSourceRepository extends JpaRepository<JobDataSourceEntity, Long> {
 
@@ -15,6 +16,9 @@ public interface SpringDataJobDataSourceRepository extends JpaRepository<JobData
     @Override
     @EntityGraph(attributePaths = {"companies", "categories"})
     List<JobDataSourceEntity> findAll();
-    
+
     boolean existsByCode(String code);
+
+    @EntityGraph(attributePaths = {"companies", "categories"})
+    Optional<JobDataSourceEntity> findByCode(String code);
 }

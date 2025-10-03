@@ -70,6 +70,11 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         return delegate.existsByCode(code);
     }
 
+    @Override
+    public Optional<JobDataSource> findByCode(String code) {
+        return delegate.findByCode(code).map(this::toDomain);
+    }
+
     private JobDataSource toDomain(JobDataSourceEntity entity) {
         List<JobDataSource.DataSourceCompany> companies = entity.getCompanies().stream()
                 .map(company -> new JobDataSource.DataSourceCompany(
