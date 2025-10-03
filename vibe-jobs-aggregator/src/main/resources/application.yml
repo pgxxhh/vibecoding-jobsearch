@@ -37,6 +37,7 @@ ingestion:
   concurrency: 6
   mode: companies
   companies:
+    - "riotgames"
     - "adyen"
     - "airwallex"
     - "airbnb"
