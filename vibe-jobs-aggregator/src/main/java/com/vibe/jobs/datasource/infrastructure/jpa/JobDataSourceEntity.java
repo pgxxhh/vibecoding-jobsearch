@@ -50,11 +50,8 @@ public class JobDataSourceEntity {
     @jakarta.persistence.Convert(converter = JsonStringMapConverter.class)
     private Map<String, String> baseOptions = new LinkedHashMap<>();
 
-    @OneToMany(mappedBy = "dataSource", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<JobDataSourceCompanyEntity> companies = new ArrayList<>();
-
-    @OneToMany(mappedBy = "dataSource", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<JobDataSourceCategoryEntity> categories = new ArrayList<>();
+    // Note: Companies and categories are managed manually in the repository
+    // to avoid JPA association complexity with code-based foreign keys
 
     public Long getId() {
         return id;
@@ -118,21 +115,5 @@ public class JobDataSourceEntity {
 
     public void setBaseOptions(Map<String, String> baseOptions) {
         this.baseOptions = baseOptions;
-    }
-
-    public List<JobDataSourceCompanyEntity> getCompanies() {
-        return companies;
-    }
-
-    public void setCompanies(List<JobDataSourceCompanyEntity> companies) {
-        this.companies = companies;
-    }
-
-    public List<JobDataSourceCategoryEntity> getCategories() {
-        return categories;
-    }
-
-    public void setCategories(List<JobDataSourceCategoryEntity> categories) {
-        this.categories = categories;
     }
 }

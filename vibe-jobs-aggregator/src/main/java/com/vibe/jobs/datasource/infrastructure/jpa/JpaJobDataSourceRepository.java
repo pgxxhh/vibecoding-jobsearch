@@ -17,9 +17,15 @@ import java.util.stream.Collectors;
 public class JpaJobDataSourceRepository implements JobDataSourceRepository {
 
     private final SpringDataJobDataSourceRepository delegate;
+    private final SpringDataJobDataSourceCompanyRepository companyRepository;
+    private final SpringDataJobDataSourceCategoryRepository categoryRepository;
 
-    public JpaJobDataSourceRepository(SpringDataJobDataSourceRepository delegate) {
+    public JpaJobDataSourceRepository(SpringDataJobDataSourceRepository delegate,
+                                      SpringDataJobDataSourceCompanyRepository companyRepository,
+                                      SpringDataJobDataSourceCategoryRepository categoryRepository) {
         this.delegate = delegate;
+        this.companyRepository = companyRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     @Override
@@ -46,8 +52,38 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     @Override
     @Transactional
     public JobDataSource save(JobDataSource dataSource) {
+        // Save the main entity first
         JobDataSourceEntity entity = toEntity(dataSource);
         JobDataSourceEntity saved = delegate.save(entity);
+
+        // Delete existing companies and categories
+        companyRepository.deleteByDataSourceCode(saved.getCode());
+        categoryRepository.deleteByDataSourceCode(saved.getCode());
+
+        // Save new companies
+        for (JobDataSource.DataSourceCompany company : dataSource.getCompanies()) {
+            JobDataSourceCompanyEntity companyEntity = new JobDataSourceCompanyEntity();
+            companyEntity.setDataSourceCode(saved.getCode());
+            companyEntity.setReference(company.reference());
+            companyEntity.setDisplayName(company.displayName());
+            companyEntity.setSlug(company.slug());
+            companyEntity.setEnabled(company.enabled());
+            companyEntity.setPlaceholderOverrides(new LinkedHashMap<>(company.placeholderOverrides()));
+            companyEntity.setOverrideOptions(new LinkedHashMap<>(company.overrideOptions()));
+            companyRepository.save(companyEntity);
+        }
+
+        // Save new categories
+        for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
+            JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
+            categoryEntity.setDataSourceCode(saved.getCode());
+            categoryEntity.setName(category.name());
+            categoryEntity.setLimit(category.limit());
+            categoryEntity.setTags(category.tags());
+            categoryEntity.setFacets(category.facets());
+            categoryRepository.save(categoryEntity);
+        }
+
         return toDomain(saved);
     }
 
@@ -76,7 +112,11 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     private JobDataSource toDomain(JobDataSourceEntity entity) {
-        List<JobDataSource.DataSourceCompany> companies = entity.getCompanies().stream()
+        // Load companies and categories separately
+        List<JobDataSourceCompanyEntity> companyEntities = companyRepository.findByDataSourceCodeOrderByReference(entity.getCode());
+        List<JobDataSourceCategoryEntity> categoryEntities = categoryRepository.findByDataSourceCodeOrderByName(entity.getCode());
+
+        List<JobDataSource.DataSourceCompany> companies = companyEntities.stream()
                 .map(company -> new JobDataSource.DataSourceCompany(
                         company.getId(),
                         company.getReference(),
@@ -86,11 +126,9 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
                         safeMap(company.getPlaceholderOverrides()),
                         safeMap(company.getOverrideOptions())
                 ))
-                .sorted(Comparator.comparing(JobDataSource.DataSourceCompany::reference))
                 .toList();
 
-        List<JobDataSource.CategoryQuotaDefinition> categories = entity.getCategories().stream()
-                .sorted(Comparator.comparing(JobDataSourceCategoryEntity::getName))
+        List<JobDataSource.CategoryQuotaDefinition> categories = categoryEntities.stream()
                 .map(category -> new JobDataSource.CategoryQuotaDefinition(
                         category.getName(),
                         category.getLimit(),
@@ -125,32 +163,6 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         entity.setRequireOverride(dataSource.isRequireOverride());
         entity.setFlow(dataSource.getFlow());
         entity.setBaseOptions(new LinkedHashMap<>(dataSource.getBaseOptions()));
-
-        entity.getCompanies().clear();
-        for (JobDataSource.DataSourceCompany company : dataSource.getCompanies()) {
-            JobDataSourceCompanyEntity companyEntity = new JobDataSourceCompanyEntity();
-            companyEntity.setId(null);
-            companyEntity.setDataSource(entity);
-            companyEntity.setReference(company.reference());
-            companyEntity.setDisplayName(company.displayName());
-            companyEntity.setSlug(company.slug());
-            companyEntity.setEnabled(company.enabled());
-            companyEntity.setPlaceholderOverrides(new LinkedHashMap<>(company.placeholderOverrides()));
-            companyEntity.setOverrideOptions(new LinkedHashMap<>(company.overrideOptions()));
-            entity.getCompanies().add(companyEntity);
-        }
-
-        entity.getCategories().clear();
-        for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
-            JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
-            categoryEntity.setId(null);
-            categoryEntity.setDataSource(entity);
-            categoryEntity.setName(category.name());
-            categoryEntity.setLimit(category.limit());
-            categoryEntity.setTags(category.tags());
-            categoryEntity.setFacets(category.facets());
-            entity.getCategories().add(categoryEntity);
-        }
 
         return entity;
     }

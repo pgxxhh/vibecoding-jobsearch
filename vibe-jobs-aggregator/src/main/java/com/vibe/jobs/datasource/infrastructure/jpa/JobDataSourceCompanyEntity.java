@@ -23,9 +23,8 @@ public class JobDataSourceCompanyEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "data_source_id", nullable = false)
-    private JobDataSourceEntity dataSource;
+    @Column(name = "data_source_code", nullable = false)
+    private String dataSourceCode;
 
     @Column(nullable = false)
     private String reference;
@@ -55,12 +54,12 @@ public class JobDataSourceCompanyEntity {
         this.id = id;
     }
 
-    public JobDataSourceEntity getDataSource() {
-        return dataSource;
+    public String getDataSourceCode() {
+        return dataSourceCode;
     }
 
-    public void setDataSource(JobDataSourceEntity dataSource) {
-        this.dataSource = dataSource;
+    public void setDataSourceCode(String dataSourceCode) {
+        this.dataSourceCode = dataSourceCode;
     }
 
     public String getReference() {
