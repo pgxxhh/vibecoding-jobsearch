@@ -39,6 +39,7 @@ local docker settings so the backend connects to the managed RDS endpoint.
 - [ ] Trigger a backend deployment (`./deploy.sh` or an ECS force deployment).
 - [ ] Watch the backend logs; Flyway should emit `Successfully applied 2 migrations`.
 - [ ] Verify tables with `mysql -h <endpoint> -u vibejobs -p -e 'SHOW TABLES IN vibejobs;'`.
+- ℹ️ If you bootstrap the database manually (before letting Flyway run), execute `setup-database.sh`. It now runs both `scripts/simple-db-setup.sql` and `scripts/2024-07-15_admin_tables.sql` so the admin tables and whitelist seed are created alongside the ingestion schema.
 
 ## 4. Post-deployment verification
 - [ ] Hit `https://<your-domain>/api/actuator/health` and confirm status `UP`.
