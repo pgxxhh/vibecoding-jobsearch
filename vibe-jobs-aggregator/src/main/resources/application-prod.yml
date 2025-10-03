@@ -27,3 +27,5 @@ spring:
 ingestion:
   concurrency: 4  # 从6降到4，减少内存压力
   pageSize: 50    # 从100降到50，减少单次处理的内存占用
+  migration:
+    enabled: true   # 强制启用配置迁移

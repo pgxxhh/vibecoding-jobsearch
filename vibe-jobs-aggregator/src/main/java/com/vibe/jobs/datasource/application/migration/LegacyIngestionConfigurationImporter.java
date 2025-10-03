@@ -39,12 +39,31 @@ public class LegacyIngestionConfigurationImporter {
 
     @PostConstruct
     public void migrateIfNecessary() {
-        if (repository.existsAny()) {
-            log.info("Job data sources already initialized; skipping legacy ingestion migration");
-            return;
-        }
+        // 生产环境强制检查并迁移配置
+        boolean hasExistingData = repository.existsAny();
+        log.info("Job data sources exist in database: {}", hasExistingData);
+        
         if (legacyProperties.getSources() == null || legacyProperties.getSources().isEmpty()) {
             log.info("No legacy ingestion sources configured; skipping migration");
+            return;
+        }
+
+        if (hasExistingData) {
+            log.info("Job data sources already initialized; checking if we need to add missing configurations");
+            // 检查是否有配置文件中的源在数据库中不存在
+            for (IngestionProperties.Source source : legacyProperties.getSources()) {
+                if (source == null || source.getType() == null || source.getType().isBlank()) {
+                    continue;
+                }
+                String code = normalizeCode(source);
+                if (!repository.existsByCode(code)) {
+                    log.info("Adding missing data source: {}", code);
+                    JobDataSource dataSource = buildDataSource(source);
+                    if (dataSource != null) {
+                        commandService.save(dataSource);
+                    }
+                }
+            }
             return;
         }
 

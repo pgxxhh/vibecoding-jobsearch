@@ -31,9 +31,3 @@ public class HybridCrawlerExecutionEngine implements CrawlerExecutionEngine {
         return httpEngine.fetch(session, pagination);
     }
 }
-        } else {
-            log.debug("Using HTTP engine for blueprint {}", blueprint.code());
-            return httpEngine.fetch(session, pagination);
-        }
-    }
-}
