@@ -1,0 +1,34 @@
+package com.vibe.jobs.admin.web.dto;
+
+import com.vibe.jobs.datasource.domain.JobDataSource;
+
+import java.util.List;
+import java.util.Map;
+
+public record DataSourceResponse(
+        Long id,
+        String code,
+        String type,
+        boolean enabled,
+        boolean runOnStartup,
+        boolean requireOverride,
+        JobDataSource.Flow flow,
+        Map<String, String> baseOptions,
+        List<JobDataSource.CategoryQuotaDefinition> categories,
+        List<JobDataSource.DataSourceCompany> companies
+) {
+    public static DataSourceResponse fromDomain(JobDataSource source) {
+        return new DataSourceResponse(
+                source.getId(),
+                source.getCode(),
+                source.getType(),
+                source.isEnabled(),
+                source.isRunOnStartup(),
+                source.isRequireOverride(),
+                source.getFlow(),
+                source.getBaseOptions(),
+                source.getCategories(),
+                source.getCompanies()
+        );
+    }
+}

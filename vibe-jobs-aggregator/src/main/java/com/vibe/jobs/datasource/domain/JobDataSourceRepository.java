@@ -17,4 +17,6 @@ public interface JobDataSourceRepository {
     void saveAll(Collection<JobDataSource> sources);
 
     boolean existsAny();
+
+    void deleteById(Long id);
 }

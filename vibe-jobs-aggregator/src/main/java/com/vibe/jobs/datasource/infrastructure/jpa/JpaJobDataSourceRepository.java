@@ -65,6 +65,11 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         return delegate.count() > 0;
     }
 
+    @Override
+    public void deleteById(Long id) {
+        delegate.deleteById(id);
+    }
+
     private JobDataSource toDomain(JobDataSourceEntity entity) {
         List<JobDataSource.DataSourceCompany> companies = entity.getCompanies().stream()
                 .map(company -> new JobDataSource.DataSourceCompany(

@@ -22,4 +22,8 @@ public class DataSourceCommandService {
     public void saveAll(Collection<JobDataSource> sources) {
         repository.saveAll(sources);
     }
+
+    public void delete(Long id) {
+        repository.deleteById(id);
+    }
 }
