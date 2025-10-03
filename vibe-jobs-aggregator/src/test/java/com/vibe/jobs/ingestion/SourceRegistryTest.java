@@ -59,17 +59,15 @@ class SourceRegistryTest {
         DataSourceQueryService queryService = mock(DataSourceQueryService.class);
         when(queryService.fetchAllEnabled()).thenReturn(List.of(sourceDefinition));
 
-        SourceClientFactory factory = (type, opts) -> new SourceClient() {
-            @Override
-            public String sourceName() {
-                return type;
-            }
-
-            @Override
-            public List<FetchedJob> fetchPage(int page, int size) {
-                return List.of();
-            }
-        };
+        SourceClientFactory factory = mock(SourceClientFactory.class);
+        SourceClient mockClient = mock(SourceClient.class);
+        when(mockClient.sourceName()).thenReturn("workday");
+        try {
+            when(mockClient.fetchPage(1, 10)).thenReturn(List.of());
+        } catch (Exception e) {
+            // This will never happen in the mock, but satisfies compiler
+        }
+        when(factory.create("workday", Map.of())).thenReturn(mockClient);
 
         SourceRegistry registry = new SourceRegistry(queryService, factory);
         List<SourceRegistry.ConfiguredSource> resolved = registry.getScheduledSources();
