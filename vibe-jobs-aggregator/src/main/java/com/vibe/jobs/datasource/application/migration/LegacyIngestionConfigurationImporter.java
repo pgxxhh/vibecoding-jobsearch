@@ -42,34 +42,15 @@ public class LegacyIngestionConfigurationImporter {
         // 生产环境强制检查并迁移配置
         boolean hasExistingData = repository.existsAny();
         log.info("Job data sources exist in database: {}", hasExistingData);
-        
-        if (legacyProperties.getSources() == null || legacyProperties.getSources().isEmpty()) {
+
+        List<IngestionProperties.Source> legacySources = legacyProperties.getSources();
+        if (legacySources == null || legacySources.isEmpty()) {
             log.info("No legacy ingestion sources configured; skipping migration");
             return;
         }
 
-        if (hasExistingData) {
-            log.info("Job data sources already initialized; checking if we need to add missing configurations");
-            // 检查是否有配置文件中的源在数据库中不存在
-            for (IngestionProperties.Source source : legacyProperties.getSources()) {
-                if (source == null || source.getType() == null || source.getType().isBlank()) {
-                    continue;
-                }
-                String code = normalizeCode(source);
-                if (!repository.existsByCode(code)) {
-                    log.info("Adding missing data source: {}", code);
-                    JobDataSource dataSource = buildDataSource(source);
-                    if (dataSource != null) {
-                        commandService.save(dataSource);
-                    }
-                }
-            }
-            return;
-        }
-
-        log.info("Migrating legacy ingestion configuration to database");
-        List<JobDataSource> sources = new ArrayList<>();
-        for (IngestionProperties.Source source : legacyProperties.getSources()) {
+        List<JobDataSource> pendingInsert = new ArrayList<>();
+        for (IngestionProperties.Source source : legacySources) {
             if (source == null || source.getType() == null || source.getType().isBlank()) {
                 continue;
             }
@@ -77,14 +58,29 @@ public class LegacyIngestionConfigurationImporter {
             if (dataSource == null) {
                 continue;
             }
-            sources.add(dataSource);
+            String code = dataSource.getCode();
+            repository.findByCode(code)
+                    .ifPresentOrElse(existing -> synchronizeExisting(existing, dataSource),
+                            () -> {
+                                log.info("Adding missing data source: {}", code);
+                                pendingInsert.add(dataSource);
+                            });
         }
-        if (sources.isEmpty()) {
-            log.info("No valid legacy data sources found; skipping migration");
+
+        if (pendingInsert.isEmpty()) {
+            if (!hasExistingData) {
+                log.info("No valid legacy data sources found; skipping migration");
+            }
             return;
         }
-        commandService.saveAll(sources);
-        log.info("Migrated {} legacy ingestion sources to the database", sources.size());
+
+        if (hasExistingData) {
+            log.info("Persisting {} new legacy ingestion sources to the database", pendingInsert.size());
+        } else {
+            log.info("Migrating legacy ingestion configuration to database ({} sources)", pendingInsert.size());
+        }
+        commandService.saveAll(pendingInsert);
+        log.info("Migration completed; inserted {} legacy ingestion sources", pendingInsert.size());
     }
 
     private JobDataSource buildDataSource(IngestionProperties.Source source) {
@@ -149,6 +145,50 @@ public class LegacyIngestionConfigurationImporter {
             companies.add(company.normalized());
         }
         return companies;
+    }
+
+    private void synchronizeExisting(JobDataSource existing, JobDataSource candidate) {
+        JobDataSource normalizedExisting = existing == null ? null : existing.normalized();
+        JobDataSource normalizedCandidate = candidate == null ? null : candidate.normalized();
+        if (normalizedExisting == null || normalizedCandidate == null) {
+            return;
+        }
+
+        if (!isDifferent(normalizedExisting, normalizedCandidate)) {
+            log.debug("Data source {} already up to date", normalizedExisting.getCode());
+            return;
+        }
+
+        log.info("Updating legacy data source configuration: {}", normalizedExisting.getCode());
+        commandService.save(normalizedCandidate.withId(normalizedExisting.getId()));
+    }
+
+    private boolean isDifferent(JobDataSource existing, JobDataSource candidate) {
+        if (existing == null || candidate == null) {
+            return true;
+        }
+        if (!existing.getType().equals(candidate.getType())) {
+            return true;
+        }
+        if (existing.isEnabled() != candidate.isEnabled()) {
+            return true;
+        }
+        if (existing.isRunOnStartup() != candidate.isRunOnStartup()) {
+            return true;
+        }
+        if (existing.isRequireOverride() != candidate.isRequireOverride()) {
+            return true;
+        }
+        if (existing.getFlow() != candidate.getFlow()) {
+            return true;
+        }
+        if (!existing.getBaseOptions().equals(candidate.getBaseOptions())) {
+            return true;
+        }
+        if (!existing.getCategories().equals(candidate.getCategories())) {
+            return true;
+        }
+        return !existing.getCompanies().equals(candidate.getCompanies());
     }
 
     private String normalizeCode(IngestionProperties.Source source) {
