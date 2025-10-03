@@ -5,7 +5,6 @@ import com.vibe.jobs.datasource.domain.JobDataSourceRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -85,20 +84,6 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         }
 
         return toDomain(saved);
-    }
-
-    @Override
-    @Transactional
-    public void saveAll(Collection<JobDataSource> sources) {
-        List<JobDataSourceEntity> entities = sources.stream()
-                .map(this::toEntity)
-                .collect(Collectors.toList());
-        delegate.saveAll(entities);
-    }
-
-    @Override
-    public boolean existsAny() {
-        return delegate.count() > 0;
     }
 
     @Override
