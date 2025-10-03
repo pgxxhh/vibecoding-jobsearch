@@ -1,7 +1,5 @@
--- Manual database setup script
+-- Simple database setup script without complex indexes
 -- Run this directly on your MySQL database to create all required tables
-
--- Create all required tables for the application
 
 -- V1: Basic job tables
 CREATE TABLE IF NOT EXISTS jobs (
@@ -34,14 +32,6 @@ CREATE TABLE IF NOT EXISTS job_tags (
     UNIQUE KEY uk_job_tag (job_id, tag),
     INDEX idx_tag (tag)
 );
-
--- V3: Add performance indexes
-CREATE INDEX IF NOT EXISTS idx_jobs_posted_at_id_desc ON jobs (posted_at DESC, id DESC);
-CREATE INDEX IF NOT EXISTS idx_jobs_company_posted_at ON jobs ((LOWER(company)), posted_at);
-CREATE INDEX IF NOT EXISTS idx_jobs_location_posted_at ON jobs ((LOWER(location)), posted_at);
-CREATE INDEX IF NOT EXISTS idx_jobs_level ON jobs (level);
-CREATE INDEX IF NOT EXISTS idx_job_tags_tag ON job_tags (tag);
-CREATE INDEX IF NOT EXISTS idx_job_tags_job_tag ON job_tags (job_id, tag);
 
 -- V10: Job data source tables
 CREATE TABLE IF NOT EXISTS job_data_source (
@@ -147,6 +137,6 @@ INSERT IGNORE INTO flyway_schema_history
 (installed_rank, version, description, type, script, checksum, installed_by, installed_on, execution_time, success)
 VALUES 
 (1, '1', '<< Flyway Baseline >>', 'BASELINE', '<< Flyway Baseline >>', NULL, 'manual', NOW(), 0, 1),
-(2, '10', 'Manual DB Setup', 'SQL', 'manual-db-setup.sql', 999999999, 'manual', NOW(), 1000, 1);
+(2, '10', 'Manual DB Setup', 'SQL', 'simple-db-setup.sql', 888888888, 'manual', NOW(), 1000, 1);
 
-SELECT 'Database setup completed successfully!' as status;
+SELECT 'Simple database setup completed successfully!' as status;
