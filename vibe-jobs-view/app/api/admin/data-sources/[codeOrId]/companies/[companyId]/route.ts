@@ -9,7 +9,7 @@ function resolveToken(req: NextRequest): string | null {
   return token && token.length > 0 ? token : null;
 }
 
-async function forward(req: NextRequest, params: { id: string }, method: 'GET' | 'PUT' | 'DELETE') {
+async function forward(req: NextRequest, params: { codeOrId: string; companyId: string }, method: 'GET' | 'PUT' | 'DELETE') {
   const token = resolveToken(req);
   if (!token) {
     return NextResponse.json({ code: 'NO_SESSION', message: 'Admin session required' }, { status: 401 });
@@ -18,7 +18,7 @@ async function forward(req: NextRequest, params: { id: string }, method: 'GET' |
   if (!base) {
     return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured' }, { status: 500 });
   }
-  const upstream = buildBackendUrl(base, `/admin/data-sources/${params.id}`);
+  const upstream = buildBackendUrl(base, `/admin/data-sources/${params.codeOrId}/companies/${params.companyId}`);
   const headers: Record<string, string> = {
     accept: 'application/json',
     'x-session-token': token,
@@ -46,14 +46,14 @@ async function forward(req: NextRequest, params: { id: string }, method: 'GET' |
   }
 }
 
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: { codeOrId: string; companyId: string } }) {
   return forward(req, context.params, 'GET');
 }
 
-export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: { codeOrId: string; companyId: string } }) {
   return forward(req, context.params, 'PUT');
 }
 
-export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: { codeOrId: string; companyId: string } }) {
   return forward(req, context.params, 'DELETE');
 }

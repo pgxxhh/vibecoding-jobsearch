@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import DataSourceBulkUpload from '@/components/admin/DataSourceBulkUpload';
 
 interface CategoryQuotaDefinition {
   name: string;
@@ -58,6 +60,7 @@ export default function DataSourcesPage() {
   });
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const selectedSource = useMemo(() => {
     if (!data) return null;
@@ -190,34 +193,49 @@ export default function DataSourcesPage() {
           <h2 className="text-2xl font-semibold text-white">数据源管理</h2>
           <p className="text-sm text-white/70">支持动态增删改，保存后缓存立即刷新。</p>
         </div>
-        <button
-          onClick={() => setSelectedId('new')}
-          className="rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20"
-        >
-          新建数据源
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="rounded-md bg-blue-500/20 px-3 py-2 text-sm font-medium text-blue-200 hover:bg-blue-500/30"
+          >
+            批量上传
+          </button>
+          <button
+            onClick={() => setSelectedId('new')}
+            className="rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20"
+          >
+            新建数据源
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
           {data.map((source) => (
-            <button
-              key={source.id}
-              onClick={() => setSelectedId(source.id)}
-              className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                selectedId === source.id
-                  ? 'border-white/40 bg-white/15 text-white'
-                  : 'border-white/10 bg-transparent text-white/70 hover:border-white/30 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{source.code}</span>
-                <span className={`text-xs ${source.enabled ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {source.enabled ? '启用' : '停用'}
-                </span>
-              </div>
-              <p className="text-xs text-white/60">{source.type}</p>
-            </button>
+            <div key={source.id} className="space-y-2">
+              <button
+                onClick={() => setSelectedId(source.id)}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                  selectedId === source.id
+                    ? 'border-white/40 bg-white/15 text-white'
+                    : 'border-white/10 bg-transparent text-white/70 hover:border-white/30 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{source.code}</span>
+                  <span className={`text-xs ${source.enabled ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {source.enabled ? '启用' : '停用'}
+                  </span>
+                </div>
+                <p className="text-xs text-white/60">{source.type}</p>
+              </button>
+              <Link
+                href={`/admin/data-sources/${source.code}`}
+                className="block w-full rounded-md bg-white/5 px-3 py-1 text-center text-xs text-white/70 hover:bg-white/10 hover:text-white/90"
+              >
+                管理公司 ({source.companies?.length || 0})
+              </Link>
+            </div>
           ))}
           {data.length === 0 && <p className="text-sm text-white/60">暂无数据源</p>}
         </aside>
@@ -338,6 +356,11 @@ export default function DataSourcesPage() {
           )}
         </section>
       </div>
+
+      <DataSourceBulkUpload 
+        isOpen={showBulkUpload} 
+        onClose={() => setShowBulkUpload(false)} 
+      />
     </div>
   );
 }
