@@ -115,12 +115,110 @@ public class AdminDataSourceService {
         return newCompany;
     }
 
+    public com.vibe.jobs.admin.web.dto.BulkCompanyResult bulkCreateCompanies(
+            String dataSourceCode, 
+            List<JobDataSource.DataSourceCompany> companiesToCreate,
+            String actorEmail) {
+        
+        if (companiesToCreate == null || companiesToCreate.isEmpty()) {
+            return com.vibe.jobs.admin.web.dto.BulkCompanyResult.success(List.of());
+        }
+        
+        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
+        List<JobDataSource.DataSourceCompany> existingCompanies = new ArrayList<>(dataSource.getCompanies());
+        
+        // Find next available ID
+        Long nextId = existingCompanies.stream()
+                .mapToLong(c -> c.id() != null ? c.id() : 0L)
+                .max()
+                .orElse(0L) + 1;
+        
+        List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        
+        for (JobDataSource.DataSourceCompany companyRequest : companiesToCreate) {
+            try {
+                // Validate required fields
+                if (companyRequest.reference() == null || companyRequest.reference().trim().isEmpty()) {
+                    errors.add("Reference is required for company entry");
+                    continue;
+                }
+                
+                // Check for duplicate reference within existing companies
+                boolean referenceExists = existingCompanies.stream()
+                        .anyMatch(existing -> existing.reference().equals(companyRequest.reference().trim()));
+                
+                if (referenceExists) {
+                    errors.add("Company reference '" + companyRequest.reference() + "' already exists");
+                    continue;
+                }
+                
+                // Create new company with generated ID
+                JobDataSource.DataSourceCompany newCompany = new JobDataSource.DataSourceCompany(
+                        nextId++,
+                        companyRequest.reference().trim(),
+                        companyRequest.displayName(),
+                        companyRequest.slug(),
+                        Boolean.TRUE.equals(companyRequest.enabled()),
+                        companyRequest.placeholderOverrides(),
+                        companyRequest.overrideOptions()
+                );
+                
+                existingCompanies.add(newCompany);
+                successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(newCompany));
+                
+            } catch (Exception e) {
+                String errorMsg = "Failed to create company '" + 
+                    (companyRequest.reference() != null ? companyRequest.reference() : "unknown") + 
+                    "': " + e.getMessage();
+                errors.add(errorMsg);
+                log.error("Bulk company creation failed", e);
+            }
+        }
+        
+        // Save updated data source if any companies were successfully created
+        if (!successful.isEmpty()) {
+            JobDataSource updated = dataSource.withCompanies(existingCompanies);
+            commandService.save(updated);
+            publishChange(dataSourceCode);
+            
+            log.info("Bulk created {} companies for data source '{}' by user '{}'", 
+                successful.size(), dataSourceCode, actorEmail);
+        }
+        
+        return com.vibe.jobs.admin.web.dto.BulkCompanyResult.withErrors(successful, errors);
+    }
+
     public JobDataSource.DataSourceCompany getCompanyById(Long companyId) {
         return queryService.fetchAll().stream()
                 .flatMap(ds -> ds.getCompanies().stream())
                 .filter(company -> company.id() != null && company.id().equals(companyId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Company not found: " + companyId));
+    }
+
+    public com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse getCompaniesPaged(
+            String dataSourceCode, int page, int size) {
+        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
+        List<JobDataSource.DataSourceCompany> allCompanies = dataSource.getCompanies();
+        
+        int totalElements = allCompanies.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int start = page * size;
+        int end = Math.min(start + size, totalElements);
+        
+        List<JobDataSource.DataSourceCompany> content = start >= totalElements ? 
+            List.of() : allCompanies.subList(start, end);
+        
+        return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
+            content,
+            page,
+            size,
+            totalPages,
+            totalElements,
+            page < totalPages - 1,
+            page > 0
+        );
     }
 
     public JobDataSource.DataSourceCompany updateCompany(String dataSourceCode, Long companyId, JobDataSource.DataSourceCompany updatedCompany) {

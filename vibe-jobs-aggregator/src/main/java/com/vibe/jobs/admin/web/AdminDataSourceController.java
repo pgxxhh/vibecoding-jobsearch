@@ -5,10 +5,13 @@ import com.vibe.jobs.admin.application.AdminDataSourceService;
 import com.vibe.jobs.admin.domain.AdminPrincipal;
 import com.vibe.jobs.admin.web.dto.DataSourceRequest;
 import com.vibe.jobs.admin.web.dto.DataSourceResponse;
+import com.vibe.jobs.admin.web.dto.PagedDataSourceResponse;
 import com.vibe.jobs.admin.web.dto.BulkDataSourceRequest;
 import com.vibe.jobs.admin.web.dto.BulkUploadResult;
 import com.vibe.jobs.admin.web.dto.CompanyRequest;
 import com.vibe.jobs.admin.web.dto.CompanyResponse;
+import com.vibe.jobs.admin.web.dto.BulkCompanyRequest;
+import com.vibe.jobs.admin.web.dto.BulkCompanyResult;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,6 +62,27 @@ public class AdminDataSourceController {
                 source = dataSourceService.getByCode(codeOrId);
             }
             return DataSourceResponse.fromDomain(source);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
+    }
+
+    @GetMapping("/{codeOrId}/paged")
+    public PagedDataSourceResponse getWithPagination(@PathVariable String codeOrId,
+                                                     @RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "20") int size) {
+        try {
+            JobDataSource source;
+            // Try to parse as Long first, if it fails treat as code
+            try {
+                Long id = Long.parseLong(codeOrId);
+                source = dataSourceService.getById(id);
+            } catch (NumberFormatException ex) {
+                source = dataSourceService.getByCode(codeOrId);
+            }
+            
+            var pagedCompanies = dataSourceService.getCompaniesPaged(source.getCode(), page, size);
+            return PagedDataSourceResponse.fromDomain(source, pagedCompanies);
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
         }
@@ -139,6 +164,43 @@ public class AdminDataSourceController {
                     Map.of("after", company)
             );
             return CompanyResponse.fromDomain(company);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
+    }
+
+    @PostMapping(path = "/{code}/companies/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public BulkCompanyResult bulkCreateCompanies(@PathVariable String code,
+                                                 @RequestBody BulkCompanyRequest request,
+                                                 AdminPrincipal principal) {
+        try {
+            List<JobDataSource.DataSourceCompany> companies = request.companies().stream()
+                    .map(CompanyRequest::toDomain)
+                    .toList();
+            
+            BulkCompanyResult result = dataSourceService.bulkCreateCompanies(
+                    code, 
+                    companies,
+                    principal != null ? principal.email() : null
+            );
+            
+            // Record the bulk operation in change log
+            if (result.successful() > 0) {
+                changeLogService.record(
+                        principal != null ? principal.email() : null,
+                        "BULK_CREATE",
+                        "DATA_SOURCE_COMPANY",
+                        code,
+                        Map.of(
+                            "total", result.total(),
+                            "successful", result.successful(),
+                            "failed", result.failed(),
+                            "companies", result.created().stream().map(CompanyResponse::reference).toList()
+                        )
+                );
+            }
+            
+            return result;
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
         }

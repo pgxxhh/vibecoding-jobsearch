@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CompanyBulkUpload from '@/components/admin/CompanyBulkUpload';
+import Pagination from '@/components/ui/Pagination';
 
 interface DataSourceCompany {
   id: number | null;
@@ -15,7 +17,17 @@ interface DataSourceCompany {
   overrideOptions: Record<string, string>;
 }
 
-interface DataSourceResponse {
+interface PagedCompanyResponse {
+  content: DataSourceCompany[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+interface PagedDataSourceResponse {
   id: number;
   code: string;
   type: string;
@@ -24,11 +36,11 @@ interface DataSourceResponse {
   requireOverride: boolean;
   flow: 'LIMITED' | 'UNLIMITED';
   baseOptions: Record<string, string>;
-  companies: DataSourceCompany[];
+  companies: PagedCompanyResponse;
 }
 
-async function fetchDataSource(code: string): Promise<DataSourceResponse> {
-  const res = await fetch(`/api/admin/data-sources/${code}`, { cache: 'no-store' });
+async function fetchDataSourcePaged(code: string, page: number, size: number): Promise<PagedDataSourceResponse> {
+  const res = await fetch(`/api/admin/data-sources/${code}/paged?page=${page}&size=${size}`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('无法获取数据源信息');
   }
@@ -69,12 +81,16 @@ async function deleteCompany(dataSourceCode: string, companyId: number): Promise
 export default function DataSourceCompaniesPage({ params }: { params: { codeOrId: string } }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10);
+  
   const { data: dataSource, isLoading, isError, error } = useQuery({ 
-    queryKey: ['admin', 'data-source', params.codeOrId], 
-    queryFn: () => fetchDataSource(params.codeOrId) 
+    queryKey: ['admin', 'data-source-paged', params.codeOrId, currentPage, pageSize], 
+    queryFn: () => fetchDataSourcePaged(params.codeOrId, currentPage, pageSize)
   });
 
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | 'new' | null>(null);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [companyForm, setCompanyForm] = useState({
     reference: '',
     displayName: '',
@@ -86,7 +102,7 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const selectedCompany = dataSource?.companies.find(c => c.id === selectedCompanyId) ?? null;
+  const selectedCompany = dataSource?.companies.content.find(c => c.id === selectedCompanyId) ?? null;
 
   useEffect(() => {
     if (selectedCompany) {
@@ -117,7 +133,7 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
       return saveCompany(params.codeOrId, payload);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source', params.codeOrId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source-paged', params.codeOrId] });
       setMessage('公司信息已保存');
       setErrorMsg(null);
       setSelectedCompanyId(null);
@@ -133,7 +149,7 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
       return deleteCompany(params.codeOrId, companyId);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source', params.codeOrId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source-paged', params.codeOrId] });
       setSelectedCompanyId(null);
       setMessage('公司已删除');
       setErrorMsg(null);
@@ -143,6 +159,11 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
       setErrorMsg(err instanceof Error ? err.message : '删除失败');
     },
   });
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedCompanyId(null); // Reset selection when changing pages
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -204,20 +225,35 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
             数据源类型: <span className="font-medium">{dataSource.type}</span> | 状态: <span className={`font-medium ${dataSource.enabled ? 'text-emerald-600' : 'text-rose-600'}`}>{dataSource.enabled ? '启用' : '停用'}</span>
           </p>
         </div>
-        <button
-          onClick={() => setSelectedCompanyId('new')}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-4 text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
-        >
-          🏢 添加公司
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowBulkUpload(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-4 text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          >
+            📤 批量上传
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCompanyId('new')}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-4 text-sm bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+          >
+            🏢 添加公司
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
         <aside className="space-y-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">公司列表</h3>
-            <div className="space-y-2">
-              {dataSource.companies.map((company) => (
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900">公司列表</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                共 {dataSource.companies.totalElements} 个公司
+              </p>
+            </div>
+            <div className="p-4 space-y-2">
+              {dataSource.companies.content.map((company) => (
                 <button
                   key={company.id}
                   onClick={() => setSelectedCompanyId(company.id)}
@@ -243,12 +279,23 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
                   )}
                 </button>
               ))}
-              {dataSource.companies.length === 0 && (
+              {dataSource.companies.content.length === 0 && (
                 <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-6 text-center">
                   <p className="text-sm text-gray-500">暂无公司配置</p>
                 </div>
               )}
             </div>
+            {dataSource.companies.totalPages > 1 && (
+              <Pagination
+                currentPage={dataSource.companies.page}
+                totalPages={dataSource.companies.totalPages}
+                hasNext={dataSource.companies.hasNext}
+                hasPrevious={dataSource.companies.hasPrevious}
+                onPageChange={handlePageChange}
+                totalElements={dataSource.companies.totalElements}
+                pageSize={dataSource.companies.size}
+              />
+            )}
           </div>
         </aside>
 
@@ -376,6 +423,12 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
           )}
         </section>
       </div>
+
+      <CompanyBulkUpload 
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        dataSourceCode={params.codeOrId}
+      />
     </div>
   );
 }
