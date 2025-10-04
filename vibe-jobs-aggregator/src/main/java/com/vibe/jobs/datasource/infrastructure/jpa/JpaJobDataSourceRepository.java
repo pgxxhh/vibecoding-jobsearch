@@ -86,7 +86,6 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         return toDomain(saved);
     }
 
-    @Override
     public boolean existsByCode(String code) {
         return delegate.existsByCode(code);
     }
@@ -94,6 +93,11 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     @Override
     public Optional<JobDataSource> findByCode(String code) {
         return delegate.findByCode(code).map(this::toDomain);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        delegate.deleteById(id);
     }
 
     private JobDataSource toDomain(JobDataSourceEntity entity) {

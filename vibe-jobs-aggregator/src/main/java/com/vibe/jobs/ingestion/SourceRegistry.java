@@ -10,6 +10,8 @@ import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.SourceClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -59,6 +61,20 @@ public class SourceRegistry {
             }
         }
         return resolved;
+    }
+
+    @EventListener
+    public void onDataSourceChanged(DataSourceConfigurationChangedEvent event) {
+        if (event == null) {
+            return;
+        }
+        String code = event.sourceCode();
+        if (code == null || code.isBlank()) {
+            clientCache.clear();
+            return;
+        }
+        String normalized = code.trim().toLowerCase(Locale.ROOT) + "::";
+        clientCache.keySet().removeIf(key -> key.toLowerCase(Locale.ROOT).startsWith(normalized));
     }
 
     private List<ConfiguredSource> resolveSingleInstance(JobDataSource source) {

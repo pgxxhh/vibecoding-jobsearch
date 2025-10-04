@@ -1,5 +1,8 @@
 package com.vibe.jobs.ingestion;
 
+import com.vibe.jobs.admin.application.IngestionSettingsService;
+import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
+import com.vibe.jobs.admin.domain.event.IngestionSettingsUpdatedEvent;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.service.JobDetailService;
@@ -10,18 +13,19 @@ import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.WorkdaySourceClient;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.LinkedHashMap;
-import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 @Slf4j
 @Component
@@ -34,7 +38,10 @@ public class JobIngestionScheduler {
     private final JobDetailService jobDetailService;
     private final LocationFilterService locationFilterService;
     private final RoleFilterService roleFilterService;
-    private final ExecutorService executor;
+    private final IngestionExecutorManager executorManager;
+    private final TaskScheduler taskScheduler;
+    private final IngestionSettingsService settingsService;
+    private volatile ScheduledFuture<?> scheduledTask;
 
     public JobIngestionScheduler(JobService jobService,
                                  IngestionProperties ingestionProperties,
@@ -43,7 +50,9 @@ public class JobIngestionScheduler {
                                  JobDetailService jobDetailService,
                                  LocationFilterService locationFilterService,
                                  RoleFilterService roleFilterService,
-                                 ExecutorService executor) {
+                                 IngestionExecutorManager executorManager,
+                                 TaskScheduler taskScheduler,
+                                 IngestionSettingsService settingsService) {
         this.jobService = jobService;
         this.ingestionProperties = ingestionProperties;
         this.sourceRegistry = sourceRegistry;
@@ -51,10 +60,32 @@ public class JobIngestionScheduler {
         this.jobDetailService = jobDetailService;
         this.locationFilterService = locationFilterService;
         this.roleFilterService = roleFilterService;
-        this.executor = executor;
+        this.executorManager = executorManager;
+        this.taskScheduler = taskScheduler;
+        this.settingsService = settingsService;
+        scheduleWith(settingsService.initializeIfNeeded());
     }
 
-    @Scheduled(fixedDelayString = "${ingestion.fixedDelayMs:3600000}", initialDelayString = "${ingestion.initialDelayMs:10000}")
+    private void scheduleWith(IngestionSettingsSnapshot snapshot) {
+        Duration delay = Duration.ofMillis(Math.max(1_000L, snapshot.fixedDelayMs()));
+        Instant start = Instant.now().plusMillis(Math.max(0L, snapshot.initialDelayMs()));
+        synchronized (this) {
+            if (scheduledTask != null) {
+                scheduledTask.cancel(false);
+            }
+            scheduledTask = taskScheduler.scheduleWithFixedDelay(this::runIngestionSafely, start, delay);
+            log.info("Scheduled ingestion with initial delay {} ms and fixed delay {} ms", snapshot.initialDelayMs(), snapshot.fixedDelayMs());
+        }
+    }
+
+    private void runIngestionSafely() {
+        try {
+            runIngestion();
+        } catch (Exception ex) {
+            log.error("Scheduled ingestion failed", ex);
+        }
+    }
+
     public void runIngestion() {
         List<SourceRegistry.ConfiguredSource> sources = sourceRegistry.getScheduledSources();
         if (sources.isEmpty()) {
@@ -74,7 +105,7 @@ public class JobIngestionScheduler {
         }
 
         CompletableFuture<?>[] tasks = unlimited.stream()
-                .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executor))
+                .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executorManager.getExecutor()))
                 .toArray(CompletableFuture[]::new);
 
         if (tasks.length > 0) {
@@ -222,117 +253,91 @@ public class JobIngestionScheduler {
     }
 
     private boolean allQuotasMet(Map<SourceRegistry.CategoryQuota, Integer> remaining) {
-        if (remaining.isEmpty()) {
-            return true;
-        }
         return remaining.values().stream().allMatch(value -> value != null && value <= 0);
     }
 
     private int matchAndStore(List<FetchedJob> jobs,
-                              SourceRegistry.ConfiguredSource configuredSource,
+                              SourceRegistry.ConfiguredSource source,
                               Map<SourceRegistry.CategoryQuota, Integer> remaining,
-                              SourceRegistry.CategoryQuota preferredCategory,
+                              SourceRegistry.CategoryQuota targetCategory,
                               int page) {
         if (jobs == null || jobs.isEmpty()) {
             return 0;
         }
-        String sourceName = configuredSource.client().sourceName();
-        String companyName = configuredSource.company();
-        int stored = 0;
+        Map<SourceRegistry.CategoryQuota, List<FetchedJob>> grouped = new LinkedHashMap<>();
         for (FetchedJob job : jobs) {
-            SourceRegistry.CategoryQuota matched = findMatchingCategory(job, configuredSource.categories(), remaining, preferredCategory);
+            SourceRegistry.CategoryQuota matched = targetCategory != null
+                    ? targetCategory
+                    : matchCategory(job.job(), source.categories());
             if (matched == null) {
                 continue;
             }
-            storeJob(job);
-            remaining.computeIfPresent(matched, (key, value) -> value == null ? 0 : Math.max(0, value - 1));
-            stored++;
-            if (allQuotasMet(remaining)) {
-                break;
+            grouped.computeIfAbsent(matched, key -> new ArrayList<>()).add(job);
+        }
+
+        int persisted = 0;
+        for (Map.Entry<SourceRegistry.CategoryQuota, List<FetchedJob>> entry : grouped.entrySet()) {
+            SourceRegistry.CategoryQuota category = entry.getKey();
+            int remainingQuota = remaining.getOrDefault(category, 0);
+            if (remainingQuota <= 0) {
+                continue;
+            }
+            List<FetchedJob> matchedJobs = entry.getValue();
+            if (matchedJobs.isEmpty()) {
+                continue;
+            }
+            int toPersist = Math.min(remainingQuota, matchedJobs.size());
+            List<FetchedJob> subset = matchedJobs.subList(0, toPersist);
+            persisted += storeJobs(subset);
+            remaining.put(category, remainingQuota - toPersist);
+            if (toPersist < matchedJobs.size()) {
+                log.debug("Category {} quota reached for {} on page {}", category.name(), source.client().sourceName(), page);
             }
         }
-        if (stored == 0) {
-            log.debug("Jobs fetched for source {} ({}) on page {} did not match remaining category quotas", sourceName, companyName, page);
-        }
-        return stored;
+        return persisted;
     }
 
-    private SourceRegistry.CategoryQuota findMatchingCategory(FetchedJob fetched,
-                                                              List<SourceRegistry.CategoryQuota> categories,
-                                                              Map<SourceRegistry.CategoryQuota, Integer> remaining,
-                                                              SourceRegistry.CategoryQuota preferredCategory) {
-        if (categories == null || categories.isEmpty() || fetched == null || fetched.job() == null) {
+    private SourceRegistry.CategoryQuota matchCategory(Job job, List<SourceRegistry.CategoryQuota> categories) {
+        if (job == null || categories == null || categories.isEmpty()) {
             return null;
         }
-        Set<String> jobTags = normalizeTags(fetched.job().getTags());
-        if (preferredCategory != null) {
-            if (remaining.getOrDefault(preferredCategory, 0) > 0 && matchesCategory(preferredCategory, jobTags)) {
-                return preferredCategory;
-            }
-            return null;
-        }
+        String normalizedTitle = job.getTitle() == null ? "" : job.getTitle().toLowerCase(Locale.ROOT);
         for (SourceRegistry.CategoryQuota category : categories) {
-            if (category == null) {
+            if (category == null || category.tags() == null) {
                 continue;
             }
-            if (remaining.getOrDefault(category, 0) <= 0) {
-                continue;
-            }
-            if (matchesCategory(category, jobTags)) {
-                return category;
+            for (String tag : category.tags()) {
+                if (tag != null && !tag.isBlank() && normalizedTitle.contains(tag)) {
+                    return category;
+                }
             }
         }
         return null;
-    }
-
-    private boolean matchesCategory(SourceRegistry.CategoryQuota category, Set<String> jobTags) {
-        List<String> requiredTags = category.tags();
-        if (requiredTags == null || requiredTags.isEmpty()) {
-            return true;
-        }
-        for (String tag : requiredTags) {
-            if (jobTags.contains(tag)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private Set<String> normalizeTags(Set<String> tags) {
-        if (tags == null || tags.isEmpty()) {
-            return Set.of();
-        }
-        Set<String> normalized = new HashSet<>();
-        for (String tag : tags) {
-            if (tag == null) {
-                continue;
-            }
-            String trimmed = tag.trim();
-            if (trimmed.isEmpty()) {
-                continue;
-            }
-            normalized.add(trimmed.toLowerCase(Locale.ROOT));
-        }
-        return normalized;
     }
 
     private int storeJobs(List<FetchedJob> jobs) {
         if (jobs == null || jobs.isEmpty()) {
             return 0;
         }
-        int count = 0;
+        int persisted = 0;
         for (FetchedJob fetched : jobs) {
-            storeJob(fetched);
-            count++;
+            try {
+                Job persistedJob = jobService.upsert(fetched.job());
+                jobDetailService.saveContent(persistedJob, fetched.content());
+                persisted++;
+            } catch (Exception ex) {
+                log.warn("Failed to persist job {} from source {}: {}", fetched.job().getTitle(), fetched.job().getSource(), ex.getMessage());
+                log.debug("Job persistence error", ex);
+            }
         }
-        return count;
+        return persisted;
     }
 
-    private void storeJob(FetchedJob fetched) {
-        if (fetched == null) {
+    @EventListener
+    public void handleSettingsUpdated(IngestionSettingsUpdatedEvent event) {
+        if (event == null || event.snapshot() == null) {
             return;
         }
-        Job persisted = jobService.upsert(fetched.job());
-        jobDetailService.saveContent(persisted, fetched.content());
+        scheduleWith(event.snapshot());
     }
 }

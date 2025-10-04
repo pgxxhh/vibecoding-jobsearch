@@ -22,6 +22,20 @@ public class DataSourceQueryService {
         return repository.findAllEnabled();
     }
 
+    public List<JobDataSource> fetchAll() {
+        return repository.findAll();
+    }
+
+    public JobDataSource getById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found: " + id));
+    }
+
+    public JobDataSource getByCode(String code) {
+        return repository.findByCode(code)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found: " + code));
+    }
+
     public List<JobDataSource> fetchStartupSources() {
         return repository.findAllEnabled().stream()
                 .filter(JobDataSource::isRunOnStartup)

@@ -13,7 +13,7 @@ public interface JobDataSourceRepository {
 
     JobDataSource save(JobDataSource dataSource);
 
-    boolean existsByCode(String code);
 
+    void deleteById(Long id);
     Optional<JobDataSource> findByCode(String code);
 }

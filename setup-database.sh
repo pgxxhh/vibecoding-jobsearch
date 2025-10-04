@@ -25,7 +25,19 @@ echo "User: $DB_USER"
 echo
 
 echo ">> Setting up database schema..."
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < vibe-jobs-aggregator/scripts/manual-db-setup.sql
+SCHEMA_SCRIPTS=(
+    "vibe-jobs-aggregator/scripts/simple-db-setup.sql"
+    "vibe-jobs-aggregator/scripts/2024-07-15_admin_tables.sql"
+)
+
+for schema_script in "${SCHEMA_SCRIPTS[@]}"; do
+    if [[ ! -f "$schema_script" ]]; then
+        echo "Error: missing schema script $schema_script" >&2
+        exit 1
+    fi
+    echo "   -> running ${schema_script##*/}"
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$schema_script"
+done
 
 echo
 echo ">> Verifying setup..."
