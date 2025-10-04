@@ -38,7 +38,8 @@ ingestion:
   mode: companies
   recentDays: 45
   locationFilter:
-    enabled: ${LOCATION_FILTER_ENABLED:true}
+    #enabled: ${LOCATION_FILTER_ENABLED:false}
+    enabled: false
     includeCountries:
       - "china"
       - "中国"
@@ -106,7 +107,8 @@ ingestion:
       - "legal"
       - "customer success"
   roleFilter:
-    enabled: ${ROLE_FILTER_ENABLED:true}
+    #enabled: ${ROLE_FILTER_ENABLED:false}
+    enabled: false
     searchDescription: true
     includeKeywords:
       - "financial"
