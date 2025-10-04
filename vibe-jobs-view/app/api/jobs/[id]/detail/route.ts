@@ -1,41 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildBackendUrl, resolveBackendBase } from '@/lib/backend';
 
 type Params = { params: { id: string } };
 
-function buildBackendUrl(base: string, path: string) {
-  const url = new URL(base);
-  const basePath = url.pathname.replace(/\/$/, '');
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const prefix = basePath.endsWith('/api') ? basePath : `${basePath}/api`;
-  url.pathname = `${prefix}${normalizedPath}`;
-  return url;
-}
-
-function resolveBackendBase(): string | null {
-  const runtimeBase = process.env['BACKEND_BASE_URL'];
-  if (runtimeBase && runtimeBase.trim()) {
-    return runtimeBase.trim();
-  }
-
-  const candidates = [
-    process.env['NEXT_PUBLIC_BACKEND_BASE'],
-    process.env['NEXT_PUBLIC_API_BASE'],
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const trimmed = candidate.trim();
-    if (trimmed && /^(https?:)?\/\//.test(trimmed)) {
-      return trimmed;
-    }
-  }
-
-  return null;
-}
-
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const { id } = params;
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
 
   if (!base) {
     return NextResponse.json({ error: 'Backend base URL not configured' }, { status: 500 });

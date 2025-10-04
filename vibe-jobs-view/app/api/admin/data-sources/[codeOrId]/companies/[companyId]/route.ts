@@ -14,7 +14,7 @@ async function forward(req: NextRequest, params: { codeOrId: string; companyId: 
   if (!token) {
     return NextResponse.json({ code: 'NO_SESSION', message: 'Admin session required' }, { status: 401 });
   }
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
   if (!base) {
     return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured' }, { status: 500 });
   }

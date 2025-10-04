@@ -46,7 +46,7 @@ export async function GET(req: NextRequest, context: { params: { codeOrId: strin
   // }
   
   // Try to fetch from backend first, if it fails use mock data
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
   if (base) {
     try {
       const { searchParams } = new URL(req.url);

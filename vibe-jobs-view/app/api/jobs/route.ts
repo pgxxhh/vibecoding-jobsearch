@@ -3,7 +3,7 @@ import { buildBackendUrl, resolveBackendBase } from '@/lib/backend';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
   if (!base) {
     return NextResponse.json({ error: 'Backend base URL not configured' }, { status: 500 });
   }

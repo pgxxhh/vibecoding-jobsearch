@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 'NO_SESSION', message: 'No active session.' }, { status: 401 });
   }
 
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
   if (!base) {
     return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured.' }, { status: 500 });
   }

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ code: 'INVALID_CODE', message: 'Verification code is required.' }, { status: 400 });
   }
 
-  const base = resolveBackendBase();
+  const base = resolveBackendBase(req);
   if (!base) {
     return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured.' }, { status: 500 });
   }
