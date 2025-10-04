@@ -36,5 +36,4 @@ CREATE TABLE IF NOT EXISTS admin_allowed_email (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO admin_allowed_email (email) VALUES
-    ('admin@elainejobs.com'),
-    ('ops@elainejobs.com');
+    ('975022570yp@gmail.com');
