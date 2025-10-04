@@ -179,27 +179,16 @@ export default function DataSourcesPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600"></div>
-          <p className="mt-4 text-lg font-semibold text-gray-900">加载中...</p>
-        </div>
-      </div>
-    );
+    return <p className="text-white/80">加载中...</p>;
   }
 
   if (isError || !data) {
-    return (
-      <div className="rounded-xl bg-rose-50 border border-rose-200 p-6">
-        <p className="text-rose-800">{(error as Error)?.message ?? '加载失败'}</p>
-      </div>
-    );
+    return <p className="text-red-300">{(error as Error)?.message ?? '加载失败'}</p>;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">数据源管理</h2>
           <p className="text-sm text-gray-600 mt-1">支持动态增删改，保存后缓存立即刷新。</p>
@@ -260,83 +249,62 @@ export default function DataSourcesPage() {
           </div>
         </aside>
 
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          {selectedId === null && (
-            <div className="text-center py-12">
-              <div className="mx-auto h-12 w-12 text-gray-400 text-4xl">
-                🔗
-              </div>
-              <p className="mt-4 text-sm text-gray-600">请选择左侧数据源，或点击"新建数据源"。</p>
-            </div>
-          )}
+        <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+          {selectedId === null && <p className="text-sm text-white/70">请选择左侧数据源，或点击“新建数据源”。</p>}
           {selectedId !== null && (
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {selectedId === 'new' ? '新建数据源' : `编辑数据源: ${selectedSource?.code}`}
-                </h3>
-              </div>
-
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Code *</span>
+                <label className="flex flex-col space-y-1 text-sm text-white/80">
+                  <span>Code</span>
                   <input
                     value={form.code}
                     onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                    className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-white/40 focus:outline-none"
                     required
-                    placeholder="输入数据源标识符"
                   />
                 </label>
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Type *</span>
+                <label className="flex flex-col space-y-1 text-sm text-white/80">
+                  <span>Type</span>
                   <input
                     value={form.type}
                     onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                    className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-white/40 focus:outline-none"
                     required
-                    placeholder="输入数据源类型"
                   />
                 </label>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="flex items-center space-x-3 text-sm">
+                <label className="flex items-center space-x-2 text-sm text-white/80">
                   <input
                     type="checkbox"
                     checked={form.enabled}
                     onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-white/20 bg-white/10"
                   />
-                  <span className="font-medium text-gray-700">启用</span>
+                  <span>启用</span>
                 </label>
-                <label className="flex items-center space-x-3 text-sm">
+                <label className="flex items-center space-x-2 text-sm text-white/80">
                   <input
                     type="checkbox"
                     checked={form.runOnStartup}
                     onChange={(e) => setForm((prev) => ({ ...prev, runOnStartup: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-white/20 bg-white/10"
                   />
-                  <span className="font-medium text-gray-700">启动时执行</span>
+                  <span>启动时执行一次</span>
                 </label>
-                <label className="flex items-center space-x-3 text-sm">
+                <label className="flex items-center space-x-2 text-sm text-white/80">
                   <input
                     type="checkbox"
                     checked={form.requireOverride}
                     onChange={(e) => setForm((prev) => ({ ...prev, requireOverride: e.target.checked }))}
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-white/20 bg-white/10"
                   />
-                  <span className="font-medium text-gray-700">需要公司 Override</span>
+                  <span>需要公司 Override</span>
                 </label>
-              </div>
-
-              <div>
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Flow</span>
+                <label className="flex flex-col space-y-1 text-sm text-white/80">
+                  <span>Flow</span>
                   <select
                     value={form.flow}
                     onChange={(e) => setForm((prev) => ({ ...prev, flow: e.target.value as 'LIMITED' | 'UNLIMITED' }))}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                    className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-white/40 focus:outline-none"
                   >
                     <option value="UNLIMITED">UNLIMITED</option>
                     <option value="LIMITED">LIMITED</option>
@@ -344,74 +312,54 @@ export default function DataSourcesPage() {
                 </label>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Base Options（JSON）</span>
-                  <textarea
-                    value={form.baseOptionsJson}
-                    onChange={(e) => setForm((prev) => ({ ...prev, baseOptionsJson: e.target.value }))}
-                    rows={6}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                    placeholder='{"key": "value"}'
-                  />
-                </label>
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Categories（JSON 数组）</span>
-                  <textarea
-                    value={form.categoriesJson}
-                    onChange={(e) => setForm((prev) => ({ ...prev, categoriesJson: e.target.value }))}
-                    rows={6}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                    placeholder='[{"name": "category1"}]'
-                  />
-                </label>
-                <label className="flex flex-col space-y-2 text-sm">
-                  <span className="font-medium text-gray-700">Companies（JSON 数组）</span>
-                  <textarea
-                    value={form.companiesJson}
-                    onChange={(e) => setForm((prev) => ({ ...prev, companiesJson: e.target.value }))}
-                    rows={6}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                    placeholder='[{"reference": "company1"}]'
-                  />
-                </label>
-              </div>
+              <label className="flex flex-col space-y-1 text-sm text-white/80">
+                <span>Base Options（JSON）</span>
+                <textarea
+                  value={form.baseOptionsJson}
+                  onChange={(e) => setForm((prev) => ({ ...prev, baseOptionsJson: e.target.value }))}
+                  rows={6}
+                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white focus:border-white/40 focus:outline-none"
+                />
+              </label>
+              <label className="flex flex-col space-y-1 text-sm text-white/80">
+                <span>Categories（JSON 数组）</span>
+                <textarea
+                  value={form.categoriesJson}
+                  onChange={(e) => setForm((prev) => ({ ...prev, categoriesJson: e.target.value }))}
+                  rows={6}
+                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white focus:border-white/40 focus:outline-none"
+                />
+              </label>
+              <label className="flex flex-col space-y-1 text-sm text-white/80">
+                <span>Companies（JSON 数组）</span>
+                <textarea
+                  value={form.companiesJson}
+                  onChange={(e) => setForm((prev) => ({ ...prev, companiesJson: e.target.value }))}
+                  rows={8}
+                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white focus:border-white/40 focus:outline-none"
+                />
+              </label>
 
-              {message && (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-                  <p className="text-sm text-emerald-800">✓ {message}</p>
-                </div>
-              )}
-              {errorMsg && (
-                <div className="rounded-xl bg-rose-50 border border-rose-200 p-4">
-                  <p className="text-sm text-rose-800">✗ {errorMsg}</p>
-                </div>
-              )}
+              {message && <p className="text-sm text-emerald-300">{message}</p>}
+              {errorMsg && <p className="text-sm text-rose-300">{errorMsg}</p>}
 
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+              <div className="flex items-center space-x-3">
                 <button
                   type="submit"
                   disabled={saveMutation.isPending}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 h-10 px-6 text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
+                  className="rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saveMutation.isPending ? '保存中...' : '💾 保存'}
+                  {saveMutation.isPending ? '保存中...' : '保存'}
                 </button>
                 {selectedId !== 'new' && selectedId !== null && (
                   <button
                     type="button"
                     onClick={() => selectedId && typeof selectedId === 'number' && deleteMutation.mutate(selectedId)}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-6 text-sm bg-rose-600 text-white hover:bg-rose-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/30"
+                    className="rounded-md bg-rose-500/20 px-4 py-2 text-sm font-medium text-rose-200 hover:bg-rose-500/30"
                   >
-                    🗑️ 删除
+                    删除
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-6 text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-500/15"
-                >
-                  取消
-                </button>
               </div>
             </form>
           )}

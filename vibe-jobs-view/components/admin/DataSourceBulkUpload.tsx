@@ -123,72 +123,80 @@ export default function DataSourceBulkUpload({ isOpen, onClose }: BulkUploadModa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-4xl rounded-xl border border-white/10 bg-gray-900 p-6">
+      <div className="w-full max-w-4xl rounded-3xl border border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-white">批量上传数据源</h3>
+          <h3 className="text-xl font-semibold text-gray-900">📤 批量上传数据源</h3>
           <button
             onClick={onClose}
-            className="text-white/60 hover:text-white/80"
+            className="inline-flex items-center justify-center h-8 w-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="flex flex-col space-y-2 text-sm text-white/80">
-              <span>上传文件（JSON格式）</span>
+            <label className="flex flex-col space-y-2 text-sm">
+              <span className="font-medium text-gray-700">上传文件（JSON格式）</span>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".json,.txt"
                 onChange={handleFileUpload}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-white/40 focus:outline-none"
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
               />
             </label>
           </div>
 
           <div>
-            <label className="flex flex-col space-y-2 text-sm text-white/80">
-              <span>或直接粘贴JSON数据</span>
+            <label className="flex flex-col space-y-2 text-sm">
+              <span className="font-medium text-gray-700">或直接粘贴JSON数据</span>
               <textarea
                 value={uploadData}
                 onChange={(e) => setUploadData(e.target.value)}
                 rows={12}
-                className="rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white focus:border-white/40 focus:outline-none"
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
                 placeholder="支持单个对象或对象数组格式"
               />
             </label>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <details className="cursor-pointer">
-              <summary className="text-sm font-medium text-white/80 mb-2">
-                数据格式示例（点击展开）
+              <summary className="text-sm font-medium text-gray-700 mb-3 select-none">
+                📋 数据格式示例（点击展开）
               </summary>
-              <pre className="text-xs text-white/60 overflow-x-auto">
+              <pre className="text-xs text-gray-600 overflow-x-auto bg-white rounded-xl p-4 border border-gray-200">
                 {JSON.stringify(exampleData, null, 2)}
               </pre>
             </details>
           </div>
 
-          {message && <p className="text-sm text-emerald-300">{message}</p>}
-          {errorMsg && <p className="text-sm text-rose-300">{errorMsg}</p>}
+          {message && (
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+              <p className="text-sm text-emerald-800">✓ {message}</p>
+            </div>
+          )}
+          {errorMsg && (
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-4">
+              <p className="text-sm text-rose-800">✗ {errorMsg}</p>
+            </div>
+          )}
 
-          <div className="flex items-center justify-end space-x-3">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md bg-white/5 px-4 py-2 text-sm font-medium text-white/70 hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-6 text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-500/15"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={uploadMutation.isPending}
-              className="rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 h-10 px-6 text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
             >
-              {uploadMutation.isPending ? '上传中...' : '开始上传'}
+              {uploadMutation.isPending ? '上传中...' : '🚀 开始上传'}
             </button>
           </div>
         </form>
