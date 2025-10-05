@@ -5,6 +5,7 @@ import com.vibe.jobs.datasource.domain.JobDataSourceRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,7 +38,7 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
 
     @Override
     public List<JobDataSource> findAll() {
-        return delegate.findAll().stream()
+        return delegate.findAllNotDeleted().stream()
                 .map(this::toDomain)
                 .sorted(Comparator.comparing(JobDataSource::getCode))
                 .collect(Collectors.toList());
@@ -49,15 +50,21 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
+    public Optional<JobDataSource> findByIdIncludingDeleted(Long id) {
+        return delegate.findByIdIncludingDeleted(id).map(this::toDomain);
+    }
+
+    @Override
     @Transactional
     public JobDataSource save(JobDataSource dataSource) {
         // Save the main entity first
         JobDataSourceEntity entity = toEntity(dataSource);
         JobDataSourceEntity saved = delegate.save(entity);
 
-        // Delete existing companies and categories
-        companyRepository.deleteByDataSourceCode(saved.getCode());
-        categoryRepository.deleteByDataSourceCode(saved.getCode());
+        // 软删除现有的companies和categories（而不是物理删除）
+        Instant now = Instant.now();
+        companyRepository.softDeleteByDataSourceCode(saved.getCode(), now);
+        categoryRepository.softDeleteByDataSourceCode(saved.getCode(), now);
 
         // Save new companies
         for (JobDataSource.DataSourceCompany company : dataSource.getCompanies()) {
@@ -96,8 +103,28 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
+    public Optional<JobDataSource> findByCodeIncludingDeleted(String code) {
+        return delegate.findByCodeIncludingDeleted(code).map(this::toDomain);
+    }
+
+    @Override
     public void deleteById(Long id) {
-        delegate.deleteById(id);
+        delegate.deleteAll(delegate.findAllById(List.of(id)));
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Instant now = Instant.now();
+        delegate.softDeleteById(id, now);
+        
+        // 同时软删除相关的companies和categories
+        Optional<JobDataSourceEntity> entity = delegate.findByIdIncludingDeleted(id);
+        if (entity.isPresent()) {
+            String code = entity.get().getCode();
+            companyRepository.softDeleteByDataSourceCode(code, now);
+            categoryRepository.softDeleteByDataSourceCode(code, now);
+        }
     }
 
     private JobDataSource toDomain(JobDataSourceEntity entity) {
@@ -143,7 +170,7 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     private JobDataSourceEntity toEntity(JobDataSource dataSource) {
         JobDataSourceEntity entity = dataSource.getId() == null
                 ? new JobDataSourceEntity()
-                : delegate.findById(dataSource.getId()).orElse(new JobDataSourceEntity());
+                : delegate.findByIdIncludingDeleted(dataSource.getId()).orElse(new JobDataSourceEntity());
         entity.setId(dataSource.getId());
         entity.setCode(dataSource.getCode());
         entity.setType(dataSource.getType());

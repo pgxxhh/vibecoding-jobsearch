@@ -2,25 +2,18 @@ package com.vibe.jobs.datasource.infrastructure.jpa;
 
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonStringMapConverter;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 @Entity
-@Table(name = "job_data_source")
+@Table(name = "job_data_source", indexes = {
+        @Index(name = "idx_job_data_source_deleted", columnList = "deleted")
+})
+@Where(clause = "deleted = false")
 public class JobDataSourceEntity {
 
     @Id
@@ -49,6 +42,38 @@ public class JobDataSourceEntity {
     @Column(name = "base_options", columnDefinition = "text")
     @jakarta.persistence.Convert(converter = JsonStringMapConverter.class)
     private Map<String, String> baseOptions = new LinkedHashMap<>();
+
+    // 软删除字段
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    // 时间字段
+    @Column(name = "created_time", nullable = false, updatable = false)
+    private Instant createdTime;
+
+    @Column(name = "updated_time", nullable = false)
+    private Instant updatedTime;
+
+    @PrePersist
+    void onCreate() {
+        Instant now = Instant.now();
+        createdTime = now;
+        updatedTime = now;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedTime = Instant.now();
+    }
+
+    public void delete() {
+        this.deleted = true;
+        this.updatedTime = Instant.now();
+    }
+
+    public boolean isNotDeleted() {
+        return !deleted;
+    }
 
     // Note: Companies and categories are managed manually in the repository
     // to avoid JPA association complexity with code-based foreign keys
@@ -115,5 +140,29 @@ public class JobDataSourceEntity {
 
     public void setBaseOptions(Map<String, String> baseOptions) {
         this.baseOptions = baseOptions;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public Instant getCreatedTime() {
+        return createdTime;
+    }
+
+    public void setCreatedTime(Instant createdTime) {
+        this.createdTime = createdTime;
+    }
+
+    public Instant getUpdatedTime() {
+        return updatedTime;
+    }
+
+    public void setUpdatedTime(Instant updatedTime) {
+        this.updatedTime = updatedTime;
     }
 }

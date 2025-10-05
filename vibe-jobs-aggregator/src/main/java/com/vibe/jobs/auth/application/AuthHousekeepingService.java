@@ -26,8 +26,25 @@ public class AuthHousekeepingService {
     @Transactional
     public void cleanupExpired() {
         Instant now = Instant.now(clock);
-        challengeRepository.deleteByExpiresAtBefore(now.minusSeconds(60));
+        // 使用软删除清理过期的登录挑战
+        challengeRepository.softDeleteByExpiresAtBefore(now.minusSeconds(60));
+        
+        // 对于会话，仍然使用物理删除，因为过期的会话数据敏感
         var expiredSessions = sessionRepository.findByExpiresAtBefore(now);
+        if (!expiredSessions.isEmpty()) {
+            sessionRepository.deleteAll(expiredSessions);
+        }
+    }
+
+    /**
+     * 物理删除过期数据（定期清理任务）
+     */
+    @Transactional
+    public void hardCleanupExpired() {
+        Instant cutoff = Instant.now(clock).minusSeconds(7 * 24 * 3600); // 7天前
+        challengeRepository.hardDeleteByExpiresAtBefore(cutoff);
+        
+        var expiredSessions = sessionRepository.findByExpiresAtBefore(cutoff);
         if (!expiredSessions.isEmpty()) {
             sessionRepository.deleteAll(expiredSessions);
         }

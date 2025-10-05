@@ -1,6 +1,7 @@
 package com.vibe.jobs.auth.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -8,8 +9,10 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "auth_login_challenge", indexes = {
-        @Index(name = "idx_auth_login_challenge_email", columnList = "email")
+        @Index(name = "idx_auth_login_challenge_email", columnList = "email"),
+        @Index(name = "idx_auth_login_challenge_deleted", columnList = "deleted")
 })
+@Where(clause = "deleted = false")
 public class LoginChallenge {
     private static final int MAX_ATTEMPTS = 5;
 
@@ -40,6 +43,10 @@ public class LoginChallenge {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    // 软删除字段
+    @Column(nullable = false)
+    private boolean deleted = false;
 
     protected LoginChallenge() {
         // for JPA
@@ -99,6 +106,15 @@ public class LoginChallenge {
         return true;
     }
 
+    public void delete() {
+        this.deleted = true;
+        this.updatedAt = Instant.now();
+    }
+
+    public boolean isNotDeleted() {
+        return !deleted;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -129,5 +145,13 @@ public class LoginChallenge {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }

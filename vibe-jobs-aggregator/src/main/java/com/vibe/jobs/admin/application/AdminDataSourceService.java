@@ -6,13 +6,17 @@ import com.vibe.jobs.admin.web.dto.DataSourceRequest;
 import com.vibe.jobs.datasource.application.DataSourceCommandService;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
+import com.vibe.jobs.datasource.infrastructure.jpa.SpringDataJobDataSourceCompanyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AdminDataSourceService {
@@ -22,13 +26,16 @@ public class AdminDataSourceService {
     private final DataSourceQueryService queryService;
     private final DataSourceCommandService commandService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SpringDataJobDataSourceCompanyRepository companyRepository;
 
     public AdminDataSourceService(DataSourceQueryService queryService,
                                   DataSourceCommandService commandService,
-                                  ApplicationEventPublisher eventPublisher) {
+                                  ApplicationEventPublisher eventPublisher,
+                                  SpringDataJobDataSourceCompanyRepository companyRepository) {
         this.queryService = queryService;
         this.commandService = commandService;
         this.eventPublisher = eventPublisher;
+        this.companyRepository = companyRepository;
     }
 
     public List<JobDataSource> listAll() {
@@ -190,11 +197,25 @@ public class AdminDataSourceService {
     }
 
     public JobDataSource.DataSourceCompany getCompanyById(Long companyId) {
-        return queryService.fetchAll().stream()
-                .flatMap(ds -> ds.getCompanies().stream())
-                .filter(company -> company.id() != null && company.id().equals(companyId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Company not found: " + companyId));
+        // 直接从数据库查找company，包括软删除的记录
+        try {
+            var companyEntity = companyRepository.findById(companyId);
+            if (companyEntity.isEmpty()) {
+                throw new IllegalArgumentException("Company not found: " + companyId);
+            }
+            var entity = companyEntity.get();
+            return new JobDataSource.DataSourceCompany(
+                    entity.getId(),
+                    entity.getReference(),
+                    entity.getDisplayName(),
+                    entity.getSlug(),
+                    entity.isEnabled(),
+                    entity.getPlaceholderOverrides() != null ? entity.getPlaceholderOverrides() : Map.of(),
+                    entity.getOverrideOptions() != null ? entity.getOverrideOptions() : Map.of()
+            );
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Company not found: " + companyId, e);
+        }
     }
 
     public com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse getCompaniesPaged(
@@ -258,18 +279,18 @@ public class AdminDataSourceService {
                 .orElseThrow();
     }
 
+    @Transactional
     public void deleteCompany(String dataSourceCode, Long companyId) {
-        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
-        List<JobDataSource.DataSourceCompany> companies = dataSource.getCompanies().stream()
-                .filter(company -> company.id() == null || !company.id().equals(companyId))
-                .toList();
+        // 验证数据源存在
+        queryService.getByCode(dataSourceCode);
         
-        if (companies.size() == dataSource.getCompanies().size()) {
-            throw new IllegalArgumentException("Company not found: " + companyId);
-        }
+        // 验证公司存在
+        getCompanyById(companyId);
         
-        JobDataSource updated = dataSource.withCompanies(companies);
-        commandService.save(updated);
+        // 直接软删除指定的公司，而不影响其他公司
+        Instant now = Instant.now();
+        companyRepository.softDeleteById(companyId, now);
+        
         publishChange(dataSourceCode);
     }
 
