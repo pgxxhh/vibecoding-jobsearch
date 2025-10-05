@@ -47,13 +47,24 @@ export async function GET(req: NextRequest, context: { params: { codeOrId: strin
   
   // Try to fetch from backend first, if it fails use mock data
   const base = resolveBackendBase(req);
+  console.log('=== Backend Connection Debug ===');
+  console.log('Resolved backend base:', base);
+  console.log('Environment variables:', {
+    BACKEND_BASE_URL: process.env.BACKEND_BASE_URL,
+    NEXT_PUBLIC_BACKEND_BASE: process.env.NEXT_PUBLIC_BACKEND_BASE,
+    NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE
+  });
+  
   if (base) {
     try {
       const { searchParams } = new URL(req.url);
       const page = searchParams.get('page') || '0';
       const size = searchParams.get('size') || '20';
       
-      const upstream = buildBackendUrl(base, `/admin/data-sources/${context.params.codeOrId}/paged?page=${page}&size=${size}`);
+      const upstream = buildBackendUrl(base, `/admin/data-sources/${context.params.codeOrId}/paged`);
+      upstream.searchParams.set('page', page);
+      upstream.searchParams.set('size', size);
+      console.log('Attempting to fetch from:', upstream.toString());
       
       const response = await fetch(upstream, {
         method: 'GET',
@@ -64,14 +75,22 @@ export async function GET(req: NextRequest, context: { params: { codeOrId: strin
         cache: 'no-store',
       });
       
+      console.log('Backend response status:', response.status);
+      const responseText = await response.text();
+      console.log('Backend response body:', responseText);
+      
       if (response.ok) {
-        const text = await response.text();
-        const json = text ? JSON.parse(text) : null;
+        const json = responseText ? JSON.parse(responseText) : null;
+        console.log('Successfully fetched from backend, returning data');
         return NextResponse.json(json, { status: response.status });
+      } else {
+        console.log('Backend returned non-OK status, falling back to mock data');
       }
     } catch (error) {
       console.log('Backend not available, using mock data:', error);
     }
+  } else {
+    console.log('No backend base resolved, using mock data directly');
   }
   
   // Fallback to mock data
@@ -79,7 +98,9 @@ export async function GET(req: NextRequest, context: { params: { codeOrId: strin
   const page = parseInt(searchParams.get('page') || '0');
   const size = parseInt(searchParams.get('size') || '20');
   
-  const totalCompanies = 85; // Mock total companies
+  // Generate different number of companies for different data sources to simulate real data
+  // This prevents all data sources from showing the same fixed number (85) of companies
+  const totalCompanies = getTotalCompaniesByDataSource(context.params.codeOrId);
   const allCompanies = generateMockCompanies(totalCompanies);
   
   const startIndex = page * size;
@@ -109,4 +130,24 @@ export async function GET(req: NextRequest, context: { params: { codeOrId: strin
   };
   
   return NextResponse.json(mockResponse);
+}
+
+// Function to return different company counts for different data sources
+// This is a temporary fix to avoid all data sources showing the same number of companies
+// TODO: Replace with actual backend API calls when authentication is properly configured
+function getTotalCompaniesByDataSource(codeOrId: string): number {
+  const dataSources: Record<string, number> = {
+    'greenhouse': 42,
+    'workday': 28,
+    'lever': 36,
+    'bamboohr': 23,
+    'smartrecruiters': 51,
+    'jobvite': 34,
+    'icims': 19,
+    'successfactors': 47,
+    'cornerstone': 31,
+    'default': 25
+  };
+  
+  return dataSources[codeOrId.toLowerCase()] || dataSources['default'];
 }

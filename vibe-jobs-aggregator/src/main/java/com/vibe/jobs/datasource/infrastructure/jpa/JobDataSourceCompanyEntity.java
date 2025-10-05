@@ -10,9 +10,10 @@ import java.util.Map;
 
 @Entity
 @Table(name = "job_data_source_company", indexes = {
-        @Index(name = "idx_job_data_source_company_deleted", columnList = "deleted")
+        @Index(name = "idx_job_data_source_company_deleted", columnList = "deleted"),
+        @Index(name = "idx_job_data_source_company_code_deleted", columnList = "data_source_code, deleted")
 })
-@Where(clause = "deleted = false")
+// 移除 @Where 注解，改用显式的查询过滤
 public class JobDataSourceCompanyEntity {
 
     @Id

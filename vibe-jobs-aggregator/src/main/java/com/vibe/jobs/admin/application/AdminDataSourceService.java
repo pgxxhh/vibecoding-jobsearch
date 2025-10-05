@@ -6,6 +6,7 @@ import com.vibe.jobs.admin.web.dto.DataSourceRequest;
 import com.vibe.jobs.datasource.application.DataSourceCommandService;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
+import com.vibe.jobs.datasource.infrastructure.jpa.JobDataSourceCompanyEntity;
 import com.vibe.jobs.datasource.infrastructure.jpa.SpringDataJobDataSourceCompanyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminDataSourceService {
@@ -94,36 +98,44 @@ public class AdminDataSourceService {
     }
 
     public JobDataSource.DataSourceCompany createCompany(String dataSourceCode, JobDataSource.DataSourceCompany company) {
+        // 验证数据源存在
         JobDataSource dataSource = queryService.getByCode(dataSourceCode);
-        List<JobDataSource.DataSourceCompany> companies = new ArrayList<>(dataSource.getCompanies());
         
-        // Generate new ID for the company (this is simplified, in reality you might want a proper ID generation strategy)
-        Long newId = companies.stream()
-                .mapToLong(c -> c.id() != null ? c.id() : 0L)
-                .max()
-                .orElse(0L) + 1;
+        // 检查重复的reference
+        boolean referenceExists = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode)
+                .stream()
+                .anyMatch(existing -> existing.getReference().equals(company.reference().trim()));
+                
+        if (referenceExists) {
+            throw new IllegalArgumentException("Company reference '" + company.reference() + "' already exists");
+        }
+
+        // 直接创建并保存到数据库
+        JobDataSourceCompanyEntity entity = new JobDataSourceCompanyEntity();
+        entity.setDataSourceCode(dataSourceCode);
+        entity.setReference(company.reference().trim());
+        entity.setDisplayName(company.displayName());
+        entity.setSlug(company.slug());
+        entity.setEnabled(company.enabled());
+        entity.setPlaceholderOverrides(new LinkedHashMap<>(company.placeholderOverrides()));
+        entity.setOverrideOptions(new LinkedHashMap<>(company.overrideOptions()));
         
-        JobDataSource.DataSourceCompany newCompany = new JobDataSource.DataSourceCompany(
-                newId,
-                company.reference(),
-                company.displayName(),
-                company.slug(),
-                company.enabled(),
-                company.placeholderOverrides(),
-                company.overrideOptions()
-        );
-        
-        companies.add(newCompany);
-        
-        JobDataSource updated = dataSource.withCompanies(companies);
-        commandService.save(updated);
+        JobDataSourceCompanyEntity saved = companyRepository.save(entity);
         publishChange(dataSourceCode);
-        
-        return newCompany;
+
+        return new JobDataSource.DataSourceCompany(
+                saved.getId(),
+                saved.getReference(),
+                saved.getDisplayName(),
+                saved.getSlug(),
+                saved.isEnabled(),
+                saved.getPlaceholderOverrides() != null ? saved.getPlaceholderOverrides() : Map.of(),
+                saved.getOverrideOptions() != null ? saved.getOverrideOptions() : Map.of()
+        );
     }
 
     public com.vibe.jobs.admin.web.dto.BulkCompanyResult bulkCreateCompanies(
-            String dataSourceCode, 
+            String dataSourceCode,
             List<JobDataSource.DataSourceCompany> companiesToCreate,
             String actorEmail) {
         
@@ -131,68 +143,76 @@ public class AdminDataSourceService {
             return com.vibe.jobs.admin.web.dto.BulkCompanyResult.success(List.of());
         }
         
-        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
-        List<JobDataSource.DataSourceCompany> existingCompanies = new ArrayList<>(dataSource.getCompanies());
+        // 验证数据源存在
+        queryService.getByCode(dataSourceCode);
         
-        // Find next available ID
-        Long nextId = existingCompanies.stream()
-                .mapToLong(c -> c.id() != null ? c.id() : 0L)
-                .max()
-                .orElse(0L) + 1;
+        // 获取现有公司引用
+        Set<String> existingReferences = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode)
+                .stream()
+                .map(JobDataSourceCompanyEntity::getReference)
+                .collect(Collectors.toSet());
         
         List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
         List<String> errors = new ArrayList<>();
-        
+
         for (JobDataSource.DataSourceCompany companyRequest : companiesToCreate) {
             try {
-                // Validate required fields
+                // 验证必填字段
                 if (companyRequest.reference() == null || companyRequest.reference().trim().isEmpty()) {
                     errors.add("Reference is required for company entry");
                     continue;
                 }
                 
-                // Check for duplicate reference within existing companies
-                boolean referenceExists = existingCompanies.stream()
-                        .anyMatch(existing -> existing.reference().equals(companyRequest.reference().trim()));
+                String reference = companyRequest.reference().trim();
                 
-                if (referenceExists) {
-                    errors.add("Company reference '" + companyRequest.reference() + "' already exists");
+                // 检查重复引用
+                if (existingReferences.contains(reference)) {
+                    errors.add("Company reference '" + reference + "' already exists");
                     continue;
                 }
                 
-                // Create new company with generated ID
-                JobDataSource.DataSourceCompany newCompany = new JobDataSource.DataSourceCompany(
-                        nextId++,
-                        companyRequest.reference().trim(),
-                        companyRequest.displayName(),
-                        companyRequest.slug(),
-                        Boolean.TRUE.equals(companyRequest.enabled()),
-                        companyRequest.placeholderOverrides(),
-                        companyRequest.overrideOptions()
+                // 创建新公司实体
+                JobDataSourceCompanyEntity entity = new JobDataSourceCompanyEntity();
+                entity.setDataSourceCode(dataSourceCode);
+                entity.setReference(reference);
+                entity.setDisplayName(companyRequest.displayName());
+                entity.setSlug(companyRequest.slug());
+                entity.setEnabled(Boolean.TRUE.equals(companyRequest.enabled()));
+                entity.setPlaceholderOverrides(companyRequest.placeholderOverrides() != null ? 
+                        new LinkedHashMap<>(companyRequest.placeholderOverrides()) : new LinkedHashMap<>());
+                entity.setOverrideOptions(companyRequest.overrideOptions() != null ? 
+                        new LinkedHashMap<>(companyRequest.overrideOptions()) : new LinkedHashMap<>());
+
+                JobDataSourceCompanyEntity saved = companyRepository.save(entity);
+                existingReferences.add(reference); // 避免后续重复
+
+                JobDataSource.DataSourceCompany domainCompany = new JobDataSource.DataSourceCompany(
+                        saved.getId(),
+                        saved.getReference(),
+                        saved.getDisplayName(),
+                        saved.getSlug(),
+                        saved.isEnabled(),
+                        saved.getPlaceholderOverrides() != null ? saved.getPlaceholderOverrides() : Map.of(),
+                        saved.getOverrideOptions() != null ? saved.getOverrideOptions() : Map.of()
                 );
                 
-                existingCompanies.add(newCompany);
-                successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(newCompany));
-                
+                successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(domainCompany));
+
             } catch (Exception e) {
-                String errorMsg = "Failed to create company '" + 
-                    (companyRequest.reference() != null ? companyRequest.reference() : "unknown") + 
+                String errorMsg = "Failed to create company '" +
+                    (companyRequest.reference() != null ? companyRequest.reference() : "unknown") +
                     "': " + e.getMessage();
                 errors.add(errorMsg);
                 log.error("Bulk company creation failed", e);
             }
         }
         
-        // Save updated data source if any companies were successfully created
         if (!successful.isEmpty()) {
-            JobDataSource updated = dataSource.withCompanies(existingCompanies);
-            commandService.save(updated);
             publishChange(dataSourceCode);
-            
-            log.info("Bulk created {} companies for data source '{}' by user '{}'", 
+            log.info("Bulk created {} companies for data source '{}' by user '{}'",
                 successful.size(), dataSourceCode, actorEmail);
         }
-        
+
         return com.vibe.jobs.admin.web.dto.BulkCompanyResult.withErrors(successful, errors);
     }
 
@@ -220,63 +240,118 @@ public class AdminDataSourceService {
 
     public com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse getCompaniesPaged(
             String dataSourceCode, int page, int size) {
-        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
-        List<JobDataSource.DataSourceCompany> allCompanies = dataSource.getCompanies();
+        // 验证数据源存在
+        queryService.getByCode(dataSourceCode);
         
-        int totalElements = allCompanies.size();
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        int start = page * size;
-        int end = Math.min(start + size, totalElements);
+        log.info("Fetching companies for dataSourceCode: '{}', page: {}, size: {}", dataSourceCode, page, size);
         
-        List<JobDataSource.DataSourceCompany> content = start >= totalElements ? 
-            List.of() : allCompanies.subList(start, end);
-        
-        return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
-            content,
-            page,
-            size,
-            totalPages,
-            totalElements,
-            page < totalPages - 1,
-            page > 0
-        );
+        try {
+            // 使用Spring Data分页
+            org.springframework.data.domain.Pageable pageable = 
+                org.springframework.data.domain.PageRequest.of(page, size);
+            org.springframework.data.domain.Page<JobDataSourceCompanyEntity> pageResult = 
+                companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode, pageable);
+            
+            List<JobDataSource.DataSourceCompany> companies = pageResult.getContent().stream()
+                    .map(entity -> new JobDataSource.DataSourceCompany(
+                            entity.getId(),
+                            entity.getReference(),
+                            entity.getDisplayName(),
+                            entity.getSlug(),
+                            entity.isEnabled(),
+                            entity.getPlaceholderOverrides() != null ? entity.getPlaceholderOverrides() : Map.of(),
+                            entity.getOverrideOptions() != null ? entity.getOverrideOptions() : Map.of()
+                    ))
+                    .toList();
+            
+            log.info("Successfully fetched {} companies (page {}) for dataSourceCode: '{}'", 
+                    companies.size(), page, dataSourceCode);
+            
+            return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
+                companies,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalPages(),
+                pageResult.getTotalElements(),
+                pageResult.hasNext(),
+                pageResult.hasPrevious()
+            );
+            
+        } catch (Exception e) {
+            log.warn("Failed to use pageable query for dataSourceCode '{}', falling back to manual pagination: {}", 
+                    dataSourceCode, e.getMessage());
+            
+            // 备用方案：手动分页
+            List<JobDataSourceCompanyEntity> allCompanies = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode);
+            
+            int totalElements = allCompanies.size();
+            int totalPages = (int) Math.ceil((double) totalElements / size);
+            int start = page * size;
+            int end = Math.min(start + size, totalElements);
+            
+            List<JobDataSourceCompanyEntity> pagedEntities = start >= totalElements ? 
+                List.of() : allCompanies.subList(start, end);
+            
+            List<JobDataSource.DataSourceCompany> companies = pagedEntities.stream()
+                    .map(entity -> new JobDataSource.DataSourceCompany(
+                            entity.getId(),
+                            entity.getReference(),
+                            entity.getDisplayName(),
+                            entity.getSlug(),
+                            entity.isEnabled(),
+                            entity.getPlaceholderOverrides() != null ? entity.getPlaceholderOverrides() : Map.of(),
+                            entity.getOverrideOptions() != null ? entity.getOverrideOptions() : Map.of()
+                    ))
+                    .toList();
+            
+            log.info("Fallback: Returning {} companies (page {}/{}) for dataSourceCode: '{}'", 
+                    companies.size(), page + 1, Math.max(totalPages, 1), dataSourceCode);
+            
+            return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
+                companies,
+                page,
+                size,
+                totalPages,
+                totalElements,
+                page < totalPages - 1,
+                page > 0
+            );
+        }
     }
 
     public JobDataSource.DataSourceCompany updateCompany(String dataSourceCode, Long companyId, JobDataSource.DataSourceCompany updatedCompany) {
-        JobDataSource dataSource = queryService.getByCode(dataSourceCode);
-        List<JobDataSource.DataSourceCompany> companies = new ArrayList<>();
+        // 验证数据源存在
+        queryService.getByCode(dataSourceCode);
         
-        boolean found = false;
-        for (JobDataSource.DataSourceCompany existing : dataSource.getCompanies()) {
-            if (existing.id() != null && existing.id().equals(companyId)) {
-                JobDataSource.DataSourceCompany updated = new JobDataSource.DataSourceCompany(
-                        companyId,
-                        updatedCompany.reference(),
-                        updatedCompany.displayName(),
-                        updatedCompany.slug(),
-                        updatedCompany.enabled(),
-                        updatedCompany.placeholderOverrides(),
-                        updatedCompany.overrideOptions()
-                );
-                companies.add(updated);
-                found = true;
-            } else {
-                companies.add(existing);
-            }
+        // 直接更新数据库中的公司记录
+        JobDataSourceCompanyEntity entity = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found: " + companyId));
+        
+        // 检查是否属于指定的数据源
+        if (!entity.getDataSourceCode().equals(dataSourceCode)) {
+            throw new IllegalArgumentException("Company " + companyId + " does not belong to data source " + dataSourceCode);
         }
         
-        if (!found) {
-            throw new IllegalArgumentException("Company not found: " + companyId);
-        }
+        // 更新字段
+        entity.setReference(updatedCompany.reference());
+        entity.setDisplayName(updatedCompany.displayName());
+        entity.setSlug(updatedCompany.slug());
+        entity.setEnabled(updatedCompany.enabled());
+        entity.setPlaceholderOverrides(new LinkedHashMap<>(updatedCompany.placeholderOverrides()));
+        entity.setOverrideOptions(new LinkedHashMap<>(updatedCompany.overrideOptions()));
         
-        JobDataSource updatedDataSource = dataSource.withCompanies(companies);
-        commandService.save(updatedDataSource);
+        JobDataSourceCompanyEntity saved = companyRepository.save(entity);
         publishChange(dataSourceCode);
         
-        return companies.stream()
-                .filter(c -> c.id() != null && c.id().equals(companyId))
-                .findFirst()
-                .orElseThrow();
+        return new JobDataSource.DataSourceCompany(
+                saved.getId(),
+                saved.getReference(),
+                saved.getDisplayName(),
+                saved.getSlug(),
+                saved.isEnabled(),
+                saved.getPlaceholderOverrides() != null ? saved.getPlaceholderOverrides() : Map.of(),
+                saved.getOverrideOptions() != null ? saved.getOverrideOptions() : Map.of()
+        );
     }
 
     @Transactional
@@ -284,13 +359,18 @@ public class AdminDataSourceService {
         // 验证数据源存在
         queryService.getByCode(dataSourceCode);
         
-        // 验证公司存在
-        getCompanyById(companyId);
+        // 验证公司存在并且属于指定的数据源
+        JobDataSourceCompanyEntity entity = companyRepository.findById(companyId)
+                .orElseThrow(() -> new IllegalArgumentException("Company not found: " + companyId));
         
-        // 直接软删除指定的公司，而不影响其他公司
+        if (!entity.getDataSourceCode().equals(dataSourceCode)) {
+            throw new IllegalArgumentException("Company " + companyId + " does not belong to data source " + dataSourceCode);
+        }
+        
+        // 执行软删除
         Instant now = Instant.now();
         companyRepository.softDeleteById(companyId, now);
-        
+
         publishChange(dataSourceCode);
     }
 
