@@ -39,7 +39,14 @@ async function forward(req: NextRequest, params: { codeOrId: string }, method: '
     cache: 'no-store',
   });
   if (method === 'DELETE') {
-    return NextResponse.json(null, { status: response.status });
+    // For DELETE requests, return appropriate response based on status
+    if (response.status === 204) {
+      // 204 No Content - successful deletion
+      return new NextResponse(null, { status: 204 });
+    } else {
+      // Other status codes, return them as-is
+      return new NextResponse(null, { status: response.status });
+    }
   }
   const text = await response.text();
   try {

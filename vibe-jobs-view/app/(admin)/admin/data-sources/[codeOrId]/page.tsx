@@ -49,8 +49,8 @@ async function fetchDataSourcePaged(code: string, page: number, size: number): P
 
 async function saveCompany(dataSourceCode: string, company: Partial<DataSourceCompany>): Promise<DataSourceCompany> {
   const url = company.id 
-    ? `/api/admin/data-sources/${dataSourceCode}/companies/${company.id}`
-    : `/api/admin/data-sources/${dataSourceCode}/companies`;
+    ? `/api/admin/data-sources?dataSourceCode=${dataSourceCode}&companyId=${company.id}`
+    : `/api/admin/data-sources?dataSourceCode=${dataSourceCode}`;
   const method = company.id ? 'PUT' : 'POST';
   
   const res = await fetch(url, {
@@ -68,7 +68,7 @@ async function saveCompany(dataSourceCode: string, company: Partial<DataSourceCo
 }
 
 async function deleteCompany(dataSourceCode: string, companyId: number): Promise<void> {
-  const res = await fetch(`/api/admin/data-sources/${dataSourceCode}/companies/${companyId}`, {
+  const res = await fetch(`/api/admin/data-sources?dataSourceCode=${dataSourceCode}&companyId=${companyId}`, {
     method: 'DELETE',
   });
   

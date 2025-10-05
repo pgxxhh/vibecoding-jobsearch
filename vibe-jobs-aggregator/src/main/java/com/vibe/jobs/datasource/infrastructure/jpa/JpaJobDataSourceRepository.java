@@ -63,26 +63,52 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     @Override
     @Transactional
     public JobDataSource save(JobDataSource dataSource) {
+        return save(dataSource, true);
+    }
+
+    /**
+     * 只更新数据源的基本属性，不触碰公司和分类数据
+     * @param dataSource 要更新的数据源
+     * @return 更新后的数据源
+     */
+    @Transactional
+    public JobDataSource updateDataSourceOnly(JobDataSource dataSource) {
+        // 只保存数据源主体，不处理关联数据
+        JobDataSourceEntity entity = toEntity(dataSource);
+        JobDataSourceEntity saved = delegate.save(entity);
+        return toDomain(saved);
+    }
+
+    /**
+     * 保存数据源，可选择是否同时处理公司和分类数据
+     * @param dataSource 要保存的数据源
+     * @param handleRelations 是否处理关联的公司和分类数据
+     * @return 保存后的数据源
+     */
+    @Transactional
+    public JobDataSource save(JobDataSource dataSource, boolean handleRelations) {
         // Save the main entity first
         JobDataSourceEntity entity = toEntity(dataSource);
         JobDataSourceEntity saved = delegate.save(entity);
 
-        // Handle companies: preserve existing IDs where possible
-        handleCompanySave(saved.getCode(), dataSource.getCompanies());
+        if (handleRelations) {
+            // Handle companies: preserve existing IDs where possible
+            handleCompanySave(saved.getCode(), dataSource.getCompanies());
 
-        // Handle categories: keep existing behavior for now
-        Instant now = Instant.now();
-        categoryRepository.softDeleteByDataSourceCode(saved.getCode(), now);
-        
-        // Save new categories
-        for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
-            JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
-            categoryEntity.setDataSourceCode(saved.getCode());
-            categoryEntity.setName(category.name());
-            categoryEntity.setLimit(category.limit());
-            categoryEntity.setTags(category.tags());
-            categoryEntity.setFacets(category.facets());
-            categoryRepository.save(categoryEntity);
+            // Handle categories: keep existing behavior for now
+            Instant now = Instant.now();
+            categoryRepository.softDeleteByDataSourceCode(saved.getCode(), now);
+            
+            // Save new categories
+            for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
+                JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
+                categoryEntity.setDataSourceCode(saved.getCode());
+                categoryEntity.setName(category.name());
+                categoryEntity.setLimit(category.limit());
+                categoryEntity.setTags(category.tags());
+                categoryEntity.setFacets(category.facets());
+                categoryRepository.save(categoryEntity);
+            }
         }
 
         return toDomain(saved);

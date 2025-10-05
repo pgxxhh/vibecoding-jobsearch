@@ -8,6 +8,7 @@ import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.infrastructure.jpa.JobDataSourceCompanyEntity;
 import com.vibe.jobs.datasource.infrastructure.jpa.SpringDataJobDataSourceCompanyRepository;
+import com.vibe.jobs.datasource.infrastructure.jpa.JpaJobDataSourceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,15 +33,18 @@ public class AdminDataSourceService {
     private final DataSourceCommandService commandService;
     private final ApplicationEventPublisher eventPublisher;
     private final SpringDataJobDataSourceCompanyRepository companyRepository;
+    private final JpaJobDataSourceRepository jpaRepository;
 
     public AdminDataSourceService(DataSourceQueryService queryService,
                                   DataSourceCommandService commandService,
                                   ApplicationEventPublisher eventPublisher,
-                                  SpringDataJobDataSourceCompanyRepository companyRepository) {
+                                  SpringDataJobDataSourceCompanyRepository companyRepository,
+                                  JpaJobDataSourceRepository jpaRepository) {
         this.queryService = queryService;
         this.commandService = commandService;
         this.eventPublisher = eventPublisher;
         this.companyRepository = companyRepository;
+        this.jpaRepository = jpaRepository;
     }
 
     public List<JobDataSource> listAll() {
@@ -60,11 +65,61 @@ public class AdminDataSourceService {
         return saved;
     }
 
+    @Transactional
     public JobDataSource update(Long id, JobDataSource source) {
+        // 获取更新前的数据源信息
+        JobDataSource existingSource = queryService.getById(id);
+        boolean wasEnabled = existingSource.isEnabled();
+        boolean willBeEnabled = source.isEnabled();
+        
         JobDataSource withId = source.withId(id).normalized();
-        JobDataSource saved = commandService.save(withId);
+        
+        // 判断是否只是简单的启用/禁用操作（不涉及公司和分类数据的变更）
+        boolean isSimpleEnableDisableOperation = isOnlyEnableStatusChange(existingSource, withId);
+        
+        JobDataSource saved;
+        if (isSimpleEnableDisableOperation) {
+            // 只更新数据源本身，不触碰公司和分类
+            saved = jpaRepository.updateDataSourceOnly(withId);
+            
+            // 如果数据源从启用变为禁用，自动禁用所有关联的公司
+            if (wasEnabled && !willBeEnabled) {
+                log.info("Data source '{}' is being disabled, disabling all associated companies", saved.getCode());
+                companyRepository.findByDataSourceCodeOrderByReference(saved.getCode())
+                    .stream()
+                    .filter(JobDataSourceCompanyEntity::isEnabled)
+                    .forEach(company -> {
+                        company.setEnabled(false);
+                        companyRepository.save(company);
+                        log.debug("Disabled company '{}' in data source '{}'", company.getReference(), saved.getCode());
+                    });
+            }
+            // 如果数据源从禁用变为启用，可以选择性地启用公司（这里暂时不自动启用，保持现有状态）
+            else if (!wasEnabled && willBeEnabled) {
+                log.info("Data source '{}' is being enabled, companies remain in their current state", saved.getCode());
+            }
+        } else {
+            // 完整更新，包括公司和分类数据
+            saved = commandService.save(withId);
+        }
+        
         publishChange(saved.getCode());
         return saved;
+    }
+    
+    /**
+     * 判断是否只是启用/禁用状态的变更，而没有其他数据的变更
+     */
+    private boolean isOnlyEnableStatusChange(JobDataSource existing, JobDataSource updated) {
+        // 检查除了enabled字段外的其他关键字段是否有变化
+        return existing.getCode().equals(updated.getCode()) &&
+               existing.getType().equals(updated.getType()) &&
+               existing.isRunOnStartup() == updated.isRunOnStartup() &&
+               existing.isRequireOverride() == updated.isRequireOverride() &&
+               existing.getFlow() == updated.getFlow() &&
+               existing.getBaseOptions().equals(updated.getBaseOptions()) &&
+               existing.getCategories().equals(updated.getCategories()) &&
+               existing.getCompanies().equals(updated.getCompanies());
     }
 
     public void delete(Long id) {
@@ -101,19 +156,19 @@ public class AdminDataSourceService {
         // 验证数据源存在
         JobDataSource dataSource = queryService.getByCode(dataSourceCode);
         
-        // 检查重复的reference
-        boolean referenceExists = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode)
-                .stream()
-                .anyMatch(existing -> existing.getReference().equals(company.reference().trim()));
+        // 检查 data_source_code + reference 且 deleted = false 的唯一性
+        String trimmedReference = company.reference().trim();
+        Optional<JobDataSourceCompanyEntity> existingCompany = companyRepository
+                .findActiveByDataSourceCodeAndReference(dataSourceCode, trimmedReference);
                 
-        if (referenceExists) {
-            throw new IllegalArgumentException("Company reference '" + company.reference() + "' already exists");
+        if (existingCompany.isPresent()) {
+            throw new IllegalArgumentException("Company reference '" + trimmedReference + "' already exists in data source '" + dataSourceCode + "'");
         }
 
         // 直接创建并保存到数据库
         JobDataSourceCompanyEntity entity = new JobDataSourceCompanyEntity();
         entity.setDataSourceCode(dataSourceCode);
-        entity.setReference(company.reference().trim());
+        entity.setReference(trimmedReference);
         entity.setDisplayName(company.displayName());
         entity.setSlug(company.slug());
         entity.setEnabled(company.enabled());
@@ -146,14 +201,9 @@ public class AdminDataSourceService {
         // 验证数据源存在
         queryService.getByCode(dataSourceCode);
         
-        // 获取现有公司引用
-        Set<String> existingReferences = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode)
-                .stream()
-                .map(JobDataSourceCompanyEntity::getReference)
-                .collect(Collectors.toSet());
-        
         List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+        Set<String> processedReferences = new java.util.HashSet<>(); // 跟踪本批次已处理的引用
 
         for (JobDataSource.DataSourceCompany companyRequest : companiesToCreate) {
             try {
@@ -163,18 +213,27 @@ public class AdminDataSourceService {
                     continue;
                 }
                 
-                String reference = companyRequest.reference().trim();
+                String trimmedReference = companyRequest.reference().trim();
                 
-                // 检查重复引用
-                if (existingReferences.contains(reference)) {
-                    errors.add("Company reference '" + reference + "' already exists");
+                // 检查本批次内部重复
+                if (processedReferences.contains(trimmedReference)) {
+                    errors.add("Duplicate reference '" + trimmedReference + "' in current batch");
+                    continue;
+                }
+                
+                // 检查数据库中是否存在活跃的相同引用
+                Optional<JobDataSourceCompanyEntity> existingCompany = companyRepository
+                        .findActiveByDataSourceCodeAndReference(dataSourceCode, trimmedReference);
+                        
+                if (existingCompany.isPresent()) {
+                    errors.add("Company reference '" + trimmedReference + "' already exists in data source '" + dataSourceCode + "'");
                     continue;
                 }
                 
                 // 创建新公司实体
                 JobDataSourceCompanyEntity entity = new JobDataSourceCompanyEntity();
                 entity.setDataSourceCode(dataSourceCode);
-                entity.setReference(reference);
+                entity.setReference(trimmedReference);
                 entity.setDisplayName(companyRequest.displayName());
                 entity.setSlug(companyRequest.slug());
                 entity.setEnabled(Boolean.TRUE.equals(companyRequest.enabled()));
@@ -184,7 +243,7 @@ public class AdminDataSourceService {
                         new LinkedHashMap<>(companyRequest.overrideOptions()) : new LinkedHashMap<>());
 
                 JobDataSourceCompanyEntity saved = companyRepository.save(entity);
-                existingReferences.add(reference); // 避免后续重复
+                processedReferences.add(trimmedReference); // 标记为已处理
 
                 JobDataSource.DataSourceCompany domainCompany = new JobDataSource.DataSourceCompany(
                         saved.getId(),
@@ -332,8 +391,22 @@ public class AdminDataSourceService {
             throw new IllegalArgumentException("Company " + companyId + " does not belong to data source " + dataSourceCode);
         }
         
+        // 检查软删除状态
+        if (entity.isDeleted()) {
+            throw new IllegalArgumentException("Cannot update deleted company: " + companyId);
+        }
+        
+        // 检查 data_source_code + reference 且 deleted = false 的唯一性（排除当前记录）
+        String trimmedReference = updatedCompany.reference().trim();
+        Optional<JobDataSourceCompanyEntity> existingCompany = companyRepository
+                .findActiveByDataSourceCodeAndReferenceExcludingId(dataSourceCode, trimmedReference, companyId);
+                
+        if (existingCompany.isPresent()) {
+            throw new IllegalArgumentException("Company reference '" + trimmedReference + "' already exists in data source '" + dataSourceCode + "'");
+        }
+        
         // 更新字段
-        entity.setReference(updatedCompany.reference());
+        entity.setReference(trimmedReference);
         entity.setDisplayName(updatedCompany.displayName());
         entity.setSlug(updatedCompany.slug());
         entity.setEnabled(updatedCompany.enabled());

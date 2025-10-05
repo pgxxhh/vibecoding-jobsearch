@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface SpringDataJobDataSourceCompanyRepository extends JpaRepository<JobDataSourceCompanyEntity, Long> {
     
@@ -18,6 +19,14 @@ public interface SpringDataJobDataSourceCompanyRepository extends JpaRepository<
     
     @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.deleted = false ORDER BY c.reference")
     Page<JobDataSourceCompanyEntity> findByDataSourceCodeOrderByReference(@Param("dataSourceCode") String dataSourceCode, Pageable pageable);
+    
+    // 检查指定数据源和引用的活跃公司是否存在（用于唯一性检查）
+    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.reference = :reference AND c.deleted = false")
+    Optional<JobDataSourceCompanyEntity> findActiveByDataSourceCodeAndReference(@Param("dataSourceCode") String dataSourceCode, @Param("reference") String reference);
+    
+    // 检查指定数据源和引用的活跃公司是否存在，排除特定ID（用于更新时的唯一性检查）
+    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.reference = :reference AND c.deleted = false AND c.id != :excludeId")
+    Optional<JobDataSourceCompanyEntity> findActiveByDataSourceCodeAndReferenceExcludingId(@Param("dataSourceCode") String dataSourceCode, @Param("reference") String reference, @Param("excludeId") Long excludeId);
     
     @Modifying
     @Query("UPDATE JobDataSourceCompanyEntity c SET c.deleted = true, c.updatedTime = :deletedAt WHERE c.dataSourceCode = :dataSourceCode")

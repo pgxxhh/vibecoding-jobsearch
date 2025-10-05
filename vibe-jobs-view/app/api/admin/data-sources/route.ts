@@ -21,13 +21,26 @@ async function forward(req: NextRequest, method: 'GET' | 'POST' | 'PUT' | 'DELET
   
   let apiPath = '/admin/data-sources';
   
-  // Handle ID-based operations via query parameters
-  if (method === 'PUT' || method === 'DELETE') {
-    const id = req.nextUrl.searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ code: 'MISSING_ID', message: 'ID parameter required for PUT/DELETE' }, { status: 400 });
+  // Check if this is a company operation
+  const companyId = req.nextUrl.searchParams.get('companyId');
+  const dataSourceCode = req.nextUrl.searchParams.get('dataSourceCode');
+  
+  if (companyId && dataSourceCode) {
+    // Company operations
+    if (method === 'PUT' || method === 'DELETE') {
+      apiPath = `/admin/data-sources/${dataSourceCode}/companies/${companyId}`;
+    } else if (method === 'POST') {
+      apiPath = `/admin/data-sources/${dataSourceCode}/companies`;
     }
-    apiPath = `/admin/data-sources/${id}`;
+  } else {
+    // Data source operations
+    if (method === 'PUT' || method === 'DELETE') {
+      const id = req.nextUrl.searchParams.get('id');
+      if (!id) {
+        return NextResponse.json({ code: 'MISSING_ID', message: 'ID parameter required for PUT/DELETE' }, { status: 400 });
+      }
+      apiPath = `/admin/data-sources/${id}`;
+    }
   }
   
   const upstream = buildBackendUrl(base, apiPath);
@@ -48,7 +61,14 @@ async function forward(req: NextRequest, method: 'GET' | 'POST' | 'PUT' | 'DELET
   });
   
   if (method === 'DELETE') {
-    return NextResponse.json(null, { status: response.status });
+    // For DELETE requests, return appropriate response based on status
+    if (response.status === 204) {
+      // 204 No Content - successful deletion
+      return new NextResponse(null, { status: 204 });
+    } else {
+      // Other status codes, return them as-is
+      return new NextResponse(null, { status: response.status });
+    }
   }
   
   const text = await response.text();
