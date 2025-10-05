@@ -103,7 +103,7 @@ export default function DataSourcesPage() {
   const saveMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
       const isNew = selectedId === 'new';
-      const url = isNew ? '/api/admin/data-sources' : `/api/admin/data-sources/${selectedId}`;
+      const url = isNew ? '/api/admin/data-sources' : `/api/admin/data-sources?id=${selectedId}`;
       const method = isNew ? 'POST' : 'PUT';
       const res = await fetch(url, {
         method,
@@ -130,7 +130,7 @@ export default function DataSourcesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/admin/data-sources/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/data-sources?id=${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || '删除失败');

@@ -2,23 +2,19 @@ package com.vibe.jobs.datasource.infrastructure.jpa;
 
 import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonStringListConverter;
 import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonStringListMapConverter;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Entity
-@Table(name = "job_data_source_category")
+@Table(name = "job_data_source_category", indexes = {
+        @Index(name = "idx_job_data_source_category_deleted", columnList = "deleted")
+})
+@Where(clause = "deleted = false")
 public class JobDataSourceCategoryEntity {
 
     @Id
@@ -41,6 +37,38 @@ public class JobDataSourceCategoryEntity {
     @Column(columnDefinition = "text")
     @Convert(converter = JsonStringListMapConverter.class)
     private Map<String, List<String>> facets = new LinkedHashMap<>();
+
+    // 软删除字段
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    // 时间字段
+    @Column(name = "created_time", nullable = false, updatable = false)
+    private Instant createdTime;
+
+    @Column(name = "updated_time", nullable = false)
+    private Instant updatedTime;
+
+    @PrePersist
+    void onCreate() {
+        Instant now = Instant.now();
+        createdTime = now;
+        updatedTime = now;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedTime = Instant.now();
+    }
+
+    public void delete() {
+        this.deleted = true;
+        this.updatedTime = Instant.now();
+    }
+
+    public boolean isNotDeleted() {
+        return !deleted;
+    }
 
     public Long getId() {
         return id;
@@ -88,5 +116,29 @@ public class JobDataSourceCategoryEntity {
 
     public void setFacets(Map<String, List<String>> facets) {
         this.facets = facets;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public Instant getCreatedTime() {
+        return createdTime;
+    }
+
+    public void setCreatedTime(Instant createdTime) {
+        this.createdTime = createdTime;
+    }
+
+    public Instant getUpdatedTime() {
+        return updatedTime;
+    }
+
+    public void setUpdatedTime(Instant updatedTime) {
+        this.updatedTime = updatedTime;
     }
 }

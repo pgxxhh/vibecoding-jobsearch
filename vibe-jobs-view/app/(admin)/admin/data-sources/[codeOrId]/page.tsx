@@ -40,7 +40,12 @@ interface PagedDataSourceResponse {
 }
 
 async function fetchDataSourcePaged(code: string, page: number, size: number): Promise<PagedDataSourceResponse> {
-  const res = await fetch(`/api/admin/data-sources/${code}/paged?page=${page}&size=${size}`, { cache: 'no-store' });
+  const trimmed = code.trim();
+  if (!trimmed) {
+    throw new Error('数据源标识无效');
+  }
+  const encodedCode = encodeURIComponent(trimmed);
+  const res = await fetch(`/api/admin/data-sources/${encodedCode}/paged?page=${page}&size=${size}`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error('无法获取数据源信息');
   }
@@ -49,8 +54,8 @@ async function fetchDataSourcePaged(code: string, page: number, size: number): P
 
 async function saveCompany(dataSourceCode: string, company: Partial<DataSourceCompany>): Promise<DataSourceCompany> {
   const url = company.id 
-    ? `/api/admin/data-sources/${dataSourceCode}/companies/${company.id}`
-    : `/api/admin/data-sources/${dataSourceCode}/companies`;
+    ? `/api/admin/data-sources?dataSourceCode=${dataSourceCode}&companyId=${company.id}`
+    : `/api/admin/data-sources?dataSourceCode=${dataSourceCode}`;
   const method = company.id ? 'PUT' : 'POST';
   
   const res = await fetch(url, {
@@ -68,7 +73,7 @@ async function saveCompany(dataSourceCode: string, company: Partial<DataSourceCo
 }
 
 async function deleteCompany(dataSourceCode: string, companyId: number): Promise<void> {
-  const res = await fetch(`/api/admin/data-sources/${dataSourceCode}/companies/${companyId}`, {
+  const res = await fetch(`/api/admin/data-sources?dataSourceCode=${dataSourceCode}&companyId=${companyId}`, {
     method: 'DELETE',
   });
   
@@ -84,8 +89,8 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10);
   
-  const { data: dataSource, isLoading, isError, error } = useQuery({ 
-    queryKey: ['admin', 'data-source-paged', params.codeOrId, currentPage, pageSize], 
+  const { data: dataSource, isLoading, isError, error } = useQuery({
+    queryKey: ['admin', 'data-source-paged', params.codeOrId, currentPage, pageSize],
     queryFn: () => fetchDataSourcePaged(params.codeOrId, currentPage, pageSize)
   });
 
@@ -146,10 +151,20 @@ export default function DataSourceCompaniesPage({ params }: { params: { codeOrId
 
   const deleteCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
-      return deleteCompany(params.codeOrId, companyId);
+      const code = dataSource?.code ?? params.codeOrId;
+      return deleteCompany(code, companyId);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source-paged', params.codeOrId] });
+      const keys = new Set<string | number>();
+      keys.add(params.codeOrId);
+      if (dataSource?.code) {
+        keys.add(dataSource.code);
+      }
+      await Promise.all(
+        Array.from(keys).map((key) =>
+          queryClient.invalidateQueries({ queryKey: ['admin', 'data-source-paged', key] })
+        )
+      );
       setSelectedCompanyId(null);
       setMessage('公司已删除');
       setErrorMsg(null);

@@ -1,13 +1,16 @@
 package com.vibe.jobs.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Where;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "job_details", indexes = {
-        @Index(name = "idx_job_details_job_id", columnList = "job_id", unique = true)
+        @Index(name = "idx_job_details_job_id", columnList = "job_id", unique = true),
+        @Index(name = "idx_job_details_deleted", columnList = "deleted")
 })
+@Where(clause = "deleted = false")
 public class JobDetail {
 
     @Id
@@ -28,6 +31,10 @@ public class JobDetail {
     @Column(nullable = false, columnDefinition = "timestamp")
     private Instant updatedAt;
 
+    // 软删除字段
+    @Column(nullable = false)
+    private boolean deleted = false;
+
     protected JobDetail() {
     }
 
@@ -46,6 +53,15 @@ public class JobDetail {
     @PreUpdate
     void onUpdate() {
         updatedAt = Instant.now();
+    }
+
+    public void delete() {
+        this.deleted = true;
+        this.updatedAt = Instant.now();
+    }
+
+    public boolean isNotDeleted() {
+        return !deleted;
     }
 
     public Long getId() {
@@ -74,6 +90,14 @@ public class JobDetail {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }
 

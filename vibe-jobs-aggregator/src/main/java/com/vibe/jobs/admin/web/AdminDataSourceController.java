@@ -50,38 +50,33 @@ public class AdminDataSourceController {
                 .toList();
     }
 
-    @GetMapping("/{codeOrId}")
-    public DataSourceResponse get(@PathVariable String codeOrId) {
+    @GetMapping("/{code}")
+    public DataSourceResponse get(@PathVariable String code) {
         try {
-            JobDataSource source;
-            // Try to parse as Long first, if it fails treat as code
-            try {
-                Long id = Long.parseLong(codeOrId);
-                source = dataSourceService.getById(id);
-            } catch (NumberFormatException ex) {
-                source = dataSourceService.getByCode(codeOrId);
-            }
+            JobDataSource source = dataSourceService.getByCode(code);
             return DataSourceResponse.fromDomain(source);
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
         }
     }
 
-    @GetMapping("/{codeOrId}/paged")
-    public PagedDataSourceResponse getWithPagination(@PathVariable String codeOrId,
+    @GetMapping("/by-id/{id}")
+    public DataSourceResponse getById(@PathVariable Long id) {
+        try {
+            JobDataSource source = dataSourceService.getById(id);
+            return DataSourceResponse.fromDomain(source);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
+    }
+
+    @GetMapping("/{code}/paged")
+    public PagedDataSourceResponse getWithPagination(@PathVariable String code,
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "20") int size) {
         try {
-            JobDataSource source;
-            // Try to parse as Long first, if it fails treat as code
-            try {
-                Long id = Long.parseLong(codeOrId);
-                source = dataSourceService.getById(id);
-            } catch (NumberFormatException ex) {
-                source = dataSourceService.getByCode(codeOrId);
-            }
-            
-            var pagedCompanies = dataSourceService.getCompaniesPaged(source.getCode(), page, size);
+            JobDataSource source = dataSourceService.getByCode(code);
+            var pagedCompanies = dataSourceService.getCompaniesPaged(code, page, size);
             return PagedDataSourceResponse.fromDomain(source, pagedCompanies);
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());

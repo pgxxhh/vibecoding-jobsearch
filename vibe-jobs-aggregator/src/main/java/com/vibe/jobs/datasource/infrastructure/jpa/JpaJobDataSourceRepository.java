@@ -3,17 +3,24 @@ package com.vibe.jobs.datasource.infrastructure.jpa;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.domain.JobDataSourceRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
 public class JpaJobDataSourceRepository implements JobDataSourceRepository {
+
+    private static final Logger log = LoggerFactory.getLogger(JpaJobDataSourceRepository.class);
 
     private final SpringDataJobDataSourceRepository delegate;
     private final SpringDataJobDataSourceCompanyRepository companyRepository;
@@ -37,7 +44,7 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
 
     @Override
     public List<JobDataSource> findAll() {
-        return delegate.findAll().stream()
+        return delegate.findAllNotDeleted().stream()
                 .map(this::toDomain)
                 .sorted(Comparator.comparing(JobDataSource::getCode))
                 .collect(Collectors.toList());
@@ -49,41 +56,111 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
+    public Optional<JobDataSource> findByIdIncludingDeleted(Long id) {
+        return delegate.findByIdIncludingDeleted(id).map(this::toDomain);
+    }
+
+    @Override
     @Transactional
     public JobDataSource save(JobDataSource dataSource) {
+        return save(dataSource, true);
+    }
+
+    /**
+     * 只更新数据源的基本属性，不触碰公司和分类数据
+     * @param dataSource 要更新的数据源
+     * @return 更新后的数据源
+     */
+    @Transactional
+    public JobDataSource updateDataSourceOnly(JobDataSource dataSource) {
+        // 只保存数据源主体，不处理关联数据
+        JobDataSourceEntity entity = toEntity(dataSource);
+        JobDataSourceEntity saved = delegate.save(entity);
+        return toDomain(saved);
+    }
+
+    /**
+     * 保存数据源，可选择是否同时处理公司和分类数据
+     * @param dataSource 要保存的数据源
+     * @param handleRelations 是否处理关联的公司和分类数据
+     * @return 保存后的数据源
+     */
+    @Transactional
+    public JobDataSource save(JobDataSource dataSource, boolean handleRelations) {
         // Save the main entity first
         JobDataSourceEntity entity = toEntity(dataSource);
         JobDataSourceEntity saved = delegate.save(entity);
 
-        // Delete existing companies and categories
-        companyRepository.deleteByDataSourceCode(saved.getCode());
-        categoryRepository.deleteByDataSourceCode(saved.getCode());
+        if (handleRelations) {
+            // Handle companies: preserve existing IDs where possible
+            handleCompanySave(saved.getCode(), dataSource.getCompanies());
 
-        // Save new companies
-        for (JobDataSource.DataSourceCompany company : dataSource.getCompanies()) {
-            JobDataSourceCompanyEntity companyEntity = new JobDataSourceCompanyEntity();
-            companyEntity.setDataSourceCode(saved.getCode());
-            companyEntity.setReference(company.reference());
-            companyEntity.setDisplayName(company.displayName());
-            companyEntity.setSlug(company.slug());
-            companyEntity.setEnabled(company.enabled());
-            companyEntity.setPlaceholderOverrides(new LinkedHashMap<>(company.placeholderOverrides()));
-            companyEntity.setOverrideOptions(new LinkedHashMap<>(company.overrideOptions()));
-            companyRepository.save(companyEntity);
-        }
-
-        // Save new categories
-        for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
-            JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
-            categoryEntity.setDataSourceCode(saved.getCode());
-            categoryEntity.setName(category.name());
-            categoryEntity.setLimit(category.limit());
-            categoryEntity.setTags(category.tags());
-            categoryEntity.setFacets(category.facets());
-            categoryRepository.save(categoryEntity);
+            // Handle categories: keep existing behavior for now
+            Instant now = Instant.now();
+            categoryRepository.softDeleteByDataSourceCode(saved.getCode(), now);
+            
+            // Save new categories
+            for (JobDataSource.CategoryQuotaDefinition category : dataSource.getCategories()) {
+                JobDataSourceCategoryEntity categoryEntity = new JobDataSourceCategoryEntity();
+                categoryEntity.setDataSourceCode(saved.getCode());
+                categoryEntity.setName(category.name());
+                categoryEntity.setLimit(category.limit());
+                categoryEntity.setTags(category.tags());
+                categoryEntity.setFacets(category.facets());
+                categoryRepository.save(categoryEntity);
+            }
         }
 
         return toDomain(saved);
+    }
+    
+    private void handleCompanySave(String dataSourceCode, List<JobDataSource.DataSourceCompany> companies) {
+        // 获取现有的公司实体
+        List<JobDataSourceCompanyEntity> existingEntities = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode);
+        Map<Long, JobDataSourceCompanyEntity> existingById = existingEntities.stream()
+                .collect(Collectors.toMap(JobDataSourceCompanyEntity::getId, e -> e));
+        Map<String, JobDataSourceCompanyEntity> existingByReference = existingEntities.stream()
+                .collect(Collectors.toMap(JobDataSourceCompanyEntity::getReference, e -> e));
+        
+        Set<Long> updatedIds = new HashSet<>();
+        
+        // 处理每个公司：如果有ID就更新，否则创建新的
+        for (JobDataSource.DataSourceCompany company : companies) {
+            JobDataSourceCompanyEntity entity;
+            
+            if (company.id() != null && existingById.containsKey(company.id())) {
+                // 更新现有实体
+                entity = existingById.get(company.id());
+                updatedIds.add(company.id());
+            } else if (existingByReference.containsKey(company.reference())) {
+                // 基于reference找到现有实体并更新
+                entity = existingByReference.get(company.reference());
+                updatedIds.add(entity.getId());
+            } else {
+                // 创建新实体
+                entity = new JobDataSourceCompanyEntity();
+                entity.setDataSourceCode(dataSourceCode);
+            }
+            
+            // 更新实体字段
+            entity.setReference(company.reference());
+            entity.setDisplayName(company.displayName());
+            entity.setSlug(company.slug());
+            entity.setEnabled(company.enabled());
+            entity.setPlaceholderOverrides(new LinkedHashMap<>(company.placeholderOverrides()));
+            entity.setOverrideOptions(new LinkedHashMap<>(company.overrideOptions()));
+            entity.setDeleted(false); // 确保不是软删除状态
+            
+            companyRepository.save(entity);
+        }
+        
+        // 软删除不在更新列表中的现有公司
+        Instant now = Instant.now();
+        for (JobDataSourceCompanyEntity existing : existingEntities) {
+            if (!updatedIds.contains(existing.getId())) {
+                companyRepository.softDeleteById(existing.getId(), now);
+            }
+        }
     }
 
     public boolean existsByCode(String code) {
@@ -96,8 +173,28 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     }
 
     @Override
+    public Optional<JobDataSource> findByCodeIncludingDeleted(String code) {
+        return delegate.findByCodeIncludingDeleted(code).map(this::toDomain);
+    }
+
+    @Override
     public void deleteById(Long id) {
-        delegate.deleteById(id);
+        delegate.deleteAll(delegate.findAllById(List.of(id)));
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Instant now = Instant.now();
+        delegate.softDeleteById(id, now);
+        
+        // 同时软删除相关的companies和categories
+        Optional<JobDataSourceEntity> entity = delegate.findByIdIncludingDeleted(id);
+        if (entity.isPresent()) {
+            String code = entity.get().getCode();
+            companyRepository.softDeleteByDataSourceCode(code, now);
+            categoryRepository.softDeleteByDataSourceCode(code, now);
+        }
     }
 
     private JobDataSource toDomain(JobDataSourceEntity entity) {
@@ -143,7 +240,7 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
     private JobDataSourceEntity toEntity(JobDataSource dataSource) {
         JobDataSourceEntity entity = dataSource.getId() == null
                 ? new JobDataSourceEntity()
-                : delegate.findById(dataSource.getId()).orElse(new JobDataSourceEntity());
+                : delegate.findByIdIncludingDeleted(dataSource.getId()).orElse(new JobDataSourceEntity());
         entity.setId(dataSource.getId());
         entity.setCode(dataSource.getCode());
         entity.setType(dataSource.getType());
