@@ -46,6 +46,34 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                           Pageable pageable);
 
     @Query("""
+        select j from Job j
+        where j.deleted = false
+        and (:q is null or
+               lower(j.title) like lower(concat('%',:q,'%')) or
+               lower(j.company) like lower(concat('%',:company,'%')) or
+               lower(j.location) like lower(concat('%',:location,'%')) or
+               exists (select t from j.tags t where lower(t) like lower(concat('%',:q,'%')))
+            )
+        and (:company is null or lower(j.company) like lower(concat('%',:company,'%')))
+        and (:location is null or lower(j.location) like lower(concat('%',:location,'%')))
+        and (:level is null or lower(j.level) = lower(:level))
+        and j.postedAt is not null
+        and (
+            :sincePostedAt is null or
+            j.postedAt > :sincePostedAt or
+            (j.postedAt = :sincePostedAt and j.id > :sinceId)
+        )
+        order by j.postedAt asc, j.id asc
+        """)
+    List<Job> findNewJobsForAlert(@Param("q") String q,
+                                  @Param("company") String company,
+                                  @Param("location") String location,
+                                  @Param("level") String level,
+                                  @Param("sincePostedAt") Instant sincePostedAt,
+                                  @Param("sinceId") Long sinceId,
+                                  Pageable pageable);
+
+    @Query("""
         select count(j) from Job j
         where j.deleted = false
         and (:q is null or 

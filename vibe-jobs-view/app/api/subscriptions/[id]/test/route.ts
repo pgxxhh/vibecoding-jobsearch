@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { buildBackendUrl, resolveBackendBase } from '@/lib/backend';
+
+function resolveSessionToken(req: NextRequest): string | undefined {
+  const header = req.headers.get('x-session-token');
+  if (header && header.trim().length > 0) {
+    return header.trim();
+  }
+  const bearer = req.headers.get('authorization');
+  if (bearer?.startsWith('Bearer ')) {
+    const token = bearer.substring(7).trim();
+    if (token) return token;
+  }
+  const cookieToken = cookies().get('vj_session')?.value;
+  if (cookieToken && cookieToken.trim().length > 0) {
+    return cookieToken.trim();
+  }
+  return undefined;
+}
+
+export async function POST(req: NextRequest) {
+  const base = resolveBackendBase(req);
+  if (!base) {
+    return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured.' }, { status: 500 });
+  }
+  const segments = req.nextUrl.pathname.split('/');
+  const id = segments[segments.length - 2];
+  const upstream = buildBackendUrl(base, `/subscriptions/${id}/test`);
+  const token = resolveSessionToken(req);
+  const headers: HeadersInit = { accept: 'application/json' };
+  if (token) {
+    headers['x-session-token'] = token;
+    headers['authorization'] = `Bearer ${token}`;
+  }
+  const response = await fetch(upstream, {
+    method: 'POST',
+    headers,
+    cache: 'no-store',
+  });
+  const text = await response.text();
+  if (text) {
+    try {
+      const json = JSON.parse(text);
+      return NextResponse.json(json, { status: response.status });
+    } catch {
+      return NextResponse.json({ code: 'UPSTREAM_ERROR', message: 'Unexpected response from backend.', raw: text }, { status: 502 });
+    }
+  }
+  return new NextResponse(null, { status: response.status });
+}

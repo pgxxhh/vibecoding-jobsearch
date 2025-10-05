@@ -299,6 +299,7 @@ export default function Page() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const hasPromptedSubscription = useRef(false);
   const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
+  const [subscriptionNotice, setSubscriptionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
@@ -613,12 +614,64 @@ export default function Page() {
   const handleConfirmSubscription = async () => {
     setShowSubscriptionModal(false);
     setSubscriptionTrigger(null);
-    await fetch(`${API_BASE}/subscription`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscriptionParams),
-    });
-    loadJobs(undefined, true);
+    const normalizeString = (value: unknown) => {
+      if (typeof value !== 'string') return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    };
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'Asia/Shanghai';
+    const filtersPayload = {
+      remote: normalizeString(subscriptionParams.remote),
+      salaryMin: normalizeString(subscriptionParams.salaryMin),
+      datePosted: normalizeString(subscriptionParams.datePosted),
+    };
+    const filteredFilters = Object.fromEntries(
+      Object.entries(filtersPayload).filter(([, value]) => value !== undefined),
+    );
+
+    const payload = {
+      keyword: normalizeString(subscriptionParams.q),
+      company: normalizeString(subscriptionParams.company),
+      location: normalizeString(subscriptionParams.location),
+      level: normalizeString(subscriptionParams.level),
+      filters: Object.keys(filteredFilters).length > 0 ? filteredFilters : undefined,
+      scheduleHour: 0,
+      timezone,
+    };
+
+    try {
+      const response = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const text = await response.text();
+      let data: any = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          console.warn('Failed to parse subscription response', err);
+        }
+      }
+      if (!response.ok) {
+        if (response.status === 401) {
+          setSubscriptionNotice({ type: 'error', message: '请先登录后再创建职位订阅。' });
+        } else {
+          setSubscriptionNotice({
+            type: 'error',
+            message: data?.message ?? '订阅创建失败，请稍后再试。',
+          });
+        }
+      } else {
+        setSubscriptionNotice({ type: 'success', message: '订阅创建成功，我们会在每天有新职位时通过邮件通知您。' });
+      }
+    } catch (error) {
+      console.error('Failed to create subscription', error);
+      setSubscriptionNotice({ type: 'error', message: '网络异常，稍后再试。' });
+    }
+
+    await loadJobs(undefined, true);
   };
 
   const handleCancelSubscription = () => {
@@ -646,6 +699,25 @@ export default function Page() {
         activeFilterCount={activeFilterCount}
         isSearching={loading}
       />
+
+      {subscriptionNotice && (
+        <div
+          className={`relative flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm ${
+            subscriptionNotice.type === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-rose-200 bg-rose-50 text-rose-700'
+          }`}
+        >
+          <span>{subscriptionNotice.message}</span>
+          <button
+            type="button"
+            className="ml-auto text-xs font-medium underline decoration-dotted"
+            onClick={() => setSubscriptionNotice(null)}
+          >
+            关闭
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
