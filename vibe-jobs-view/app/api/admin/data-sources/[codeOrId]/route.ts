@@ -18,7 +18,11 @@ async function forward(req: NextRequest, params: { codeOrId: string }, method: '
   if (!base) {
     return NextResponse.json({ code: 'CONFIG_ERROR', message: 'Backend base URL not configured' }, { status: 500 });
   }
+  
+  // For PUT and DELETE, we assume the codeOrId is an ID (number)
+  // For GET, we assume it's a code (string)
   const upstream = buildBackendUrl(base, `/admin/data-sources/${params.codeOrId}`);
+  
   const headers: Record<string, string> = {
     accept: 'application/json',
     'x-session-token': token,
@@ -46,14 +50,14 @@ async function forward(req: NextRequest, params: { codeOrId: string }, method: '
   }
 }
 
-export async function GET(req: NextRequest, context: { params: { codeOrId: string } }) {
-  return forward(req, context.params, 'GET');
+export async function GET(req: NextRequest, { params }: { params: { codeOrId: string } }) {
+  return forward(req, params, 'GET');
 }
 
-export async function PUT(req: NextRequest, context: { params: { codeOrId: string } }) {
-  return forward(req, context.params, 'PUT');
+export async function PUT(req: NextRequest, { params }: { params: { codeOrId: string } }) {
+  return forward(req, params, 'PUT');
 }
 
-export async function DELETE(req: NextRequest, context: { params: { codeOrId: string } }) {
-  return forward(req, context.params, 'DELETE');
+export async function DELETE(req: NextRequest, { params }: { params: { codeOrId: string } }) {
+  return forward(req, params, 'DELETE');
 }
