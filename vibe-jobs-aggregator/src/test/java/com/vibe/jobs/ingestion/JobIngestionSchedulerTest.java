@@ -5,6 +5,7 @@ import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.domain.Job;
+import com.vibe.jobs.ingestion.IngestionCursorService;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
@@ -61,6 +62,9 @@ class JobIngestionSchedulerTest {
 
     @Mock
     private IngestionSettingsService settingsService;
+
+    @Mock
+    private IngestionCursorService ingestionCursorService;
 
     @Mock
     private DataSourceQueryService dataSourceQueryService;
@@ -140,7 +144,8 @@ class JobIngestionSchedulerTest {
                 roleFilterService,
                 executorManager,
                 taskScheduler,
-                settingsService
+                settingsService,
+                ingestionCursorService
         );
 
         scheduler.runIngestion();
