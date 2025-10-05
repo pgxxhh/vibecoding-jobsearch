@@ -9,6 +9,21 @@ function resolveToken(req: NextRequest): string | null {
   return token && token.length > 0 ? token : null;
 }
 
+function cloneUpstreamHeaders(response: Response): Headers {
+  const headers = new Headers();
+  response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'content-length') {
+      return;
+    }
+    headers.set(key, value);
+  });
+  return headers;
+}
+
+function isNoBodyStatus(status: number): boolean {
+  return status === 101 || status === 204 || status === 205 || status === 304;
+}
+
 async function forward(req: NextRequest, params: { codeOrId: string }, method: 'GET' | 'PUT' | 'DELETE') {
   const token = resolveToken(req);
   if (!token) {
@@ -34,13 +49,30 @@ async function forward(req: NextRequest, params: { codeOrId: string }, method: '
     body,
     cache: 'no-store',
   });
+  const responseHeaders = cloneUpstreamHeaders(response);
   if (method === 'DELETE') {
-    return NextResponse.json(null, { status: response.status });
+    if (isNoBodyStatus(response.status)) {
+      return new NextResponse(null, { status: response.status, headers: responseHeaders });
+    }
+    const text = await response.text();
+    const contentType = responseHeaders.get('content-type') ?? '';
+    if (contentType.includes('application/json')) {
+      try {
+        const json = text ? JSON.parse(text) : null;
+        return NextResponse.json(json, { status: response.status, headers: responseHeaders });
+      } catch {
+        return NextResponse.json(
+          { code: 'UPSTREAM_ERROR', message: 'Unexpected response from backend', raw: text },
+          { status: 502 }
+        );
+      }
+    }
+    return new NextResponse(text, { status: response.status, headers: responseHeaders });
   }
   const text = await response.text();
   try {
     const json = text ? JSON.parse(text) : null;
-    return NextResponse.json(json, { status: response.status });
+    return NextResponse.json(json, { status: response.status, headers: responseHeaders });
   } catch {
     return NextResponse.json({ code: 'UPSTREAM_ERROR', message: 'Unexpected response from backend', raw: text }, { status: 502 });
   }
