@@ -12,7 +12,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminDataSourceService {
@@ -90,14 +93,8 @@ public class AdminDataSourceService {
         JobDataSource dataSource = queryService.getByCode(dataSourceCode);
         List<JobDataSource.DataSourceCompany> companies = new ArrayList<>(dataSource.getCompanies());
         
-        // Generate new ID for the company (this is simplified, in reality you might want a proper ID generation strategy)
-        Long newId = companies.stream()
-                .mapToLong(c -> c.id() != null ? c.id() : 0L)
-                .max()
-                .orElse(0L) + 1;
-        
         JobDataSource.DataSourceCompany newCompany = new JobDataSource.DataSourceCompany(
-                newId,
+                null,
                 company.reference(),
                 company.displayName(),
                 company.slug(),
@@ -105,18 +102,22 @@ public class AdminDataSourceService {
                 company.placeholderOverrides(),
                 company.overrideOptions()
         );
-        
+
         companies.add(newCompany);
-        
+
         JobDataSource updated = dataSource.withCompanies(companies);
-        commandService.save(updated);
+        JobDataSource saved = commandService.save(updated);
         publishChange(dataSourceCode);
-        
-        return newCompany;
+
+        return saved.getCompanies().stream()
+                .filter(c -> c.reference().equals(newCompany.reference()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Created company not found after save for data source: " + dataSourceCode));
     }
 
     public com.vibe.jobs.admin.web.dto.BulkCompanyResult bulkCreateCompanies(
-            String dataSourceCode, 
+            String dataSourceCode,
             List<JobDataSource.DataSourceCompany> companiesToCreate,
             String actorEmail) {
         
@@ -127,15 +128,9 @@ public class AdminDataSourceService {
         JobDataSource dataSource = queryService.getByCode(dataSourceCode);
         List<JobDataSource.DataSourceCompany> existingCompanies = new ArrayList<>(dataSource.getCompanies());
         
-        // Find next available ID
-        Long nextId = existingCompanies.stream()
-                .mapToLong(c -> c.id() != null ? c.id() : 0L)
-                .max()
-                .orElse(0L) + 1;
-        
-        List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
+        List<JobDataSource.DataSourceCompany> newlyCreated = new ArrayList<>();
         List<String> errors = new ArrayList<>();
-        
+
         for (JobDataSource.DataSourceCompany companyRequest : companiesToCreate) {
             try {
                 // Validate required fields
@@ -153,9 +148,9 @@ public class AdminDataSourceService {
                     continue;
                 }
                 
-                // Create new company with generated ID
+                // Create new company letting persistence layer assign the ID
                 JobDataSource.DataSourceCompany newCompany = new JobDataSource.DataSourceCompany(
-                        nextId++,
+                        null,
                         companyRequest.reference().trim(),
                         companyRequest.displayName(),
                         companyRequest.slug(),
@@ -163,13 +158,13 @@ public class AdminDataSourceService {
                         companyRequest.placeholderOverrides(),
                         companyRequest.overrideOptions()
                 );
-                
+
                 existingCompanies.add(newCompany);
-                successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(newCompany));
-                
+                newlyCreated.add(newCompany);
+
             } catch (Exception e) {
-                String errorMsg = "Failed to create company '" + 
-                    (companyRequest.reference() != null ? companyRequest.reference() : "unknown") + 
+                String errorMsg = "Failed to create company '" +
+                    (companyRequest.reference() != null ? companyRequest.reference() : "unknown") +
                     "': " + e.getMessage();
                 errors.add(errorMsg);
                 log.error("Bulk company creation failed", e);
@@ -177,15 +172,33 @@ public class AdminDataSourceService {
         }
         
         // Save updated data source if any companies were successfully created
-        if (!successful.isEmpty()) {
+        List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
+
+        if (!newlyCreated.isEmpty()) {
             JobDataSource updated = dataSource.withCompanies(existingCompanies);
-            commandService.save(updated);
+            JobDataSource saved = commandService.save(updated);
             publishChange(dataSourceCode);
-            
-            log.info("Bulk created {} companies for data source '{}' by user '{}'", 
-                successful.size(), dataSourceCode, actorEmail);
+
+            Map<String, JobDataSource.DataSourceCompany> savedByReference = saved.getCompanies().stream()
+                    .collect(Collectors.toMap(
+                            JobDataSource.DataSourceCompany::reference,
+                            company -> company,
+                            (existing, replacement) -> replacement,
+                            LinkedHashMap::new));
+
+            for (JobDataSource.DataSourceCompany created : newlyCreated) {
+                JobDataSource.DataSourceCompany persisted = savedByReference.get(created.reference());
+                if (persisted != null) {
+                    successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(persisted));
+                } else {
+                    log.warn("Could not locate persisted company '{}' after save for data source '{}'", created.reference(), dataSourceCode);
+                }
+            }
+
+            log.info("Bulk created {} companies for data source '{}' by user '{}'",
+                newlyCreated.size(), dataSourceCode, actorEmail);
         }
-        
+
         return com.vibe.jobs.admin.web.dto.BulkCompanyResult.withErrors(successful, errors);
     }
 
