@@ -5,6 +5,8 @@ import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.admin.domain.event.IngestionSettingsUpdatedEvent;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
+import com.vibe.jobs.ingestion.domain.IngestionCursor;
+import com.vibe.jobs.ingestion.domain.IngestionCursorKey;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
@@ -41,6 +43,7 @@ public class JobIngestionScheduler {
     private final IngestionExecutorManager executorManager;
     private final TaskScheduler taskScheduler;
     private final IngestionSettingsService settingsService;
+    private final IngestionCursorService ingestionCursorService;
     private volatile ScheduledFuture<?> scheduledTask;
 
     public JobIngestionScheduler(JobService jobService,
@@ -52,7 +55,8 @@ public class JobIngestionScheduler {
                                  RoleFilterService roleFilterService,
                                  IngestionExecutorManager executorManager,
                                  TaskScheduler taskScheduler,
-                                 IngestionSettingsService settingsService) {
+                                 IngestionSettingsService settingsService,
+                                 IngestionCursorService ingestionCursorService) {
         this.jobService = jobService;
         this.ingestionProperties = ingestionProperties;
         this.sourceRegistry = sourceRegistry;
@@ -63,6 +67,7 @@ public class JobIngestionScheduler {
         this.executorManager = executorManager;
         this.taskScheduler = taskScheduler;
         this.settingsService = settingsService;
+        this.ingestionCursorService = ingestionCursorService;
         scheduleWith(settingsService.initializeIfNeeded());
     }
 
@@ -124,7 +129,7 @@ public class JobIngestionScheduler {
         try {
             List<SourceRegistry.CategoryQuota> categories = configuredSource.categories();
             if (categories == null || categories.isEmpty()) {
-                ingestWithoutCategories(sourceClient, sourceName, companyName, pageSize);
+                ingestWithoutCategories(configuredSource, pageSize);
             } else {
                 ingestWithCategories(configuredSource, pageSize);
             }
@@ -141,10 +146,13 @@ public class JobIngestionScheduler {
         }
     }
 
-    private void ingestWithoutCategories(SourceClient sourceClient,
-                                         String sourceName,
-                                         String companyName,
+    private void ingestWithoutCategories(SourceRegistry.ConfiguredSource configuredSource,
                                          int pageSize) throws Exception {
+        SourceClient sourceClient = configuredSource.client();
+        String sourceName = sourceClient.sourceName();
+        String companyName = configuredSource.company();
+        IngestionCursorKey cursorKey = buildCursorKey(configuredSource, null);
+        IngestionCursor cursor = ingestionCursorService.find(cursorKey).orElse(null);
         int page = 1;
         while (true) {
             List<FetchedJob> items = sourceClient.fetchPage(page, pageSize);
@@ -154,9 +162,16 @@ public class JobIngestionScheduler {
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            int persisted = storeJobs(roleFiltered);
-            if (roleFiltered.isEmpty() || persisted == 0) {
-                log.debug("All jobs filtered out for source {} ({}) on page {}", sourceName, companyName, page);
+            List<FetchedJob> cursorFiltered = filterByCursor(roleFiltered, cursor);
+            if (cursorFiltered.isEmpty()) {
+                log.debug("No new jobs beyond cursor for source {} ({}) on page {}", sourceName, companyName, page);
+                break;
+            }
+            JobIngestionResult result = storeJobs(cursorFiltered);
+            if (result.persisted() <= 0) {
+                log.debug("All jobs filtered out or skipped for source {} ({}) on page {}", sourceName, companyName, page);
+            } else if (result.lastJob() != null) {
+                cursor = ingestionCursorService.updatePosition(cursorKey, result.lastJob());
             }
             page++;
         }
@@ -169,25 +184,27 @@ public class JobIngestionScheduler {
         if (remaining.isEmpty()) {
             return;
         }
+        Map<String, IngestionCursor> cursorCache = new LinkedHashMap<>();
 
         if (client instanceof WorkdaySourceClient workday) {
             for (SourceRegistry.CategoryQuota category : configuredSource.categories()) {
                 if (!category.hasFacets()) {
                     continue;
                 }
-                fetchCategoryWithFacets(workday, configuredSource, category, pageSize, remaining);
+                fetchCategoryWithFacets(workday, configuredSource, category, pageSize, remaining, cursorCache);
                 if (allQuotasMet(remaining)) {
                     return;
                 }
             }
         }
 
-        fetchGenericPages(configuredSource, pageSize, remaining);
+        fetchGenericPages(configuredSource, pageSize, remaining, cursorCache);
     }
 
     private void fetchGenericPages(SourceRegistry.ConfiguredSource configuredSource,
                                    int pageSize,
-                                   Map<SourceRegistry.CategoryQuota, Integer> remaining) throws Exception {
+                                   Map<SourceRegistry.CategoryQuota, Integer> remaining,
+                                   Map<String, IngestionCursor> cursorCache) throws Exception {
         SourceClient client = configuredSource.client();
         String sourceName = client.sourceName();
         String companyName = configuredSource.company();
@@ -200,9 +217,12 @@ public class JobIngestionScheduler {
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            int persisted = matchAndStore(roleFiltered, configuredSource, remaining, null, page);
-            if (roleFiltered.isEmpty() || persisted == 0) {
+            JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, null, page, cursorCache);
+            if (roleFiltered.isEmpty() || result.persisted() == 0) {
                 log.debug("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
+            }
+            if (!result.advanced()) {
+                break;
             }
             page++;
         }
@@ -212,7 +232,8 @@ public class JobIngestionScheduler {
                                          SourceRegistry.ConfiguredSource configuredSource,
                                          SourceRegistry.CategoryQuota category,
                                          int pageSize,
-                                         Map<SourceRegistry.CategoryQuota, Integer> remaining) throws Exception {
+                                         Map<SourceRegistry.CategoryQuota, Integer> remaining,
+                                         Map<String, IngestionCursor> cursorCache) throws Exception {
         String sourceName = client.sourceName();
         String companyName = configuredSource.company();
         int page = 1;
@@ -224,12 +245,15 @@ public class JobIngestionScheduler {
             List<FetchedJob> filtered = jobFilter.apply(items);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            int persisted = matchAndStore(roleFiltered, configuredSource, remaining, category, page);
-            if (roleFiltered.isEmpty() || persisted == 0) {
+            JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, category, page, cursorCache);
+            if (roleFiltered.isEmpty() || result.persisted() == 0) {
                 log.debug("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
             }
             if (allQuotasMet(remaining)) {
                 return;
+            }
+            if (!result.advanced()) {
+                break;
             }
             page++;
         }
@@ -256,16 +280,20 @@ public class JobIngestionScheduler {
         return remaining.values().stream().allMatch(value -> value != null && value <= 0);
     }
 
-    private int matchAndStore(List<FetchedJob> jobs,
-                              SourceRegistry.ConfiguredSource source,
-                              Map<SourceRegistry.CategoryQuota, Integer> remaining,
-                              SourceRegistry.CategoryQuota targetCategory,
-                              int page) {
+    private JobIngestionResult matchAndStore(List<FetchedJob> jobs,
+                                             SourceRegistry.ConfiguredSource source,
+                                             Map<SourceRegistry.CategoryQuota, Integer> remaining,
+                                             SourceRegistry.CategoryQuota targetCategory,
+                                             int page,
+                                             Map<String, IngestionCursor> cursorCache) {
         if (jobs == null || jobs.isEmpty()) {
-            return 0;
+            return JobIngestionResult.empty();
         }
         Map<SourceRegistry.CategoryQuota, List<FetchedJob>> grouped = new LinkedHashMap<>();
         for (FetchedJob job : jobs) {
+            if (job == null) {
+                continue;
+            }
             SourceRegistry.CategoryQuota matched = targetCategory != null
                     ? targetCategory
                     : matchCategory(job.job(), source.categories());
@@ -275,7 +303,9 @@ public class JobIngestionScheduler {
             grouped.computeIfAbsent(matched, key -> new ArrayList<>()).add(job);
         }
 
-        int persisted = 0;
+        int totalPersisted = 0;
+        Job lastJob = null;
+        boolean advanced = false;
         for (Map.Entry<SourceRegistry.CategoryQuota, List<FetchedJob>> entry : grouped.entrySet()) {
             SourceRegistry.CategoryQuota category = entry.getKey();
             int remainingQuota = remaining.getOrDefault(category, 0);
@@ -286,15 +316,33 @@ public class JobIngestionScheduler {
             if (matchedJobs.isEmpty()) {
                 continue;
             }
-            int toPersist = Math.min(remainingQuota, matchedJobs.size());
-            List<FetchedJob> subset = matchedJobs.subList(0, toPersist);
-            persisted += storeJobs(subset);
-            remaining.put(category, remainingQuota - toPersist);
-            if (toPersist < matchedJobs.size()) {
-                log.debug("Category {} quota reached for {} on page {}", category.name(), source.client().sourceName(), page);
+            String cacheKey = category.name() == null ? "" : category.name();
+            IngestionCursorKey cursorKey = buildCursorKey(source, cacheKey);
+            IngestionCursor cursor = cursorCache.computeIfAbsent(cacheKey, key -> ingestionCursorService.find(cursorKey).orElse(null));
+            List<FetchedJob> cursorFiltered = filterByCursor(matchedJobs, cursor);
+            if (cursorFiltered.isEmpty()) {
+                continue;
+            }
+            advanced = true;
+            int toPersist = Math.min(remainingQuota, cursorFiltered.size());
+            List<FetchedJob> subset = cursorFiltered.subList(0, toPersist);
+            JobIngestionResult result = storeJobs(subset);
+            if (result.persisted() <= 0) {
+                continue;
+            }
+            totalPersisted += result.persisted();
+            remaining.put(category, Math.max(0, remainingQuota - result.persisted()));
+            if (result.lastJob() != null) {
+                IngestionCursor updated = ingestionCursorService.updatePosition(cursorKey, result.lastJob());
+                cursorCache.put(cacheKey, updated);
+                lastJob = result.lastJob();
+            }
+            advanced = advanced || result.advanced();
+            if (result.persisted() < subset.size()) {
+                log.debug("Persisted {} of {} jobs for category {} from source {} on page {}", result.persisted(), subset.size(), category.name(), source.client().sourceName(), page);
             }
         }
-        return persisted;
+        return new JobIngestionResult(totalPersisted, lastJob, advanced);
     }
 
     private SourceRegistry.CategoryQuota matchCategory(Job job, List<SourceRegistry.CategoryQuota> categories) {
@@ -315,22 +363,109 @@ public class JobIngestionScheduler {
         return null;
     }
 
-    private int storeJobs(List<FetchedJob> jobs) {
+    private List<FetchedJob> filterByCursor(List<FetchedJob> jobs, IngestionCursor cursor) {
         if (jobs == null || jobs.isEmpty()) {
-            return 0;
+            return new ArrayList<>();
+        }
+        List<FetchedJob> result = new ArrayList<>();
+        if (cursor == null || !cursor.hasPosition()) {
+            result.addAll(jobs);
+            return result;
+        }
+        for (FetchedJob job : jobs) {
+            if (job == null || job.job() == null) {
+                continue;
+            }
+            if (isAfterCursor(job.job(), cursor)) {
+                result.add(job);
+            }
+        }
+        return result;
+    }
+
+    private boolean isAfterCursor(Job job, IngestionCursor cursor) {
+        if (cursor == null) {
+            return true;
+        }
+        Instant jobPostedAt = job.getPostedAt();
+        Instant cursorPostedAt = cursor.lastPostedAt();
+        if (jobPostedAt == null || cursorPostedAt == null) {
+            return true;
+        }
+        if (jobPostedAt.isAfter(cursorPostedAt)) {
+            return true;
+        }
+        if (!jobPostedAt.equals(cursorPostedAt)) {
+            return false;
+        }
+        String jobExternalId = job.getExternalId();
+        String cursorExternalId = cursor.lastExternalId();
+        if (jobExternalId == null || jobExternalId.isBlank()) {
+            return true;
+        }
+        if (cursorExternalId == null || cursorExternalId.isBlank()) {
+            return true;
+        }
+        return jobExternalId.compareTo(cursorExternalId) > 0;
+    }
+
+    private IngestionCursorKey buildCursorKey(SourceRegistry.ConfiguredSource source, String categoryName) {
+        String sourceCode = source.definition() == null ? "" : source.definition().getCode();
+        String sourceName = source.client() == null ? "" : source.client().sourceName();
+        String companyName = source.company();
+        return IngestionCursorKey.of(sourceCode, sourceName, companyName, categoryName);
+    }
+
+    private JobIngestionResult storeJobs(List<FetchedJob> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return JobIngestionResult.empty();
         }
         int persisted = 0;
+        Job lastJob = null;
         for (FetchedJob fetched : jobs) {
+            if (fetched == null) {
+                continue;
+            }
             try {
                 Job persistedJob = jobService.upsert(fetched.job());
                 jobDetailService.saveContent(persistedJob, fetched.content());
                 persisted++;
+                lastJob = persistedJob;
             } catch (Exception ex) {
-                log.warn("Failed to persist job {} from source {}: {}", fetched.job().getTitle(), fetched.job().getSource(), ex.getMessage());
+                log.warn("Failed to persist job {} from source {}: {}", fetched.job() == null ? "unknown" : fetched.job().getTitle(), fetched.job() == null ? "unknown" : fetched.job().getSource(), ex.getMessage());
                 log.debug("Job persistence error", ex);
             }
         }
-        return persisted;
+        return new JobIngestionResult(persisted, lastJob, persisted > 0);
+    }
+
+    private static final class JobIngestionResult {
+        private static final JobIngestionResult EMPTY = new JobIngestionResult(0, null, false);
+        private final int persisted;
+        private final Job lastJob;
+        private final boolean advanced;
+
+        private JobIngestionResult(int persisted, Job lastJob, boolean advanced) {
+            this.persisted = persisted;
+            this.lastJob = lastJob;
+            this.advanced = advanced;
+        }
+
+        static JobIngestionResult empty() {
+            return EMPTY;
+        }
+
+        int persisted() {
+            return persisted;
+        }
+
+        Job lastJob() {
+            return lastJob;
+        }
+
+        boolean advanced() {
+            return advanced;
+        }
     }
 
     @EventListener
