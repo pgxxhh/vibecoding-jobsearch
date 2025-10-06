@@ -228,5 +228,6 @@ public class ParserProfile {
         public String getUrlField() { return urlField; }
         public List<String> getContentSelectors() { return contentSelectors; }
         public long getDelayMs() { return delayMs; }
+        public Boolean shouldPreserveHtml() { return null; } // 临时添加，后续完善
     }
 }

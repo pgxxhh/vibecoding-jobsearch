@@ -10,8 +10,12 @@ import java.util.Locale;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ParserField {
+
+    private static final Logger log = LoggerFactory.getLogger(ParserField.class);
 
     private final String name;
     private final ParserFieldType type;
@@ -117,14 +121,22 @@ public class ParserField {
         if (selector == null || selector.isBlank() || selector.trim().isEmpty()) {
             return Collections.singletonList(element);
         }
+        
+        // Clean the selector to avoid empty string issues
+        String cleanSelector = selector.trim();
+        if (cleanSelector.isEmpty()) {
+            return Collections.singletonList(element);
+        }
+        
         try {
-            Elements elements = element.select(selector);
+            Elements elements = element.select(cleanSelector);
             if (elements == null || elements.isEmpty()) {
                 return List.of();
             }
             return elements.stream().toList();
         } catch (Exception e) {
             // If selector parsing fails, return the element itself
+            log.debug("Selector parsing failed for '{}': {}", cleanSelector, e.getMessage());
             return Collections.singletonList(element);
         }
     }

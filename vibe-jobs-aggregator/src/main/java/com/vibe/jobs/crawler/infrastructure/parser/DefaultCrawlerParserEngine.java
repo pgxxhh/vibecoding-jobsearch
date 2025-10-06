@@ -56,7 +56,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             
             Job domainJob = Job.builder()
                     .source(resolveSourceName(context))
-                    .externalId(finalJob.externalId().isBlank() ? finalJob.title() : finalJob.externalId())
+                    .externalId(cleanExternalId(finalJob.externalId(), finalJob.url(), finalJob.title()))
                     .title(finalJob.title())
                     .company(resolveCompany(context, finalJob))
                     .location(finalJob.location())
@@ -99,7 +99,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl);
             
             // 尝试提取更好的职位编号
-            String betterJobId = extractJobId(pageContent, job.externalId());
+            String betterJobId = extractJobId(pageContent, job.externalId(), detailConfig);
             
             // 创建增强后的职位信息
             ParsedJob enhancedJob = job;
@@ -162,56 +162,6 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 .map(tag -> tag == null ? "" : tag.trim().toLowerCase())
                 .filter(tag -> !tag.isBlank())
                 .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
-    }
-
-    /**
-     * 增强职位描述 - 如果配置了详情获取，则访问详情页面获取完整内容
-     */
-    private String enhanceJobDescription(ParsedJob job, ParserProfile profile) {
-        ParserProfile.DetailFetchConfig detailConfig = profile.getDetailFetchConfig();
-        
-        if (!detailConfig.isEnabled()) {
-            return null;  // 返回null表示不需要增强
-        }
-        
-        try {
-            // 构建详情URL
-            String detailUrl = buildDetailUrl(job, detailConfig);
-            if (detailUrl == null || detailUrl.isBlank()) {
-                log.debug("Cannot build detail URL for job: {}", job.title());
-                return null;
-            }
-            
-            // 获取详情页面内容
-            String pageContent = fetchDetailPage(detailUrl);
-            if (pageContent == null || pageContent.isBlank()) {
-                log.debug("No content fetched from: {}", detailUrl);
-                return null;
-            }
-            
-            // 解析详情内容
-            String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl);
-            if (detailContent != null && detailContent.length() > 100) {
-                log.debug("Enhanced job description for '{}' from: {}", job.title(), detailUrl);
-                
-                // 尝试提取更好的职位编号并更新
-                String betterJobId = extractJobId(pageContent, job.externalId());
-                if (!betterJobId.equals(job.externalId())) {
-                    log.debug("Updated external ID from '{}' to '{}' for job '{}'", 
-                             job.externalId(), betterJobId, job.title());
-                    // 这里我们需要创建一个新的ParsedJob实例来更新external_id
-                    // 但由于ParsedJob是record，我们需要在调用方处理这个逻辑
-                }
-                
-                return detailContent;
-            }
-            
-            return null;
-            
-        } catch (Exception e) {
-            log.warn("Failed to enhance job description for '{}': {}", job.title(), e.getMessage());
-            return null;
-        }
     }
 
     /**
@@ -331,13 +281,32 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     }
 
     /**
-     * 判断是否应该保留HTML格式
+     * 判断是否应该保留HTML格式 - 通用化版本
      */
     private boolean shouldPreserveHtmlFormat(ParserProfile.DetailFetchConfig config, String url) {
-        // 可以根据URL或配置决定是否保留HTML
-        // 对于Apple Jobs，保留HTML以获得更好的格式
-        return url.contains("jobs.apple.com") || 
-               config.getContentSelectors().stream().anyMatch(s -> s.contains("section") || s.contains("div"));
+        // 优先检查配置中的明确设置
+        if (config.shouldPreserveHtml() != null) {
+            return config.shouldPreserveHtml();
+        }
+        
+        // 基于URL模式的智能判断
+        String[] htmlFormattedSites = {
+            "jobs.apple.com",
+            "careers.airbnb.com", 
+            "careers.google.com",
+            "careers.microsoft.com",
+            "jobs.netflix.com"
+        };
+        
+        for (String site : htmlFormattedSites) {
+            if (url.contains(site)) {
+                return true;
+            }
+        }
+        
+        // 基于选择器特征的判断
+        return config.getContentSelectors().stream()
+                .anyMatch(s -> s.contains("section") || s.contains("div[class*") || s.contains("#description"));
     }
 
     /**
@@ -398,36 +367,43 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     }
 
     /**
-     * 从页面内容中提取职位编号作为更好的external_id
+     * 从页面内容中提取职位编号作为更好的external_id - 通用化版本
      */
-    private String extractJobId(String pageContent, String fallbackExternalId) {
+    private String extractJobId(String pageContent, String fallbackExternalId, ParserProfile.DetailFetchConfig config) {
         try {
-            // 尝试提取Role Number
-            var roleNumberPatterns = new String[]{
-                "Role Number[:\\s]*([0-9-]+)",
-                "role[\\s\\-_]*number[:\\s]*([0-9-]+)", 
-                "job[\\s\\-_]*id[:\\s]*([0-9-]+)",
-                "position[\\s\\-_]*id[:\\s]*([0-9-]+)"
-            };
+            // 使用配置中的提取模式，如果没有则使用默认模式
+            var patterns = getJobIdPatterns(config);
             
-            for (String pattern : roleNumberPatterns) {
+            for (String pattern : patterns) {
                 var matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE)
                         .matcher(pageContent);
                 if (matcher.find()) {
-                    String roleNumber = matcher.group(1).trim();
-                    if (!roleNumber.isBlank()) {
-                        log.debug("Extracted job ID '{}' from page content", roleNumber);
-                        return roleNumber;
+                    String jobId = matcher.group(1).trim();
+                    if (!jobId.isBlank()) {
+                        log.debug("Extracted job ID '{}' using pattern '{}'", jobId, pattern);
+                        return jobId;
                     }
                 }
             }
             
-            // 如果没找到，从URL中提取数字部分
+            // 如果没找到，从URL中提取
             if (fallbackExternalId != null && fallbackExternalId.contains("/")) {
-                var urlMatcher = java.util.regex.Pattern.compile("/details/([0-9-]+)")
-                        .matcher(fallbackExternalId);
-                if (urlMatcher.find()) {
-                    return urlMatcher.group(1);
+                // 通用的URL ID提取模式
+                var urlPatterns = new String[]{
+                    "/(?:details|job|position|career)/([A-Za-z0-9-]+)",
+                    "/([A-Za-z0-9-]+)/?(?:\\?|$)",
+                    "id=([A-Za-z0-9-]+)"
+                };
+                
+                for (String urlPattern : urlPatterns) {
+                    var urlMatcher = java.util.regex.Pattern.compile(urlPattern).matcher(fallbackExternalId);
+                    if (urlMatcher.find()) {
+                        String extractedId = urlMatcher.group(1);
+                        if (!extractedId.isBlank() && extractedId.length() > 3) {
+                            log.debug("Extracted job ID '{}' from URL using pattern '{}'", extractedId, urlPattern);
+                            return extractedId;
+                        }
+                    }
                 }
             }
             
@@ -436,6 +412,91 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
         }
         
         return fallbackExternalId; // 回退到原始值
+    }
+
+    /**
+     * 获取职位ID提取模式 - 支持配置化
+     */
+    private String[] getJobIdPatterns(ParserProfile.DetailFetchConfig config) {
+        // 通用的职位ID提取模式
+        return new String[]{
+            // Apple Jobs
+            "Role Number[:\\s]*([A-Za-z0-9-]+)",
+            // Google Careers  
+            "Job ID[:\\s]*([A-Za-z0-9-]+)",
+            // Microsoft Careers
+            "Job number[:\\s]*([A-Za-z0-9-]+)",
+            // Airbnb
+            "Requisition[:\\s]*(?:ID[:\\s]*)?([A-Za-z0-9-]+)",
+            // Netflix
+            "Position ID[:\\s]*([A-Za-z0-9-]+)",
+            // Amazon
+            "Job ID[:\\s]*([A-Za-z0-9-]+)",
+            // 通用模式
+            "(?:Job|Position|Role|Req)\\s*(?:ID|Number|#)[:\\s]*([A-Za-z0-9-]+)",
+            "ID[:\\s]+([A-Za-z0-9]{5,})",
+        };
+    }
+
+    /**
+     * 清理和优化external_id - 从URL中提取最佳标识符
+     */
+    private String cleanExternalId(String rawExternalId, String jobUrl, String title) {
+        // 尝试从URL中提取数字ID
+        if (jobUrl != null && !jobUrl.isBlank()) {
+            // 匹配常见的职位ID模式
+            var patterns = new String[]{
+                "/positions/(\\d+)/",           // Airbnb: /positions/7174313/
+                "/job/([A-Za-z0-9-]+)",         // 通用: /job/abc-123
+                "/career/([A-Za-z0-9-]+)",      // 通用: /career/def-456
+                "/details/([A-Za-z0-9-]+)",     // Apple: /details/200619104
+                "\\?id=([A-Za-z0-9-]+)",       // 查询参数: ?id=xyz789
+                "/([A-Za-z0-9-]{5,})/?$"       // URL末尾的ID
+            };
+            
+            for (String pattern : patterns) {
+                try {
+                    var matcher = java.util.regex.Pattern.compile(pattern).matcher(jobUrl);
+                    if (matcher.find()) {
+                        String extractedId = matcher.group(1);
+                        if (!extractedId.isBlank() && extractedId.length() >= 3) {
+                            log.debug("Extracted clean external ID '{}' from URL: {}", extractedId, jobUrl);
+                            return extractedId;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("Pattern matching error: {}", e.getMessage());
+                }
+            }
+        }
+        
+        // 如果rawExternalId是有效的数字或短字符串，直接使用
+        if (rawExternalId != null && !rawExternalId.isBlank()) {
+            // 如果是纯数字或合理长度的字符串
+            if (rawExternalId.matches("\\d+") || (rawExternalId.length() >= 3 && rawExternalId.length() <= 20)) {
+                return rawExternalId;
+            }
+            
+            // 如果是URL，尝试从中提取
+            if (rawExternalId.contains("/")) {
+                for (String pattern : new String[]{"/(\\d+)/?", "/([A-Za-z0-9-]{3,})/?$"}) {
+                    try {
+                        var matcher = java.util.regex.Pattern.compile(pattern).matcher(rawExternalId);
+                        if (matcher.find()) {
+                            return matcher.group(1);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+        
+        // 最后回退到title的hash或截断版本
+        if (title != null && !title.isBlank()) {
+            return String.valueOf(Math.abs(title.hashCode()));
+        }
+        
+        // 完全失败的情况，生成随机ID
+        return "job-" + System.currentTimeMillis() % 1000000;
     }
 
     /**
