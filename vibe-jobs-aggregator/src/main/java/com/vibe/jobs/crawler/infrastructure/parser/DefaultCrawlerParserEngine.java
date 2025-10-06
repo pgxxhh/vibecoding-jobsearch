@@ -49,24 +49,95 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 continue;
             }
             
-            // 获取详细内容（如果配置了详情获取）
-            String enhancedDescription = enhanceJobDescription(job, profile);
-            String finalDescription = enhancedDescription != null ? enhancedDescription : job.description();
+            // 获取详细内容和增强的职位信息（如果配置了详情获取）
+            EnhancedJobResult enhanced = enhanceJobWithDetails(job, profile);
+            ParsedJob finalJob = enhanced.job();
+            String finalDescription = enhanced.description();
             
             Job domainJob = Job.builder()
                     .source(resolveSourceName(context))
-                    .externalId(job.externalId().isBlank() ? job.title() : job.externalId())
-                    .title(job.title())
-                    .company(resolveCompany(context, job))
-                    .location(job.location())
-                    .level(job.level())
-                    .postedAt(job.postedAt() == null ? Instant.now() : job.postedAt())
-                    .url(job.url())
-                    .tags(normalizeTags(job.tags()))
+                    .externalId(finalJob.externalId().isBlank() ? finalJob.title() : finalJob.externalId())
+                    .title(finalJob.title())
+                    .company(resolveCompany(context, finalJob))
+                    .location(finalJob.location())
+                    .level(finalJob.level())
+                    .postedAt(finalJob.postedAt() == null ? Instant.now() : finalJob.postedAt())
+                    .url(finalJob.url())
+                    .tags(normalizeTags(finalJob.tags()))
                     .build();
             results.add(new CrawlResult(new FetchedJob(domainJob, finalDescription), finalDescription, Map.of()));
         }
         return results;
+    }
+
+    /**
+     * 增强职位信息，包括详情内容和更好的external_id
+     */
+    private EnhancedJobResult enhanceJobWithDetails(ParsedJob job, ParserProfile profile) {
+        ParserProfile.DetailFetchConfig detailConfig = profile.getDetailFetchConfig();
+        
+        if (!detailConfig.isEnabled()) {
+            return new EnhancedJobResult(job, job.description());
+        }
+        
+        try {
+            // 构建详情URL
+            String detailUrl = buildDetailUrl(job, detailConfig);
+            if (detailUrl == null || detailUrl.isBlank()) {
+                log.debug("Cannot build detail URL for job: {}", job.title());
+                return new EnhancedJobResult(job, job.description());
+            }
+            
+            // 获取详情页面内容
+            String pageContent = fetchDetailPage(detailUrl);
+            if (pageContent == null || pageContent.isBlank()) {
+                log.debug("No content fetched from: {}", detailUrl);
+                return new EnhancedJobResult(job, job.description());
+            }
+            
+            // 解析详情内容
+            String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl);
+            
+            // 尝试提取更好的职位编号
+            String betterJobId = extractJobId(pageContent, job.externalId());
+            
+            // 创建增强后的职位信息
+            ParsedJob enhancedJob = job;
+            if (!betterJobId.equals(job.externalId())) {
+                log.debug("Updated external ID from '{}' to '{}' for job '{}'", 
+                         job.externalId(), betterJobId, job.title());
+                enhancedJob = new ParsedJob(
+                    betterJobId,  // 使用更好的职位编号
+                    job.title(),
+                    job.company(), 
+                    job.location(),
+                    job.url(),
+                    job.level(),
+                    job.postedAt(),
+                    job.tags(),
+                    job.description()
+                );
+            }
+            
+            String finalDescription = detailContent != null && detailContent.length() > 100 ? 
+                detailContent : job.description();
+            
+            if (detailContent != null && detailContent.length() > 100) {
+                log.debug("Enhanced job description for '{}' from: {}", job.title(), detailUrl);
+            }
+            
+            return new EnhancedJobResult(enhancedJob, finalDescription);
+            
+        } catch (Exception e) {
+            log.warn("Failed to enhance job details for '{}': {}", job.title(), e.getMessage());
+            return new EnhancedJobResult(job, job.description());
+        }
+    }
+
+    /**
+     * 增强职位结果的包装类
+     */
+    private record EnhancedJobResult(ParsedJob job, String description) {
     }
 
     private String resolveSourceName(CrawlContext context) {
@@ -122,6 +193,16 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl);
             if (detailContent != null && detailContent.length() > 100) {
                 log.debug("Enhanced job description for '{}' from: {}", job.title(), detailUrl);
+                
+                // 尝试提取更好的职位编号并更新
+                String betterJobId = extractJobId(pageContent, job.externalId());
+                if (!betterJobId.equals(job.externalId())) {
+                    log.debug("Updated external ID from '{}' to '{}' for job '{}'", 
+                             job.externalId(), betterJobId, job.title());
+                    // 这里我们需要创建一个新的ParsedJob实例来更新external_id
+                    // 但由于ParsedJob是record，我们需要在调用方处理这个逻辑
+                }
+                
                 return detailContent;
             }
             
@@ -197,11 +278,15 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     }
 
     /**
-     * 解析详情内容
+     * 解析详情内容 - 优化版本，支持HTML格式保留和职位编号提取
      */
     private String parseDetailContent(String pageContent, ParserProfile.DetailFetchConfig config, String url) {
         try {
             Document doc = Jsoup.parse(pageContent);
+            
+            // 检查是否需要HTML格式
+            boolean preserveHtml = shouldPreserveHtmlFormat(config, url);
+            
             StringBuilder content = new StringBuilder();
             
             // 使用配置的选择器提取内容
@@ -209,14 +294,26 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 try {
                     var elements = doc.select(selector);
                     for (Element element : elements) {
-                        String text = element.text().trim();
-                        if (!text.isBlank() && text.length() > 50) {
+                        String extractedContent;
+                        
+                        if (preserveHtml) {
+                            // 保留HTML格式，但清理不必要的标签和属性
+                            extractedContent = cleanHtmlContent(element);
+                        } else {
+                            // 纯文本提取
+                            extractedContent = element.text().trim();
+                        }
+                        
+                        if (!extractedContent.isBlank() && extractedContent.length() > 50) {
                             // 避免重复内容
-                            if (content.length() == 0 || !content.toString().contains(text.substring(0, Math.min(50, text.length())))) {
+                            String preview = extractedContent.length() > 50 ? 
+                                extractedContent.substring(0, 50).replaceAll("<[^>]*>", "") : extractedContent;
+                            
+                            if (content.length() == 0 || !content.toString().contains(preview)) {
                                 if (content.length() > 0) {
-                                    content.append("\n\n");
+                                    content.append(preserveHtml ? "\n\n" : "\n\n");
                                 }
-                                content.append(text);
+                                content.append(extractedContent);
                             }
                         }
                     }
@@ -231,6 +328,114 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             log.debug("Error parsing detail content from {}: {}", url, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 判断是否应该保留HTML格式
+     */
+    private boolean shouldPreserveHtmlFormat(ParserProfile.DetailFetchConfig config, String url) {
+        // 可以根据URL或配置决定是否保留HTML
+        // 对于Apple Jobs，保留HTML以获得更好的格式
+        return url.contains("jobs.apple.com") || 
+               config.getContentSelectors().stream().anyMatch(s -> s.contains("section") || s.contains("div"));
+    }
+
+    /**
+     * 清理HTML内容，保留格式但移除不必要的标签和属性
+     */
+    private String cleanHtmlContent(Element element) {
+        // 克隆元素以避免修改原始DOM
+        Element cleaned = element.clone();
+        
+        // 移除不必要的属性，保留基本格式标签
+        cleaned.select("*").forEach(el -> {
+            // 保留的标签
+            String tagName = el.tagName().toLowerCase();
+            if (!isAllowedTag(tagName)) {
+                el.unwrap(); // 移除标签但保留内容
+                return;
+            }
+            
+            // 清理属性，只保留必要的
+            el.attributes().asList().forEach(attr -> {
+                if (!isAllowedAttribute(attr.getKey())) {
+                    el.removeAttr(attr.getKey());
+                }
+            });
+        });
+        
+        // 清理空白和格式化
+        String html = cleaned.html()
+                .replaceAll("(?m)^\\s*$", "") // 移除空行
+                .replaceAll("\\s{2,}", " ") // 压缩多余空格
+                .trim();
+        
+        return html.isBlank() ? cleaned.text().trim() : html;
+    }
+
+    /**
+     * 允许的HTML标签（保留格式用）
+     */
+    private boolean isAllowedTag(String tagName) {
+        return switch (tagName) {
+            case "h1", "h2", "h3", "h4", "h5", "h6" -> true; // 标题
+            case "p", "div", "section" -> true;               // 段落和容器
+            case "ul", "ol", "li" -> true;                    // 列表
+            case "strong", "b", "em", "i" -> true;           // 强调
+            case "br" -> true;                                // 换行
+            default -> false;
+        };
+    }
+
+    /**
+     * 允许的HTML属性
+     */
+    private boolean isAllowedAttribute(String attrName) {
+        return switch (attrName.toLowerCase()) {
+            case "id", "class" -> true;  // 基本属性
+            default -> false;
+        };
+    }
+
+    /**
+     * 从页面内容中提取职位编号作为更好的external_id
+     */
+    private String extractJobId(String pageContent, String fallbackExternalId) {
+        try {
+            // 尝试提取Role Number
+            var roleNumberPatterns = new String[]{
+                "Role Number[:\\s]*([0-9-]+)",
+                "role[\\s\\-_]*number[:\\s]*([0-9-]+)", 
+                "job[\\s\\-_]*id[:\\s]*([0-9-]+)",
+                "position[\\s\\-_]*id[:\\s]*([0-9-]+)"
+            };
+            
+            for (String pattern : roleNumberPatterns) {
+                var matcher = java.util.regex.Pattern.compile(pattern, java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(pageContent);
+                if (matcher.find()) {
+                    String roleNumber = matcher.group(1).trim();
+                    if (!roleNumber.isBlank()) {
+                        log.debug("Extracted job ID '{}' from page content", roleNumber);
+                        return roleNumber;
+                    }
+                }
+            }
+            
+            // 如果没找到，从URL中提取数字部分
+            if (fallbackExternalId != null && fallbackExternalId.contains("/")) {
+                var urlMatcher = java.util.regex.Pattern.compile("/details/([0-9-]+)")
+                        .matcher(fallbackExternalId);
+                if (urlMatcher.find()) {
+                    return urlMatcher.group(1);
+                }
+            }
+            
+        } catch (Exception e) {
+            log.debug("Failed to extract job ID: {}", e.getMessage());
+        }
+        
+        return fallbackExternalId; // 回退到原始值
     }
 
     /**
