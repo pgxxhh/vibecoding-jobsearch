@@ -28,16 +28,19 @@ public class CrawlerOrchestrator {
     private final HybridCrawlerExecutionEngine executionEngine;
     private final CrawlerParserEngine parserEngine;
     private final Clock clock;
+    private final CrawlerRateLimiter rateLimiter;
 
     public CrawlerOrchestrator(CrawlerBlueprintRepository blueprintRepository,
                                CrawlRunRepository runRepository,
                                HybridCrawlerExecutionEngine executionEngine,
                                CrawlerParserEngine parserEngine,
+                               CrawlerRateLimiter rateLimiter,
                                java.util.Optional<Clock> clock) {
         this.blueprintRepository = blueprintRepository;
         this.runRepository = runRepository;
         this.executionEngine = executionEngine;
         this.parserEngine = parserEngine;
+        this.rateLimiter = rateLimiter;
         this.clock = clock.orElse(Clock.systemUTC());
     }
 
@@ -55,7 +58,7 @@ public class CrawlerOrchestrator {
         List<CrawlResult> results = new ArrayList<>();
         boolean success = false;
         String error = "";
-        try {
+        try (CrawlerRateLimiter.Permit ignored = rateLimiter.acquire(blueprint)) {
             CrawlPageSnapshot snapshot = executionEngine.fetch(session, request.pagination());
             results = parserEngine.parse(session, snapshot);
             success = true;

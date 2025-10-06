@@ -50,6 +50,7 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
         CrawlFlow flow = resolveFlow(config);
         CrawlBlueprint.RateLimit rateLimit = resolveRateLimit(config);
         Map<String, Object> metadata = config == null || config.metadata == null ? Map.of() : config.metadata;
+        AutomationSettings automation = resolveAutomation(config);
         String entryUrl = entity.getEntryUrl() == null || entity.getEntryUrl().isBlank()
                 ? (config == null ? "" : Optional.ofNullable(config.entryUrl).orElse(""))
                 : entity.getEntryUrl();
@@ -63,7 +64,8 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
                 flow,
                 parserProfile,
                 rateLimit,
-                metadata
+                metadata,
+                automation
         );
     }
 
@@ -119,6 +121,60 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
         return CrawlBlueprint.RateLimit.of(rpm, burst);
     }
 
+    private AutomationSettings resolveAutomation(BlueprintConfig config) {
+        if (config == null || config.automation == null) {
+            return AutomationSettings.disabled();
+        }
+        BlueprintConfig.Automation automation = config.automation;
+        boolean enabled = Boolean.TRUE.equals(automation.enabled);
+        boolean jsEnabled = Boolean.TRUE.equals(automation.jsEnabled);
+        AutomationSettings.SearchSettings searchSettings = buildSearchSettings(automation.search);
+        return new AutomationSettings(
+                enabled,
+                jsEnabled,
+                automation.waitForSelector,
+                automation.waitForMilliseconds,
+                searchSettings
+        );
+    }
+
+    private AutomationSettings.SearchSettings buildSearchSettings(BlueprintConfig.Search search) {
+        if (search == null) {
+            return AutomationSettings.SearchSettings.disabled();
+        }
+        boolean enabled = Boolean.TRUE.equals(search.enabled);
+        List<AutomationSettings.SearchField> fields = new ArrayList<>();
+        if (search.fields != null) {
+            for (BlueprintConfig.SearchField field : search.fields) {
+                if (field == null) {
+                    continue;
+                }
+                AutomationSettings.FillStrategy strategy = AutomationSettings.FillStrategy.FILL;
+                if (field.strategy != null && !field.strategy.isBlank()) {
+                    try {
+                        strategy = AutomationSettings.FillStrategy.valueOf(field.strategy.trim().toUpperCase(Locale.ROOT));
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+                fields.add(new AutomationSettings.SearchField(
+                        field.selector,
+                        field.optionKey,
+                        field.constantValue,
+                        strategy,
+                        field.clearBefore,
+                        field.required
+                ));
+            }
+        }
+        return new AutomationSettings.SearchSettings(
+                enabled,
+                fields,
+                search.submitSelector,
+                search.waitForSelector,
+                search.waitAfterSubmitMs
+        );
+    }
+
     private ParserProfile buildProfile(BlueprintConfig.Parser parser) {
         if (parser == null) {
             return ParserProfile.empty();
@@ -170,6 +226,7 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
         public RateLimit rateLimit;
         public Map<String, Object> metadata;
         public List<FlowStep> flow;
+        public Automation automation;
 
         static class Paging {
             public String mode;
@@ -204,6 +261,31 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
         static class FlowStep {
             public String type;
             public Map<String, Object> options;
+        }
+
+        static class Automation {
+            public Boolean enabled;
+            public Boolean jsEnabled;
+            public String waitForSelector;
+            public Integer waitForMilliseconds;
+            public Search search;
+        }
+
+        static class Search {
+            public Boolean enabled;
+            public List<SearchField> fields;
+            public String submitSelector;
+            public String waitForSelector;
+            public Integer waitAfterSubmitMs;
+        }
+
+        static class SearchField {
+            public String selector;
+            public String optionKey;
+            public String constantValue;
+            public String strategy;
+            public Boolean clearBefore;
+            public Boolean required;
         }
     }
 }
