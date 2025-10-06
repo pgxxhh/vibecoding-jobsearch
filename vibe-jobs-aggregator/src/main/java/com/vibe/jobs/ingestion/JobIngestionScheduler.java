@@ -164,12 +164,12 @@ public class JobIngestionScheduler {
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             List<FetchedJob> cursorFiltered = filterByCursor(roleFiltered, cursor);
             if (cursorFiltered.isEmpty()) {
-                log.debug("No new jobs beyond cursor for source {} ({}) on page {}", sourceName, companyName, page);
+                log.info("No new jobs beyond cursor for source {} ({}) on page {}", sourceName, companyName, page);
                 break;
             }
             JobIngestionResult result = storeJobs(cursorFiltered);
             if (result.persisted() <= 0) {
-                log.debug("All jobs filtered out or skipped for source {} ({}) on page {}", sourceName, companyName, page);
+                log.info("All jobs filtered out or skipped for source {} ({}) on page {}", sourceName, companyName, page);
             } else if (result.lastJob() != null) {
                 cursor = ingestionCursorService.updatePosition(cursorKey, result.lastJob());
             }
