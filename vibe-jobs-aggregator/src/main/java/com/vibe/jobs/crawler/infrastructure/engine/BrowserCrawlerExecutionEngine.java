@@ -4,6 +4,7 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Page.NavigateOptions;
 import com.microsoft.playwright.Page.WaitForSelectorOptions;
+import com.microsoft.playwright.options.WaitUntilState;
 import com.vibe.jobs.crawler.domain.AutomationSettings;
 import com.vibe.jobs.crawler.domain.CrawlBlueprint;
 import com.vibe.jobs.crawler.domain.CrawlFlow;
@@ -52,7 +53,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
 
     private CrawlPageSnapshot execute(CrawlSession session, CrawlPagination pagination, String url, Page page) throws Exception {
         NavigateOptions navigateOptions = new NavigateOptions();
-        navigateOptions.setWaitUntil(Page.LoadState.DOMCONTENTLOADED);
+        navigateOptions.setWaitUntil(WaitUntilState.DOMCONTENTLOADED);
         log.debug("[{}] Navigating to {} with browser engine", session.blueprint().code(), url);
         page.navigate(url, navigateOptions);
         AutomationSettings automation = session.blueprint().automation();
@@ -149,7 +150,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                         String nextUrl = asString(options.get("url"));
                         if (!nextUrl.isBlank()) {
                             String resolved = resolveUrl(page.url(), nextUrl);
-                            page.navigate(resolved, new NavigateOptions().setWaitUntil(Page.LoadState.DOMCONTENTLOADED));
+                            page.navigate(resolved, new NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
                             listHtml = page.content();
                         }
                     }
@@ -226,7 +227,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
             }
             String resolved = resolveUrl(page.url(), href);
             try (Page detail = page.context().newPage()) {
-                detail.navigate(resolved, new NavigateOptions().setWaitUntil(Page.LoadState.DOMCONTENTLOADED));
+                detail.navigate(resolved, new NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
                 snapshots.add(detail.content());
             } catch (RuntimeException ex) {
                 log.debug("Failed to collect detail page {}: {}", resolved, ex.getMessage());

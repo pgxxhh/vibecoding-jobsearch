@@ -197,14 +197,31 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
                         field.constant,
                         field.format,
                         field.delimiter,
-                        Boolean.TRUE.equals(field.required)
+                        Boolean.TRUE.equals(field.required),
+                        field.baseUrl  // 添加baseUrl支持
                 );
                 fields.put(name, parserField);
             });
         }
         Set<String> tagFields = parser.tagFields == null ? Set.of() : new LinkedHashSet<>(parser.tagFields);
         String descriptionField = parser.descriptionField;
-        return ParserProfile.of(parser.listSelector, fields, tagFields, descriptionField);
+        
+        // 构建详情获取配置
+        ParserProfile.DetailFetchConfig detailFetchConfig = ParserProfile.DetailFetchConfig.disabled();
+        if (parser.detailFetch != null && Boolean.TRUE.equals(parser.detailFetch.enabled)) {
+            List<String> contentSelectors = parser.detailFetch.contentSelectors != null ? 
+                parser.detailFetch.contentSelectors : List.of();
+            long delayMs = parser.detailFetch.delayMs != null ? parser.detailFetch.delayMs : 1000L;
+            
+            detailFetchConfig = ParserProfile.DetailFetchConfig.of(
+                parser.detailFetch.baseUrl,
+                parser.detailFetch.urlField != null ? parser.detailFetch.urlField : "url",
+                contentSelectors,
+                delayMs
+            );
+        }
+        
+        return ParserProfile.of(parser.listSelector, fields, tagFields, descriptionField, detailFetchConfig);
     }
 
     private BlueprintConfig readConfig(String json) {
@@ -241,6 +258,7 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
             public Map<String, Field> fields;
             public List<String> tagFields;
             public String descriptionField;
+            public DetailFetch detailFetch;
         }
 
         static class Field {
@@ -251,6 +269,15 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
             public String format;
             public String delimiter;
             public Boolean required;
+            public String baseUrl;
+        }
+
+        static class DetailFetch {
+            public Boolean enabled;
+            public String baseUrl;
+            public String urlField;
+            public List<String> contentSelectors;
+            public Long delayMs;
         }
 
         static class RateLimit {

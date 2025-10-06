@@ -8,9 +8,9 @@ import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 
@@ -46,7 +46,7 @@ public class BrowserSessionManager implements Closeable {
             playwright = Playwright.create();
             BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions();
             launchOptions.setHeadless(true);
-            launchOptions.setArgs(new String[]{"--disable-dev-shm-usage", "--no-sandbox"});
+            launchOptions.setArgs(Arrays.asList("--disable-dev-shm-usage", "--no-sandbox"));
             browser = playwright.chromium().launch(launchOptions);
             return browser;
         } finally {
