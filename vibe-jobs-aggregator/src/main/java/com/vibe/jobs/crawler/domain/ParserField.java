@@ -120,7 +120,7 @@ public class ParserField {
 
     private List<Element> select(Element element) {
         if (selector == null || selector.isBlank() || selector.trim().isEmpty()) {
-            return Collections.singletonList(element);
+            return List.of();
         }
 
         // Clean the selector to avoid empty string issues
@@ -139,8 +139,32 @@ public class ParserField {
             }
             return elements.stream().toList();
         } catch (Exception e) {
-            // If selector parsing fails, return the element itself
             log.debug("Selector parsing failed for '{}': {}", cleanSelector, e.getMessage());
+            if (cleanSelector.contains(",")) {
+                List<Element> aggregated = new java.util.ArrayList<>();
+                for (String part : cleanSelector.split(",")) {
+                    String trimmed = part == null ? "" : part.trim();
+                    if (trimmed.isEmpty()) {
+                        continue;
+                    }
+                    if (".".equals(trimmed)) {
+                        aggregated.add(element);
+                        continue;
+                    }
+                    try {
+                        Elements partial = element.select(trimmed);
+                        if (partial != null && !partial.isEmpty()) {
+                            aggregated.addAll(partial.stream().toList());
+                        }
+                    } catch (Exception ignored) {
+                        log.debug("Sub-selector parsing failed for '{}': {}", trimmed, ignored.getMessage());
+                    }
+                }
+                if (!aggregated.isEmpty()) {
+                    return aggregated;
+                }
+            }
+            // As a fallback return the current element when selector is invalid
             return Collections.singletonList(element);
         }
     }

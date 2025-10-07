@@ -41,6 +41,8 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     public List<CrawlResult> parse(CrawlSession session, CrawlPageSnapshot snapshot) {
         ParserProfile profile = session.blueprint().parserProfile();
         List<ParsedJob> parsed = profile.parse(snapshot.pageContent());
+        List<String> detailSnapshots = snapshot.detailContents();
+        int detailIndex = 0;
         List<CrawlResult> results = new ArrayList<>();
         CrawlContext context = session.context();
         
@@ -50,7 +52,15 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             }
             
             // 获取详细内容和增强的职位信息（如果配置了详情获取）
-            EnhancedJobResult enhanced = enhanceJobWithDetails(job, profile);
+            String inlineDetail = null;
+            if (detailIndex < detailSnapshots.size()) {
+                inlineDetail = detailSnapshots.get(detailIndex++);
+                if (inlineDetail != null && inlineDetail.isBlank()) {
+                    inlineDetail = null;
+                }
+            }
+
+            EnhancedJobResult enhanced = enhanceJobWithDetails(job, profile, inlineDetail);
             ParsedJob finalJob = enhanced.job();
             String finalDescription = enhanced.description();
             
@@ -73,31 +83,35 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     /**
      * 增强职位信息，包括详情内容和更好的external_id
      */
-    private EnhancedJobResult enhanceJobWithDetails(ParsedJob job, ParserProfile profile) {
+    private EnhancedJobResult enhanceJobWithDetails(ParsedJob job, ParserProfile profile, String inlineDetailPage) {
         ParserProfile.DetailFetchConfig detailConfig = profile.getDetailFetchConfig();
-        
-        if (!detailConfig.isEnabled()) {
+
+        if (!detailConfig.isEnabled() && inlineDetailPage == null) {
             return new EnhancedJobResult(job, job.description());
         }
-        
+
         try {
             // 构建详情URL
             String detailUrl = buildDetailUrl(job, detailConfig);
-            if (detailUrl == null || detailUrl.isBlank()) {
+            if ((detailUrl == null || detailUrl.isBlank()) && inlineDetailPage == null) {
                 log.debug("Cannot build detail URL for job: {}", job.title());
                 return new EnhancedJobResult(job, job.description());
             }
-            
+
             // 获取详情页面内容
-            String pageContent = fetchDetailPage(detailUrl);
+            String pageContent = inlineDetailPage;
             if (pageContent == null || pageContent.isBlank()) {
-                log.debug("No content fetched from: {}", detailUrl);
+                pageContent = fetchDetailPage(detailUrl);
+            }
+            if (pageContent == null || pageContent.isBlank()) {
+                log.debug("No content fetched from: {}", detailUrl != null ? detailUrl : "inline-detail");
                 return new EnhancedJobResult(job, job.description());
             }
-            
+
             // 解析详情内容
-            String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl);
-            
+            String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl != null ? detailUrl : job.url());
+            detailContent = stripRedundantHeader(job, detailContent);
+
             // 尝试提取更好的职位编号
             String betterJobId = extractJobId(pageContent, job.externalId(), detailConfig);
             
@@ -119,7 +133,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 );
             }
             
-            String finalDescription = detailContent != null && detailContent.length() > 100 ? 
+            String finalDescription = detailContent != null && !detailContent.isBlank() ?
                 detailContent : job.description();
             
             if (detailContent != null && detailContent.length() > 100) {
@@ -272,6 +286,12 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 }
             }
             
+            if (content.length() == 0) {
+                content.append(doc.body().html().trim());
+            }
+            if (content.length() == 0) {
+                content.append(doc.body().text().trim());
+            }
             return content.length() > 0 ? content.toString() : null;
             
         } catch (Exception e) {
@@ -364,6 +384,88 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             case "id", "class" -> true;  // 基本属性
             default -> false;
         };
+    }
+
+    private String stripRedundantHeader(ParsedJob job, String detailContent) {
+        if (detailContent == null || detailContent.isBlank()) {
+            return detailContent;
+        }
+        String title = job.title() == null ? "" : job.title().trim();
+        String location = job.location() == null ? "" : job.location().trim();
+        String cleaned = detailContent;
+        try {
+            if (detailContent.contains("<")) {
+                Document fragment = Jsoup.parseBodyFragment(detailContent);
+                Element body = fragment.body();
+                stripMatchingChildren(body, title, location);
+                cleaned = body.html().trim();
+                if (cleaned.isBlank()) {
+                    cleaned = body.text().trim();
+                }
+            } else {
+                cleaned = removeLeadingLines(detailContent, title, location);
+            }
+        } catch (Exception ex) {
+            log.debug("Failed to strip header from detail content: {}", ex.getMessage());
+        }
+        return cleaned.isBlank() ? detailContent : cleaned;
+    }
+
+    private void stripMatchingChildren(Element body, String title, String location) {
+        if (body == null) {
+            return;
+        }
+        List<Element> children = new ArrayList<>(body.children());
+        int removed = 0;
+        for (Element child : children) {
+            if (removed >= 3) {
+                break;
+            }
+            String text = child.text().trim();
+            if (matchesHeaderText(text, title, location)) {
+                child.remove();
+                removed++;
+            } else {
+                break;
+            }
+        }
+    }
+
+    private String removeLeadingLines(String detailContent, String title, String location) {
+        String[] lines = detailContent.split("\n");
+        List<String> remaining = new ArrayList<>();
+        boolean skipping = true;
+        int removed = 0;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (skipping && removed < 3 && matchesHeaderText(trimmed, title, location)) {
+                removed++;
+                continue;
+            }
+            skipping = false;
+            remaining.add(line);
+        }
+        return String.join("\n", remaining).trim();
+    }
+
+    private boolean matchesHeaderText(String text, String title, String location) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        String normalized = text.strip();
+        if (!title.isBlank() && normalized.equalsIgnoreCase(title)) {
+            return true;
+        }
+        if (!location.isBlank() && normalized.equalsIgnoreCase(location)) {
+            return true;
+        }
+        if (!title.isBlank() && !location.isBlank()) {
+            String combined = (title + " " + location).trim();
+            if (normalized.equalsIgnoreCase(combined)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
