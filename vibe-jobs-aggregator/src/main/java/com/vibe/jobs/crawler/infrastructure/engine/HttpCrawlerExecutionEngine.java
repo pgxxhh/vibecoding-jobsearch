@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
@@ -18,6 +19,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class HttpCrawlerExecutionEngine implements CrawlerExecutionEngine {
 
     private static final Logger log = LoggerFactory.getLogger(HttpCrawlerExecutionEngine.class);
+    private static final int MAX_BUFFER_SIZE_BYTES = 2 * 1024 * 1024; // allow ~2MB HTML payloads
+    private static final ExchangeStrategies CUSTOM_STRATEGIES = ExchangeStrategies.builder()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(MAX_BUFFER_SIZE_BYTES))
+            .build();
     private final WebClient.Builder webClientBuilder;
 
     public HttpCrawlerExecutionEngine(WebClient.Builder webClientBuilder) {
@@ -31,14 +36,15 @@ public class HttpCrawlerExecutionEngine implements CrawlerExecutionEngine {
         if (url == null || url.isBlank()) {
             return new CrawlPageSnapshot("", java.util.List.of(), Map.of("status", 400));
         }
-        WebClient client = webClientBuilder
-                .baseUrl(url)
+        WebClient client = webClientBuilder.clone()
+                .exchangeStrategies(CUSTOM_STRATEGIES)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.TEXT_HTML_VALUE)
                 .defaultHeader(HttpHeaders.USER_AGENT, randomUserAgent())
                 .build();
 
         log.debug("Fetching crawl page {} for blueprint {}", pagination.page(), blueprint.code());
         String body = client.get()
+                .uri(url)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block(Duration.ofSeconds(30));

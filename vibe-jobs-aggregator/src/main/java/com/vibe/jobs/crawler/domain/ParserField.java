@@ -96,13 +96,14 @@ public class ParserField {
                         .map(String::trim)
                         .filter(value -> !value.isBlank())
                         .orElse(null);
-                
-                // 如果是URL属性且值是相对路径，尝试转换为绝对URL
-                if (rawValue != null && "href".equals(attribute) && rawValue.startsWith("/")) {
-                    // 优先使用字段配置的baseUrl
-                    String resolvedBaseUrl = !baseUrl.isBlank() ? baseUrl : extractBaseUrl(element);
-                    if (resolvedBaseUrl != null) {
-                        yield resolvedBaseUrl + rawValue;
+
+                if (rawValue != null && "href".equals(attribute)) {
+                    if (!rawValue.startsWith("http://") && !rawValue.startsWith("https://")) {
+                        String resolvedBaseUrl = !baseUrl.isBlank() ? baseUrl : extractBaseUrl(element);
+                        if (resolvedBaseUrl != null) {
+                            String separator = resolvedBaseUrl.endsWith("/") || rawValue.startsWith("/") ? "" : "/";
+                            yield resolvedBaseUrl + separator + (rawValue.startsWith("/") ? rawValue.substring(1) : rawValue);
+                        }
                     }
                 }
                 yield rawValue;
