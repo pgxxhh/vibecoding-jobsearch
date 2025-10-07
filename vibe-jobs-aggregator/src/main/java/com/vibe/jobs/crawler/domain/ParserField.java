@@ -122,9 +122,12 @@ public class ParserField {
         if (selector == null || selector.isBlank() || selector.trim().isEmpty()) {
             return Collections.singletonList(element);
         }
-        
+
         // Clean the selector to avoid empty string issues
         String cleanSelector = selector.trim();
+        if (".".equals(cleanSelector)) {
+            return Collections.singletonList(element);
+        }
         if (cleanSelector.isEmpty()) {
             return Collections.singletonList(element);
         }
