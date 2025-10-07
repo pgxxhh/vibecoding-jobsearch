@@ -14,7 +14,7 @@ const translations: Translations = {
     'language.zh': '中文',
     'language.en': 'English',
     'footer.builtWith': '基于 Next.js · Tailwind · TanStack Query 构建',
-    'hero.badge': '每周上新',
+    'hero.badge': '每日上新',
     'hero.title': '发现下一份令人心动的职位',
     'hero.subtitle': '使用智能筛选快速锁定适合你的机会。',
     'subscription.title': '创建订阅提醒',
