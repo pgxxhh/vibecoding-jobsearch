@@ -117,95 +117,58 @@ categories:
 - `CrawlerOrchestrator` 读取蓝图 → 调用 `HybridCrawlerExecutionEngine` 获取 HTML → 用 `DefaultCrawlerParserEngine` 解析为 `FetchedJob` → 将执行信息写入 `crawler_run_log`。
 - 支持通过蓝图的 `rateLimit` 与 `concurrencyLimit` 控制爬虫节奏，避免 403/429。
 
-### JavaScript 渲染支持 🆕
+### JavaScript 渲染与自动化支持 🆕
 
-对于 **SPA (单页应用)** 或需要 **JavaScript 渲染** 的网站（如 React/Vue 构建的 Career Page），系统提供了 Selenium WebDriver 支持：
+对于 **SPA (单页应用)** 或需要 **表单自动填写 / 按钮点击** 才能展示职位列表的 Career Page，系统内置基于 **Playwright** 的浏览器抓取引擎。
 
 #### 引擎选择
-- **HttpCrawlerExecutionEngine**: 静态 HTML 页面（默认）
-- **JsCrawlerExecutionEngine**: JavaScript 渲染页面（Selenium WebDriver）
-- **HybridCrawlerExecutionEngine**: 根据配置自动选择引擎
+- **HttpCrawlerExecutionEngine**：纯静态 HTML 页面（默认）。
+- **BrowserCrawlerExecutionEngine**：由 Playwright 驱动，支持等待、滚动、点击、详情页抓取等交互。
+- **HybridCrawlerExecutionEngine**：自动判断是否使用浏览器（`automation.jsEnabled` 或 `flow` 中存在交互步骤时启用）。
 
-#### JavaScript 配置示例
+#### `automation` 元数据结构
 
-```json
-{
-  "jsEnabled": true,
-  "waitSelector": ".job-tile",
-  "waitSeconds": 10,
-  "additionalWaitMs": 2000,
-  "pageLoadTimeoutSeconds": 30,
-  "chromeOptions": "--disable-blink-features=AutomationControlled,--disable-extensions"
-}
-```
-
-#### 配置参数说明
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `jsEnabled` | boolean | false | 启用 JavaScript 渲染 |
-| `waitSelector` | string | null | 等待的 CSS 选择器，页面加载完成标志 |
-| `waitSeconds` | integer | 10 | 等待动态内容的最大秒数 |
-| `additionalWaitMs` | integer | 0 | 页面就绪后额外等待的毫秒数 |
-| `pageLoadTimeoutSeconds` | integer | 30 | 初始页面加载超时秒数 |
-| `chromeOptions` | string | null | Chrome 选项，逗号分隔 |
-
-#### JavaScript配置示例
-
-```sql
-INSERT INTO crawler_blueprint (
-    code, name, enabled, entry_url, concurrency_limit, config_json, parser_template_code
-) VALUES (
-    'example-js-crawler', 'Example JavaScript Crawler', 1, 
-    'https://example.com/careers', 1,
-    '{
-        "metadata": {
-            "jsEnabled": true,
-            "waitSelector": ".job-listing",
-            "waitSeconds": 10,
-            "additionalWaitMs": 2000,
-            "chromeOptions": "--disable-blink-features=AutomationControlled"
-        },
-        "paging": {"mode": "NONE"},
-        "rateLimit": {"requestsPerMinute": 6, "burst": 1}
-    }',
-    'example-js-parser'
-);
-```
-
-#### 性能优化建议
-
-1. **WebDriver 池管理**: 系统自动复用 Chrome 实例（最大5个）
-2. **资源考虑**: JS 渲染比 HTTP 消耗更多 CPU/内存，建议降低 `concurrencyLimit`
-3. **选择器优化**: 使用具体的 `waitSelector` 而非通用超时
-4. **Chrome 选项**: 禁用不必要的功能以提升性能
-
-#### 常见用例
+在 `crawler_blueprint.config_json` 中新增 `automation` 字段，描述加载等待与搜索行为：
 
 ```json
-// SPA 应用
 {
-  "jsEnabled": true,
-  "waitSelector": "[data-testid='job-list']",
-  "waitSeconds": 15
-}
-
-// AJAX 加载
-{
-  "jsEnabled": true,
-  "waitSelector": ".loading-complete",
-  "waitSeconds": 10,
-  "additionalWaitMs": 1000
-}
-
-// 反爬虫保护
-{
-  "jsEnabled": true,
-  "waitSeconds": 20,
-  "additionalWaitMs": 5000,
-  "chromeOptions": "--disable-blink-features=AutomationControlled,--no-first-run"
+  "entryUrl": "https://careers.example.com/jobs",
+  "automation": {
+    "enabled": true,
+    "jsEnabled": true,
+    "waitForSelector": ".job-card",
+    "waitForMilliseconds": 1000,
+    "search": {
+      "enabled": true,
+      "fields": [
+        { "selector": "#keyword", "optionKey": "searchQuery", "strategy": "FILL", "clearBefore": true },
+        { "selector": "#location", "optionKey": "location", "strategy": "SELECT" }
+      ],
+      "submitSelector": "button[type='submit']",
+      "waitForSelector": "#search-results",
+      "waitAfterSubmitMs": 2000
+    }
+  },
+  "flow": [
+    { "type": "WAIT", "options": { "selector": "#search-results" } },
+    { "type": "SCROLL", "options": { "to": "bottom", "times": 2 } },
+    { "type": "EXTRACT_LIST" },
+    { "type": "EXTRACT_DETAIL", "options": { "selector": "a.job-link", "limit": 5 } }
+  ]
 }
 ```
+
+`baseOptions` / `overrideOptions` 中可提供 `searchQuery`、`location` 等参数，执行时由 Playwright 自动填充输入框并点击搜索按钮。
+
+#### 使用建议
+1. **等待策略**：优先配置 `waitForSelector`，保障页面渲染完成；如站点无明显标识，可使用 `waitForMilliseconds`。
+2. **搜索字段**：`strategy` 支持 `FILL`（输入框）、`SELECT`（下拉框）、`CLICK`（纯按钮）；`optionKey` 对应数据源传入的参数，`constantValue` 可指定固定值。
+3. **详情抓取**：在 `flow` 中加入 `EXTRACT_DETAIL` 步骤并设置 `selector`/`limit`，系统会在后台打开新标签获取详情页 HTML。
+4. **限流控制**：充分利用蓝图的 `rateLimit` 与 `concurrencyLimit`，浏览器抓取资源占用高，建议限制在 1~2 并发。
+
+#### 运行要求
+- 首次运行会下载 Playwright Chromium，容器需允许 `--no-sandbox`、`--disable-dev-shm-usage`。
+- 若生产环境无法联网，可在镜像构建阶段预装浏览器 (`npx playwright install chromium`) 或挂载共享缓存。
 
 > 提示：如果多个公司共用同一职业站，只需在 `crawler_blueprint` 中维护一次解析模板，再通过不同 `JobDataSource.company.overrideOptions.entryUrl` 定位到具体公司页面。
 

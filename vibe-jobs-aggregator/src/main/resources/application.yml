@@ -161,3 +161,9 @@ auth:
     exposeCodeInResponse: true
     fromAddress: 975022570@qq.com
     sender: ${AUTH_EMAIL_SENDER:smtp}
+
+# 职位详情增强功能配置（定时任务相关，当前功能已集成到爬虫中）
+jobs:
+  detail-enhancement:
+    enabled: true
+

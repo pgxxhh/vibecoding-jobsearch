@@ -20,6 +20,7 @@ public class CrawlBlueprint {
     private final ParserProfile parserProfile;
     private final RateLimit rateLimit;
     private final Map<String, Object> metadata;
+    private final AutomationSettings automation;
 
     public CrawlBlueprint(String code,
                           String name,
@@ -30,7 +31,8 @@ public class CrawlBlueprint {
                           CrawlFlow flow,
                           ParserProfile parserProfile,
                           RateLimit rateLimit,
-                          Map<String, Object> metadata) {
+                          Map<String, Object> metadata,
+                          AutomationSettings automation) {
         this.code = sanitize(code);
         this.name = sanitize(name);
         this.enabled = enabled;
@@ -41,6 +43,7 @@ public class CrawlBlueprint {
         this.parserProfile = parserProfile == null ? ParserProfile.empty() : parserProfile;
         this.rateLimit = rateLimit == null ? RateLimit.unlimited() : rateLimit;
         this.metadata = metadata == null ? Map.of() : Collections.unmodifiableMap(metadata);
+        this.automation = automation == null ? AutomationSettings.disabled() : automation;
     }
 
     private String sanitize(String value) {
@@ -87,6 +90,10 @@ public class CrawlBlueprint {
         return metadata;
     }
 
+    public AutomationSettings automation() {
+        return automation;
+    }
+
     public boolean isConfigured() {
         return !entryUrl.isBlank() && parserProfile.isConfigured();
     }
@@ -110,6 +117,17 @@ public class CrawlBlueprint {
             return Optional.empty();
         }
         return Optional.ofNullable(metadata.get(key));
+    }
+
+    public boolean requiresBrowser() {
+        if (!flow.isEmpty()) {
+            for (CrawlStep step : flow.steps()) {
+                if (step.type() != CrawlStepType.REQUEST) {
+                    return true;
+                }
+            }
+        }
+        return automation.requiresBrowser();
     }
 
     public record RateLimit(int requestsPerMinute, int burst) {

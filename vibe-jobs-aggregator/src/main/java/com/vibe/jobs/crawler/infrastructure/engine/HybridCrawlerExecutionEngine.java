@@ -7,26 +7,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * Hybrid crawler execution engine that uses HTTP-based crawling for all sites.
- * JavaScript crawling has been removed to simplify deployment and reduce resource usage.
- */
 @Component
 public class HybridCrawlerExecutionEngine implements CrawlerExecutionEngine {
 
     private static final Logger log = LoggerFactory.getLogger(HybridCrawlerExecutionEngine.class);
-    
-    private final HttpCrawlerExecutionEngine httpEngine;
 
-    public HybridCrawlerExecutionEngine(HttpCrawlerExecutionEngine httpEngine) {
+    private final HttpCrawlerExecutionEngine httpEngine;
+    private final BrowserCrawlerExecutionEngine browserEngine;
+
+    public HybridCrawlerExecutionEngine(HttpCrawlerExecutionEngine httpEngine,
+                                        BrowserCrawlerExecutionEngine browserEngine) {
         this.httpEngine = httpEngine;
+        this.browserEngine = browserEngine;
     }
 
     @Override
     public CrawlPageSnapshot fetch(CrawlSession session, CrawlPagination pagination) throws Exception {
         CrawlBlueprint blueprint = session.blueprint();
-        
-        // Always use HTTP engine (JavaScript crawling removed)
+        if (browserEngine != null && browserEngine.supports(blueprint)) {
+            try {
+                log.debug("Using browser engine for blueprint {}", blueprint.code());
+                return browserEngine.fetch(session, pagination);
+            } catch (Exception ex) {
+                log.warn("Browser engine failed for blueprint {}, falling back to HTTP: {}", blueprint.code(), ex.getMessage());
+            }
+        }
         log.debug("Using HTTP engine for blueprint {}", blueprint.code());
         return httpEngine.fetch(session, pagination);
     }
