@@ -1,6 +1,7 @@
 # Elaine Jobs · vibecoding-jobsearch
-
-适合国内希望找外企岗位的人，减少信息差，主要是聚合各个ATS数据源以及各公司的官方career page。 包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。
+初衷: 做一个外企职位聚合网站，方便女朋友找工作。
+适合国内希望找外企岗位的人(不需要梯子)，减少信息差，主要是聚合各个ATS数据源以及各公司的官方career page。 包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。
+97%的代码由codex+github copilot编写， 我主要负责设计，review以及部署。
 
 - 线上地址（生产）：https://elainejobs.com/
 - 运行环境：AWS EC2
@@ -10,10 +11,16 @@
   - 前端（Next.js）：`/vibe-jobs-view`
   - 部署与反向代理：[`docker-compose.yml`](./docker-compose.yml) · [`Caddyfile`](./Caddyfile) · [`docker/`](./docker) · [`deploy.sh`](./deploy.sh)
 
-> 截图参考：  
-> - 用户前台（搜索/浏览/订阅）：见 image1  
-> - 管理后台（采集调度配置）：见 image2  
+> 参考：  
+> - 用户前台（搜索/浏览/订阅）：
+<img width="1411" height="910" alt="image" src="https://github.com/user-attachments/assets/f3aec622-4f8b-448e-bfc9-615b00de9419" />
+
+> - 管理后台（采集调度配置）：见 image2
+<img width="1345" height="881" alt="image" src="https://github.com/user-attachments/assets/1c3d5a9b-df72-438c-b738-cb1b7f3750be" />
+
 > - 管理后台（数据源管理）：见 image3
+<img width="1611" height="921" alt="image" src="https://github.com/user-attachments/assets/76534435-0dfe-4709-9af0-feab8bde9256" />
+
 
 ---
 
