@@ -43,8 +43,9 @@
 | 🏆 P7 | **Amazon Jobs API** | ✅ 已启用 | 300+ | 官方APAC职位接口 |
 | 🆕 P8 | **本土ATS** | ⚠️ 可选启用 | 1500+ | Moka、北森、SuccessFactors 等 |
 | 🆕 P9 | **Crawler 蓝图** | 🚧 逐步放量 | 视站点而定 | Career Page + HTML 解析 |
+| 🌟 P10 | **国际公司** | ✅ 已验证 | 135+ | Airbnb Greenhouse + Meta 爬虫 |
 
-**总计预期**: **6800+ 岗位 (财务 & 工程双线)**
+**总计预期**: **6900+ 岗位 (财务 & 工程双线)**
 
 > 🧵 **并发策略**：
 > - Workday / Greenhouse / Ashby / Workable 等无限流数据源使用 6 线程并发抓取。
@@ -390,7 +391,42 @@ python scripts/validate_ats_sources.py --companies okx bitget
 
 > ℹ️ `param_` 前缀会转换成查询字符串（POST/GET 均适用），`payload_` 前缀负责覆盖或追加请求体字段，`header_` 前缀可以自定义所需的 HTTP 头（如 Referer/Origin）。默认仍会自动填充分页字段 (`page`, `size`, `limit`) 以及财务/工程关键词，如需覆盖可在 `payload_` 设置同名字段。
 
-### 🆕 国际 ATS 限量租户（2024 Q1 更新）
+## 🌍 国际知名公司数据源 (新增)
+
+### 已验证支持的公司
+
+经过API连通性测试，以下国际知名企业已确认支持，适合在中国有招聘需求的场景：
+
+| 公司 | 数据源类型 | 状态 | 预计岗位 | APAC覆盖情况 |
+|------|-----------|------|----------|--------------|
+| **Airbnb** | Greenhouse ATS | ✅ 已测试 (16个APAC岗位) | 75+ | 中国、新加坡、香港、亚太 |
+| **Meta (Facebook)** | 浏览器爬虫 | ✅ 已测试 | 60+ | 上海、北京、新加坡、香港 |
+
+### 数据源配置概览
+
+```yaml
+# Airbnb Greenhouse
+airbnb-greenhouse:
+  type: greenhouse
+  slug: airbnb
+  departments: [Engineering, Data, Finance]
+  locations: [China, Singapore, Hong Kong, Asia Pacific]
+  categories: engineering(60), finance(15)
+
+# Meta Careers Crawler
+meta-careers-crawler:
+  type: crawler
+  blueprint: meta-careers-apac
+  automation: browser-js-rendering
+  target: https://www.metacareers.com/jobs/?offices[]=Shanghai,China
+  categories: engineering(50), finance(10)
+```
+
+### 部署文件
+
+- **DML**: `V1759905001_add_international_companies_clean_dml.sql`
+- **部署指南**: `docs/international-companies-deployment.md`
+- **预期增量**: 135+ 个职位 (110 工程师 + 25 财务)
 
 | 公司 | ATS | 租户标识 | 预计岗位量 | 大中华区覆盖 |
 |------|-----|----------|-------------|----------------|

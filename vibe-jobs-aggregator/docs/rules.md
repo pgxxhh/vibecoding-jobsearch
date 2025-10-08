@@ -2,11 +2,12 @@
 
 编写代码要遵循的一些规则
 
-## 功能特性
+## 规则
 
-### 🎯 **核心功能**
-1.新创建的ddl统一添加到resources db.migrations目录下
-迁移文件命名格式为`<timestamp>_<description>_<ddl or dml>.sql`
+### 🎯 **规则列表**
+1.新创建的ddl统一添加到resources db.migrations目录下，迁移文件命名格式为`<V+自然递增序号>_<description>_<ddl or dml>.sql`
+新创建的业务表统一要包含以下字段：create_time, update_time, deleted(非null默认false).
+所有ddl和dml都要设计成可重复执行
 
 2.不要写补丁逻辑，代码里不能有硬编码，尽量配置化
 
