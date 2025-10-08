@@ -74,7 +74,7 @@
 
 ## 核心数据抓取与处理流程
 
-数据源（Data Sources）可在后台动态管理（见 image3），目前已包含示例：`airbnb-crawler`、`apple-jobs-crawler`、`ashby`、`google-careers-cn`、`greenhouse`、`lever` 等。
+数据源（Data Sources）可在后台动态管理（见 image3），目前已包含示例：`ashby`、`greenhouse`、`lever`、 `recruitee`、`smartrecruiters`、 `workday` 以及crawler数据源。
 
 - 采集模式
   - RECENT：按站点/平台最新职位增量抓取
