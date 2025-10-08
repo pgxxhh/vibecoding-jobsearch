@@ -1,7 +1,7 @@
 # Elaine Jobs · vibecoding-jobsearch
-初衷: 做一个外企职位聚合网站，方便女朋友找工作。 
-适合国内希望找外企岗位的人(不需要梯子)，减少信息差，主要是聚合各个ATS数据源以及各公司的官方career page。 包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。 
-97%的代码由codex+github copilot编写， 我主要负责设计，review以及部署。
+初衷: 做一个外企职位聚合网站，方便女朋友找工作。  
+适合国内希望找外企岗位的人(不需要梯子)，减少信息差，主要是聚合各个ATS数据源以及各公司的官方career page。 包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。  
+97%的代码由codex+github copilot编写， 我主要负责设计，review以及部署。  
 
 - 线上地址（生产）：https://elainejobs.com/
 - 运行环境：AWS EC2
@@ -93,46 +93,6 @@
   - 用户可在前台基于检索条件订阅（前端调用 `/subscription`），由后端以邮件方式发送更新（Spring Mail）
 
 ---
-
-## 接口概览（对前端）
-
-后端通过反向代理前缀 `/backend-api` 暴露（前端通过 `NEXT_PUBLIC_BACKEND_BASE` 配置）。
-
-- GET `/backend-api/jobs`
-  - 查询参数：`q`（关键词）、`location`、`company`、`category`、`page`、`size` 等
-  - 返回：`JobsResponse`（列表 + 分页/统计）
-- GET `/backend-api/jobs/{id}/detail`
-  - 返回：职位完整详情（描述、要求、原始链接等）
-- POST `/backend-api/subscription`
-  - Body：订阅邮箱与筛选条件
-  - 返回：订阅结果/确认信息
-- 维护接口
-  - `/actuator/*`（健康检查/指标）
-  - `/swagger-ui/*`、`/v3/*`（文档，若启用）
-
-前端示例调用（节选）：[`vibe-jobs-view/app/page.tsx`](./vibe-jobs-view/app/page.tsx)
-
----
-
-## 快速开始
-
-### 一键部署（推荐）
-
-1. 准备环境变量  
-   - 复制并完善根目录下的 `.env` / `.env.production`（数据库、域名、邮件等）
-   - 关键变量：
-     - 后端（Spring Boot 常规变量）：`SPRING_DATASOURCE_URL`、`SPRING_DATASOURCE_USERNAME`、`SPRING_DATASOURCE_PASSWORD`、`SPRING_MAIL_*` 等
-     - 前端：`NEXT_PUBLIC_BACKEND_BASE=/backend-api`
-     - 反向代理：`DOMAIN`（供 Caddy 使用）
-2. 启动
-   ```bash
-   docker compose up -d
-   ```
-3. 访问
-   - 前台：http://localhost
-   - 管理后台：http://localhost/admin
-
-生产环境可在 AWS EC2 上以相同方式运行，数据库指向 Aurora/RDS。Caddy 将自动按 `Caddyfile` 分流流量。
 
 ### 本地开发
 
