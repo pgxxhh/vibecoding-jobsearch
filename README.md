@@ -1,6 +1,6 @@
 # Elaine Jobs · vibecoding-jobsearch
 
-一个聚合各大公司职位信息的开源项目，包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。
+适合国内希望找外企岗位的人，减少信息差，主要是聚合各个ATS数据源以及各公司的官方career page。 包含用户前台与管理后台。支持可配置的抓取数据源、调度与并发参数、去重与详情解析，并通过统一 API 为前端提供检索、订阅等能力。
 
 - 线上地址（生产）：https://elainejobs.com/
 - 运行环境：AWS EC2
@@ -63,19 +63,7 @@
 
 ## 系统架构
 
-```mermaid
-flowchart LR
-  U[User] --> Caddy
-  Caddy -- / --> FE[Next.js Frontend 3000]
-  Caddy -- /backend-api/* --> BE[Spring Boot Backend 8080]
-  BE --> DB[(Aurora / RDS MySQL)]
-  BE <-.Crawler Schedulers .-> ExternalSites[Company Careers / ATS (Greenhouse/Lever/Ashby/自建等)]
-```
 
-- 反向代理（Caddy）：将 `/backend-api/*` 转发给后端；其余默认前端处理。配置见 [`Caddyfile`](./Caddyfile)。
-- Docker 化部署：服务编排见 [`docker-compose.yml`](./docker-compose.yml)。
-
----
 
 ## 核心数据抓取与处理流程
 
