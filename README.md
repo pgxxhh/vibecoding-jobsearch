@@ -15,10 +15,10 @@
 > - 用户前台（搜索/浏览/订阅）：
 <img width="1411" height="910" alt="image" src="https://github.com/user-attachments/assets/f3aec622-4f8b-448e-bfc9-615b00de9419" />
 
-> - 管理后台（采集调度配置）：见 image2
+> - 管理后台（采集调度配置）：
 <img width="1345" height="881" alt="image" src="https://github.com/user-attachments/assets/1c3d5a9b-df72-438c-b738-cb1b7f3750be" />
 
-> - 管理后台（数据源管理）：见 image3
+> - 管理后台（数据源管理）：
 <img width="1611" height="921" alt="image" src="https://github.com/user-attachments/assets/76534435-0dfe-4709-9af0-feab8bde9256" />
 
 
