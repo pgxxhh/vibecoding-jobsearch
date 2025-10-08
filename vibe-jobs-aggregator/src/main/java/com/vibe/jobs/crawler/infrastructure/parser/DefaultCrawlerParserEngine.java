@@ -222,6 +222,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
     private String fetchDetailPage(String url) {
         try {
             WebClient client = webClientBuilder
+                    .clone()
                     .defaultHeader(HttpHeaders.ACCEPT, MediaType.TEXT_HTML_VALUE)
                     .defaultHeader(HttpHeaders.USER_AGENT, getRandomUserAgent())
                     .build();
