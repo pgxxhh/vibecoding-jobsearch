@@ -163,16 +163,25 @@ mvn spring-boot:run
 
 The service ships with dedicated Spring profiles so you can switch between the embedded H2 database and MySQL without editing configuration files:
 
-- `application-mysql.yml` — activates when `SPRING_PROFILES_ACTIVE=mysql` (default). It expects a MySQL 8+ instance and defaults to validating the schema on startup.
+- `application-mysql.yml` — activates when `SPRING_PROFILES_ACTIVE=mysql` (default). It expects a MySQL 8+ instance and defaults to validating the schema on startup. **Credentials must be provided via environment variables or encrypted values — no plaintext username/password are checked into the repo.**
 - `application-h2.yml` — activates when `SPRING_PROFILES_ACTIVE=h2`. Stores data on the local filesystem and enables the H2 console for quick development feedback.
 
-Both profiles honour the same environment overrides: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, and `SPRING_JPA_DATABASE_PLATFORM`.
+Both profiles honour the same environment overrides: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, and `SPRING_JPA_DATABASE_PLATFORM`. When the `prod` profile is active and `db.credentials.encryption.enabled=true`, datasource credentials must be wrapped as `ENC(<ciphertext>)` values. The bundled `CredentialEncryptionTool` can generate the AES key and ciphertext wrappers:
 
 ```bash
-# Default MySQL profile (override only if your credentials differ)
-SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/vibejobs?useSSL=false \
-SPRING_DATASOURCE_USERNAME=vibejobs \
-SPRING_DATASOURCE_PASSWORD=vibejobs \
+# 1) Generate a key once and store it securely (e.g. /opt/vibejobs/secrets/db-aes.key)
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="generate-key" > db-aes.key
+
+# 2) Encrypt credentials; the tool outputs ENC(<ciphertext>) ready for application.yml
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_username"
+
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_password"
+
+# 3) Provide the wrapped values via SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD
+export SPRING_DATASOURCE_USERNAME='ENC(...)'
+export SPRING_DATASOURCE_PASSWORD='ENC(...)'
+
+# 4) Start the service
 mvn spring-boot:run
 ```
 
@@ -204,6 +213,8 @@ If no SMTP configuration is supplied, the application falls back to logging veri
 - `docker-compose.yml` now provisions a `mysql:8` container and injects the connection details into the backend service via `SPRING_DATASOURCE_*` environment variables. Update `.env` before running `docker compose up -d` to customise the database name, credentials, or choose the `h2` profile for local experiments.
 - For managed database providers (AWS RDS, Azure Database for MySQL, etc.) set `SPRING_PROFILES_ACTIVE=mysql` and supply the managed endpoint credentials (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`) through your host environment or secrets manager. Ensure the security group / firewall allows inbound traffic from the application subnet on port 3306 while keeping the instance closed to the public internet.
 - A production checklist for Aurora/RDS lives in `docs/production-rds-checklist.md`. Update `.env.production` with the managed database secrets, and `deploy.sh` will automatically export the variables before rebuilding the containers.
+- **Database credential encryption (prod profile):** production now expects the database username and password to be AES-encrypted. Generate a Base64 key once (`mvn -pl vibe-jobs-aggregator -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="generate-key" > db-aes.key`), copy the resulting file to the server (default path `/opt/vibejobs/secrets/db-aes.key`), and encrypt each secret (`mvn -pl vibe-jobs-aggregator -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key my-db-password"`). Save the encrypted strings in your environment variables (`SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`) and supply `DB_AES_KEY_PATH` if you use a custom location.
+- **Public API rate limiting:** anonymous access to `/api/jobs/**` is capped at 20 requests per minute per IP/user in production. Adjust `security.rate-limiter.*` properties if you need to increase or decrease the throttle.
 
 ## Notes
 - Greenhouse does not return `postedAt`; we stamp the current time. Extend `GreenhouseSourceClient` if you need more metadata.

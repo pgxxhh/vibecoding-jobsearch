@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/vibejobs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
-    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:vibejobs}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:vibejobs}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:#{null}}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:#{null}}}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
   jpa:
     hibernate:
@@ -161,6 +161,10 @@ auth:
     exposeCodeInResponse: true
     fromAddress: 975022570@qq.com
     sender: ${AUTH_EMAIL_SENDER:smtp}
+
+security:
+  rate-limiter:
+    enabled: false
 
 # 职位详情增强功能配置（定时任务相关，当前功能已集成到爬虫中）
 jobs:

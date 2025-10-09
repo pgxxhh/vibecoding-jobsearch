@@ -29,3 +29,17 @@ ingestion:
   pageSize: 50    # 从100降到50，减少单次处理的内存占用
   migration:
     enabled: true   # 强制启用配置迁移
+
+db:
+  credentials:
+    encryption:
+      enabled: true
+      key-path: ${DB_AES_KEY_PATH:/opt/vibejobs/secrets/db-aes.key}
+
+security:
+  rate-limiter:
+    enabled: true
+    requests-per-minute: 20
+    window-seconds: 60
+    paths:
+      - "/jobs/**"
