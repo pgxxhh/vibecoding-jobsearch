@@ -31,14 +31,6 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
         if (request.getUserPrincipal() != null) {
             return "user:" + request.getUserPrincipal().getName();
         }
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return "ip:" + forwardedFor.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return "ip:" + realIp.trim();
-        }
         return "ip:" + request.getRemoteAddr();
     }
 }
