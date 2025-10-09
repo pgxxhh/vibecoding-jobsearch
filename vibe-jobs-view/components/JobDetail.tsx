@@ -1,4 +1,5 @@
 import { Badge, Button, Skeleton } from '@/components/ui';
+import { TimeDisplay } from '@/components/TimeDisplay';
 import type { Job } from '@/lib/types';
 
 type Labels = {
@@ -79,8 +80,6 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
     );
   }
 
-  const posted = new Date(job.postedAt);
-  const date = Number.isNaN(posted.getTime()) ? '' : posted.toLocaleDateString();
   const sanitizedContent = job.content ? sanitizeJobContent(job.content) : '';
   const hasDescription = sanitizedContent.trim().length > 0;
 
@@ -92,17 +91,10 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           {job.company} · {job.location}
           {job.level ? ` · ${job.level}` : ''}
         </div>
-        {date && (
-          <div className="flex items-center gap-2 text-xs text-gray-400" suppressHydrationWarning>
-            <span>{date}</span>
-            {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
-          </div>
-        )}
-        {!date && isRefreshing && !isLoading && (
-          <div className="text-xs text-gray-400" role="status">
-            {labels.refreshing}
-          </div>
-        )}
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <TimeDisplay utcTime={job.postedAt} format="DATETIME" placeholder="--" />
+          {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
+        </div>
       </div>
       {job.tags && job.tags.length > 0 && (
         <div className="flex flex-wrap gap-2">

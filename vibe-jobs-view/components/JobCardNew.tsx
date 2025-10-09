@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { Card, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { RelativeTime } from '@/components/TimeDisplay';
 import type { Job } from '@/lib/types';
 
 export default function JobCardNew({ job, className }: { job: Job; className?: string }) {
-  const posted = new Date(job.postedAt);
-  const date = Number.isNaN(posted.getTime()) ? '' : posted.toLocaleDateString();
-
   return (
     <Card className={cn('p-4 transition will-change-transform hover:shadow-brand-lg', className)}>
       <div className="flex items-start justify-between gap-4">
@@ -28,11 +26,10 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
             ))}
           </div>
         </div>
-        {date && (
-          <time className="mt-1 shrink-0 text-xs text-gray-500" suppressHydrationWarning>
-            {date}
-          </time>
-        )}
+        <RelativeTime 
+          utcTime={job.postedAt} 
+          className="mt-1 shrink-0 text-xs text-gray-500" 
+        />
       </div>
     </Card>
   );
