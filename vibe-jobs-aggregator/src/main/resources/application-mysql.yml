@@ -4,8 +4,8 @@ spring:
       on-profile: mysql
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:mysql://localhost:3306/vibejobs?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}}
-    username: ENC(Hj3fCaC+Ll+9uaHAFXk5huSq5IC/yO+18NyHdZSYmqKWCgJ/)
-    password: ENC(Hj3fCaC+Ll+9uaHAFXk5huSq5IC/yO+18NyHdZSYmqKWCgJ/)
+    username: ENC(HuLwG0isQiaM/3b3PSpepOdjN2DPx7/Z08EvG+MAJQfmkpNm)
+    password: ENC(HuLwG0isQiaM/3b3PSpepOdjN2DPx7/Z08EvG+MAJQfmkpNm)
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
   jpa:
     hibernate:
