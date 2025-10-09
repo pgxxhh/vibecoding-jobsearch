@@ -170,18 +170,12 @@ Both profiles honour the same environment overrides: `SPRING_DATASOURCE_URL`, `S
 
 ```bash
 # 1) Generate a key once and store it securely (e.g. /opt/vibejobs/secrets/db-aes.key)
-mvn -pl vibe-jobs-aggregator -q exec:java \
-  -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool \
-  -Dexec.args="generate-key" > db-aes.key
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="generate-key" > db-aes.key
 
 # 2) Encrypt credentials; the tool outputs ENC(<ciphertext>) ready for application.yml
-mvn -pl vibe-jobs-aggregator -q exec:java \
-  -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool \
-  -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_username"
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_username"
 
-mvn -pl vibe-jobs-aggregator -q exec:java \
-  -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool \
-  -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_password"
+mvn -q exec:java -Dexec.mainClass=com.vibe.jobs.security.CredentialEncryptionTool -Dexec.args="encrypt /opt/vibejobs/secrets/db-aes.key prod_db_password"
 
 # 3) Provide the wrapped values via SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD
 export SPRING_DATASOURCE_USERNAME='ENC(...)'
