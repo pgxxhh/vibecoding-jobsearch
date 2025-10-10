@@ -119,8 +119,20 @@ public class JpaJobDataSourceRepository implements JobDataSourceRepository {
         List<JobDataSourceCompanyEntity> existingEntities = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode);
         Map<Long, JobDataSourceCompanyEntity> existingById = existingEntities.stream()
                 .collect(Collectors.toMap(JobDataSourceCompanyEntity::getId, e -> e));
+        
+        // 处理可能的重复reference，使用最新的实体（按ID降序）
         Map<String, JobDataSourceCompanyEntity> existingByReference = existingEntities.stream()
-                .collect(Collectors.toMap(JobDataSourceCompanyEntity::getReference, e -> e));
+                .collect(Collectors.toMap(
+                    JobDataSourceCompanyEntity::getReference, 
+                    e -> e,
+                    (existing, replacement) -> {
+                        log.warn("Found duplicate reference '{}' in data source '{}'. Using entity with higher ID: {} instead of {}",
+                                replacement.getReference(), dataSourceCode, 
+                                Math.max(existing.getId(), replacement.getId()), 
+                                Math.min(existing.getId(), replacement.getId()));
+                        return existing.getId() > replacement.getId() ? existing : replacement;
+                    }
+                ));
         
         Set<Long> updatedIds = new HashSet<>();
         

@@ -1,7 +1,7 @@
 package com.vibe.jobs.datasource.infrastructure.jpa;
 
 import com.vibe.jobs.datasource.domain.JobDataSource;
-import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonStringMapConverter;
+import com.vibe.jobs.datasource.infrastructure.jpa.converter.JsonMixedTypeMapConverter;
 import jakarta.persistence.*;
 import org.hibernate.annotations.Where;
 
@@ -40,7 +40,7 @@ public class JobDataSourceEntity {
     private JobDataSource.Flow flow = JobDataSource.Flow.UNLIMITED;
 
     @Column(name = "base_options", columnDefinition = "text")
-    @jakarta.persistence.Convert(converter = JsonStringMapConverter.class)
+    @jakarta.persistence.Convert(converter = JsonMixedTypeMapConverter.class)
     private Map<String, String> baseOptions = new LinkedHashMap<>();
 
     // 软删除字段

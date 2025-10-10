@@ -2,11 +2,15 @@ package com.vibe.jobs.crawler.domain;
 
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
 
 public class ParserProfile {
+
+    private static final Logger log = LoggerFactory.getLogger(ParserProfile.class);
 
     private final String listSelector;
     private final Map<String, ParserField> fields;
@@ -91,6 +95,15 @@ public class ParserProfile {
             }
             if (value != null) {
                 values.put(entry.getKey(), value);
+            }
+            
+            // 调试airbnb location提取
+            if ("location".equals(entry.getKey()) && element.ownerDocument() != null) {
+                String docUrl = element.ownerDocument().location();
+                if (docUrl != null && docUrl.contains("airbnb")) {
+                    log.debug("Airbnb location extraction - Field: {}, Value: '{}', Element text: '{}'", 
+                             entry.getKey(), value, element.text().length() > 100 ? element.text().substring(0, 100) + "..." : element.text());
+                }
             }
         }
         if (!values.containsKey("title")) {

@@ -52,6 +52,12 @@ public class AdminDataSourceService {
     }
 
     public JobDataSource getById(Long id) {
+        // 在获取数据源之前，尝试清理可能的重复数据
+        try {
+            cleanupDuplicateCompanies(id);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup duplicate companies for data source {}: {}", id, e.getMessage());
+        }
         return queryService.getById(id);
     }
 
@@ -449,5 +455,60 @@ public class AdminDataSourceService {
 
     private void publishChange(String code) {
         eventPublisher.publishEvent(new DataSourceConfigurationChangedEvent(code));
+    }
+    
+    /**
+     * 清理指定数据源的重复公司记录（保留ID最大的活跃记录）
+     */
+    @Transactional
+    public void cleanupDuplicateCompanies(Long dataSourceId) {
+        try {
+            // 首先获取数据源信息
+            JobDataSource dataSource = queryService.getById(dataSourceId);
+            String dataSourceCode = dataSource.getCode();
+            
+            // 查找所有活跃的公司记录
+            List<JobDataSourceCompanyEntity> allActiveCompanies = companyRepository.findByDataSourceCodeOrderByReference(dataSourceCode);
+            
+            // 按reference分组，找出重复的记录
+            Map<String, List<JobDataSourceCompanyEntity>> companiesByReference = allActiveCompanies.stream()
+                    .collect(Collectors.groupingBy(JobDataSourceCompanyEntity::getReference));
+            
+            Instant now = Instant.now();
+            int duplicatesRemoved = 0;
+            
+            for (Map.Entry<String, List<JobDataSourceCompanyEntity>> entry : companiesByReference.entrySet()) {
+                List<JobDataSourceCompanyEntity> companies = entry.getValue();
+                if (companies.size() > 1) {
+                    // 有重复记录，保留ID最大的（最新的），软删除其他的
+                    companies.sort((c1, c2) -> Long.compare(c2.getId(), c1.getId())); // 按ID降序排列
+                    JobDataSourceCompanyEntity keepCompany = companies.get(0);
+                    
+                    log.warn("Found {} duplicate companies with reference '{}' in data source '{}'. Keeping company with ID {}, soft-deleting others.",
+                            companies.size(), entry.getKey(), dataSourceCode, keepCompany.getId());
+                    
+                    // 软删除其他重复记录
+                    for (int i = 1; i < companies.size(); i++) {
+                        JobDataSourceCompanyEntity duplicate = companies.get(i);
+                        companyRepository.softDeleteById(duplicate.getId(), now);
+                        duplicatesRemoved++;
+                        log.info("Soft-deleted duplicate company with ID {} (reference: '{}') in data source '{}'",
+                                duplicate.getId(), duplicate.getReference(), dataSourceCode);
+                    }
+                }
+            }
+            
+            if (duplicatesRemoved > 0) {
+                log.info("Cleaned up {} duplicate company records for data source '{}' (ID: {})", 
+                        duplicatesRemoved, dataSourceCode, dataSourceId);
+                publishChange(dataSourceCode);
+            } else {
+                log.debug("No duplicate company records found for data source '{}' (ID: {})", dataSourceCode, dataSourceId);
+            }
+            
+        } catch (Exception e) {
+            log.error("Failed to cleanup duplicate companies for data source ID {}: {}", dataSourceId, e.getMessage(), e);
+            throw new RuntimeException("Failed to cleanup duplicate companies", e);
+        }
     }
 }

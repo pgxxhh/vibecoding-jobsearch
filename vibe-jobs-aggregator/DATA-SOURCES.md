@@ -476,3 +476,10 @@ docker compose logs -f backend | grep -E "(financial|财务|analyst|分析师)"
 **🔗 相关文档**: 
 - [项目主README](./vibe-jobs-aggregator/README.md)
 - [生产环境RDS部署清单](./vibe-jobs-aggregator/docs/production-rds-checklist.md)
+
+### 智能Location提取通用能力 🔥
+- **问题**: 各网站location字段结构不同，单一选择器无法覆盖所有情况  
+- **解决方案**: 在ParserField中实现智能location提取，作为通用能力
+- **功能**: 当指定选择器失效时，自动尝试多种location提取策略
+- **策略**: 优先级选择器 → 关键词匹配 → 父子元素搜索 → 文本模式识别
+- **适用**: 所有爬虫蓝图的location字段，无需额外配置

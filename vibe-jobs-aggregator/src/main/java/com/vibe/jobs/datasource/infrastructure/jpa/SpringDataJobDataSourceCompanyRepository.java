@@ -14,10 +14,10 @@ import java.util.Optional;
 public interface SpringDataJobDataSourceCompanyRepository extends JpaRepository<JobDataSourceCompanyEntity, Long> {
     
     // 由于 deleted 字段现在是 NOT NULL 且默认为 false，可以简化查询条件
-    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.deleted = false ORDER BY c.reference")
+    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.deleted = false ORDER BY c.reference, c.id DESC")
     List<JobDataSourceCompanyEntity> findByDataSourceCodeOrderByReference(@Param("dataSourceCode") String dataSourceCode);
     
-    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.deleted = false ORDER BY c.reference")
+    @Query("SELECT c FROM JobDataSourceCompanyEntity c WHERE c.dataSourceCode = :dataSourceCode AND c.deleted = false ORDER BY c.reference, c.id DESC")
     Page<JobDataSourceCompanyEntity> findByDataSourceCodeOrderByReference(@Param("dataSourceCode") String dataSourceCode, Pageable pageable);
     
     // 检查指定数据源和引用的活跃公司是否存在（用于唯一性检查）

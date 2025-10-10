@@ -11,7 +11,8 @@ import java.util.Map;
 @Entity
 @Table(name = "job_data_source_company", indexes = {
         @Index(name = "idx_job_data_source_company_deleted", columnList = "deleted"),
-        @Index(name = "idx_job_data_source_company_code_deleted", columnList = "data_source_code, deleted")
+        @Index(name = "idx_job_data_source_company_code_deleted", columnList = "data_source_code, deleted"),
+        @Index(name = "idx_job_data_source_company_code_ref_deleted", columnList = "data_source_code, reference, deleted")
 })
 // 移除 @Where 注解，改用显式的查询过滤
 public class JobDataSourceCompanyEntity {

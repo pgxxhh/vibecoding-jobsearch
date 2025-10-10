@@ -110,11 +110,21 @@ public class ParserField {
             }
             case LIST -> parseList(element);
             case DATE -> parseDate(element);
-            case TEXT -> select(element).stream().findFirst()
-                    .map(Element::text)
-                    .map(String::trim)
-                    .filter(value -> !value.isBlank())
-                    .orElse(null);
+            case TEXT -> {
+                // 首先尝试使用指定的选择器
+                String textValue = select(element).stream().findFirst()
+                        .map(Element::text)
+                        .map(String::trim)
+                        .filter(value -> !value.isBlank())
+                        .orElse(null);
+                
+                // 如果是location字段且没有提取到值，使用智能location提取
+                if (textValue == null && "location".equalsIgnoreCase(name)) {
+                    textValue = extractLocationIntelligently(element);
+                }
+                
+                yield textValue;
+            }
         };
     }
 
@@ -147,6 +157,29 @@ public class ParserField {
                     if (trimmed.isEmpty()) {
                         continue;
                     }
+                    
+                    // Skip XPath-style selectors that JSoup can't handle, but try conversion first
+                    if (isXPathSelector(trimmed)) {
+                        String converted = convertXPathToCss(trimmed);
+                        if (!converted.equals(trimmed) && !converted.trim().isEmpty()) {
+                            log.debug("Converting XPath selector '{}' to CSS '{}'", trimmed, converted);
+                            try {
+                                Elements partial = element.select(converted);
+                                if (partial != null && !partial.isEmpty()) {
+                                    aggregated.addAll(partial.stream().toList());
+                                }
+                                continue;
+                            } catch (Exception conversionException) {
+                                log.debug("CSS conversion '{}' failed, skipping", converted);
+                            }
+                        }
+                        // 只记录一次XPath警告，避免日志噪音
+                        if (log.isTraceEnabled()) {
+                            log.trace("Skipping XPath selector '{}' (JSoup supports CSS only)", trimmed);
+                        }
+                        continue;
+                    }
+                    
                     if (".".equals(trimmed)) {
                         aggregated.add(element);
                         continue;
@@ -167,6 +200,44 @@ public class ParserField {
             // As a fallback return the current element when selector is invalid
             return Collections.singletonList(element);
         }
+    }
+    
+    /**
+     * 检测是否为XPath样式的选择器（JSoup不支持）
+     */
+    private boolean isXPathSelector(String selector) {
+        return selector.contains("../") || 
+               selector.contains("../../") || 
+               selector.contains("following-sibling::") ||
+               selector.contains("preceding-sibling::") ||
+               selector.contains("parent::") ||
+               selector.contains("child::");
+    }
+    
+    /**
+     * 尝试将XPath样式的选择器转换为等效的CSS选择器
+     */
+    private String convertXPathToCss(String xpathSelector) {
+        // 简单的XPath到CSS转换
+        String converted = xpathSelector.trim();
+        
+        // 处理一些常见的XPath模式
+        if (converted.contains("following-sibling::div")) {
+            if (converted.contains("../following-sibling::div")) {
+                // 父级的兄弟元素：在CSS中无法直接表达，尝试使用通用兄弟选择器
+                converted = converted.replace("../following-sibling::div", "~ div");
+            }
+            if (converted.contains("../../following-sibling::div")) {
+                // 祖父级兄弟元素：在CSS中无法直接表达，尝试使用通用兄弟选择器
+                converted = converted.replace("../../following-sibling::div", "~ div");
+            }
+        }
+        
+        // 清理可能残留的XPath语法
+        converted = converted.replace("../", "");
+        converted = converted.replace("../../", "");
+        
+        return converted;
     }
 
     private Object parseDate(Element element) {
@@ -210,6 +281,133 @@ public class ParserField {
                 .toList();
     }
 
+    /**
+     * 智能location提取 - 通用能力，适用于各种网站结构
+     */
+    private String extractLocationIntelligently(Element element) {
+        // 定义常见的location相关选择器，按优先级排序
+        String[] locationSelectors = {
+            // 直接的location类和属性
+            ".location", "[data-location]", "[class*='location']", 
+            ".job-location", ".position-location", ".work-location",
+            
+            // 通用的地理位置相关类
+            ".office", ".workplace", ".city", ".country", ".region",
+            "[class*='office']", "[class*='city']", "[class*='place']",
+            
+            // 现代前端框架常用的data属性
+            "[data-testid*='location']", "[data-test*='location']",
+            "[data-cy*='location']", "[aria-label*='location']",
+            
+            // 通用结构选择器
+            "span:contains('China')", "span:contains('Beijing')", "span:contains('Shanghai')",
+            "div:contains('China')", ".text:contains('China')",
+            
+            // 兄弟元素和相邻元素（适用于标题旁边的位置信息）
+            "~ span", "~ div", "+ span", "+ div"
+        };
+        
+        for (String sel : locationSelectors) {
+            try {
+                Elements found = element.select(sel);
+                for (Element elem : found) {
+                    String text = elem.text().trim();
+                    if (isValidLocationText(text)) {
+                        log.debug("Location extracted using selector '{}': '{}'", sel, text);
+                        return text;
+                    }
+                }
+            } catch (Exception e) {
+                // 忽略选择器错误，继续尝试下一个
+                log.trace("Selector '{}' failed: {}", sel, e.getMessage());
+            }
+        }
+        
+        // 最后尝试：在父元素或祖父元素中寻找location信息
+        Element parent = element.parent();
+        if (parent != null) {
+            String locationFromParent = extractLocationFromElementTree(parent, 2);
+            if (locationFromParent != null) {
+                log.debug("Location extracted from parent element: '{}'", locationFromParent);
+                return locationFromParent;
+            }
+        }
+        
+        log.debug("No location information found for element: {}", 
+                 element.text().length() > 50 ? element.text().substring(0, 50) + "..." : element.text());
+        return null;
+    }
+    
+    /**
+     * 从元素树中提取location信息
+     */
+    private String extractLocationFromElementTree(Element element, int maxDepth) {
+        if (element == null || maxDepth <= 0) {
+            return null;
+        }
+        
+        // 在当前元素的所有子元素中寻找location信息
+        Elements allDescendants = element.select("*");
+        for (Element desc : allDescendants) {
+            String text = desc.text().trim();
+            if (isValidLocationText(text) && !text.equals(element.text().trim())) {
+                return text;
+            }
+        }
+        
+        // 递归检查兄弟元素
+        Element nextSibling = element.nextElementSibling();
+        if (nextSibling != null) {
+            String siblingLocation = extractLocationFromElementTree(nextSibling, maxDepth - 1);
+            if (siblingLocation != null) {
+                return siblingLocation;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 验证文本是否为有效的location信息
+     */
+    private boolean isValidLocationText(String text) {
+        if (text == null || text.isBlank() || text.length() < 2) {
+            return false;
+        }
+        
+        // 排除明显不是location的文本
+        String lower = text.toLowerCase();
+        if (lower.matches("^[0-9]+$") || // 纯数字
+            lower.matches("^[a-z]$") ||   // 单个字母
+            lower.contains("apply") || lower.contains("view") || lower.contains("submit") ||
+            lower.contains("description") || lower.contains("detail") ||
+            lower.length() > 100) { // 太长的文本通常不是location
+            return false;
+        }
+        
+        // 常见location关键词
+        String[] locationKeywords = {
+            "china", "beijing", "shanghai", "shenzhen", "guangzhou", "hangzhou",
+            "中国", "北京", "上海", "深圳", "广州", "杭州",
+            "singapore", "hong kong", "taiwan", "macau",
+            "remote", "hybrid", "office", "onsite"
+        };
+        
+        for (String keyword : locationKeywords) {
+            if (lower.contains(keyword)) {
+                return true;
+            }
+        }
+        
+        // 检查是否包含城市/国家的常见模式
+        if (text.matches(".*[A-Z][a-z]+,\\s*[A-Z][a-z]+.*") || // "City, Country"格式
+            text.matches(".*\\p{IsHan}+.*")) { // 包含中文字符
+            return true;
+        }
+        
+        return false;
+    }
+    
     private String extractBaseUrl(Element element) {
         // 尝试从document的base标签获取
         if (element.ownerDocument() != null) {

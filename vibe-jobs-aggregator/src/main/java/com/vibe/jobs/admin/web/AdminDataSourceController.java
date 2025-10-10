@@ -241,4 +241,21 @@ public class AdminDataSourceController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
         }
     }
+
+    @PostMapping("/{id}/cleanup-duplicates")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cleanupDuplicateCompanies(@PathVariable Long id, AdminPrincipal principal) {
+        try {
+            dataSourceService.cleanupDuplicateCompanies(id);
+            changeLogService.record(
+                    principal != null ? principal.email() : null,
+                    "CLEANUP",
+                    "DATA_SOURCE_DUPLICATE_COMPANIES",
+                    id.toString(),
+                    Map.of("operation", "cleanup_duplicate_companies")
+            );
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
+    }
 }

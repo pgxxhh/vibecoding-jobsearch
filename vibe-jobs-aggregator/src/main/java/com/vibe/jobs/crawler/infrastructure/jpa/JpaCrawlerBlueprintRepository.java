@@ -189,6 +189,12 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
                     } catch (IllegalArgumentException ignored) {
                     }
                 }
+                
+                // 如果字段没有指定baseUrl，使用解析器级别的baseUrl作为回退
+                String effectiveBaseUrl = field.baseUrl != null && !field.baseUrl.trim().isEmpty() 
+                    ? field.baseUrl 
+                    : parser.baseUrl;
+                
                 ParserField parserField = new ParserField(
                         name,
                         type,
@@ -198,7 +204,7 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
                         field.format,
                         field.delimiter,
                         Boolean.TRUE.equals(field.required),
-                        field.baseUrl  // 添加baseUrl支持
+                        effectiveBaseUrl  // 使用有效的baseUrl（字段级别优先，解析器级别回退）
                 );
                 fields.put(name, parserField);
             });
@@ -259,6 +265,7 @@ public class JpaCrawlerBlueprintRepository implements CrawlerBlueprintRepository
             public List<String> tagFields;
             public String descriptionField;
             public DetailFetch detailFetch;
+            public String baseUrl;  // 添加baseUrl字段以支持解析器级别的基础URL配置
         }
 
         static class Field {
