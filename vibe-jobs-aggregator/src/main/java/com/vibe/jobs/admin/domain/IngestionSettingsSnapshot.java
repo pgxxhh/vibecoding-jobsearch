@@ -7,7 +7,6 @@ import com.vibe.jobs.config.IngestionProperties;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -18,7 +17,6 @@ public final class IngestionSettingsSnapshot {
     private final long initialDelayMs;
     private final int pageSize;
     private final IngestionProperties.Mode mode;
-    private final List<String> companies;
     private final int recentDays;
     private final int concurrency;
     private final Map<String, IngestionProperties.CompanyOverride> companyOverrides;
@@ -32,7 +30,6 @@ public final class IngestionSettingsSnapshot {
             @JsonProperty("initialDelayMs") long initialDelayMs,
             @JsonProperty("pageSize") int pageSize,
             @JsonProperty("mode") IngestionProperties.Mode mode,
-            @JsonProperty("companies") List<String> companies,
             @JsonProperty("recentDays") int recentDays,
             @JsonProperty("concurrency") int concurrency,
             @JsonProperty("companyOverrides") Map<String, IngestionProperties.CompanyOverride> companyOverrides,
@@ -43,7 +40,6 @@ public final class IngestionSettingsSnapshot {
         this.initialDelayMs = Math.max(0, initialDelayMs);
         this.pageSize = Math.max(1, pageSize);
         this.mode = mode == null ? IngestionProperties.Mode.RECENT : mode;
-        this.companies = sanitizeCompanies(companies);
         this.recentDays = Math.max(1, recentDays);
         this.concurrency = Math.max(1, concurrency);
         this.companyOverrides = sanitizeOverrides(companyOverrides);
@@ -59,7 +55,6 @@ public final class IngestionSettingsSnapshot {
                 properties.getInitialDelayMs(),
                 properties.getPageSize(),
                 properties.getMode(),
-                properties.getCompanies(),
                 properties.getRecentDays(),
                 properties.getConcurrency(),
                 properties.getCompanyOverrides(),
@@ -75,7 +70,6 @@ public final class IngestionSettingsSnapshot {
         properties.setInitialDelayMs(initialDelayMs);
         properties.setPageSize(pageSize);
         properties.setMode(mode);
-        properties.setCompanies(new ArrayList<>(companies));
         properties.setRecentDays(recentDays);
         properties.setConcurrency(concurrency);
         properties.setCompanyOverrides(companyOverrides);
@@ -103,10 +97,7 @@ public final class IngestionSettingsSnapshot {
         return mode;
     }
 
-    @JsonProperty("companies")
-    public List<String> companies() {
-        return companies;
-    }
+
 
     @JsonProperty("recentDays")
     public int recentDays() {
@@ -138,22 +129,7 @@ public final class IngestionSettingsSnapshot {
         return updatedAt;
     }
 
-    private static List<String> sanitizeCompanies(List<String> raw) {
-        if (raw == null || raw.isEmpty()) {
-            return List.of();
-        }
-        List<String> sanitized = new ArrayList<>();
-        for (String value : raw) {
-            if (value == null) {
-                continue;
-            }
-            String trimmed = value.trim();
-            if (!trimmed.isEmpty()) {
-                sanitized.add(trimmed);
-            }
-        }
-        return List.copyOf(sanitized);
-    }
+
 
     private static Map<String, IngestionProperties.CompanyOverride> sanitizeOverrides(
             Map<String, IngestionProperties.CompanyOverride> overrides) {

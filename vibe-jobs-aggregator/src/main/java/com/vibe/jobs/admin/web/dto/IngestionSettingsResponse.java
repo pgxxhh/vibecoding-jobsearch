@@ -4,7 +4,6 @@ import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.config.IngestionProperties;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 public record IngestionSettingsResponse(
@@ -12,7 +11,6 @@ public record IngestionSettingsResponse(
         long initialDelayMs,
         int pageSize,
         IngestionProperties.Mode mode,
-        List<String> companies,
         int recentDays,
         int concurrency,
         Map<String, IngestionProperties.CompanyOverride> companyOverrides,
@@ -26,7 +24,6 @@ public record IngestionSettingsResponse(
                 snapshot.initialDelayMs(),
                 snapshot.pageSize(),
                 snapshot.mode(),
-                snapshot.companies(),
                 snapshot.recentDays(),
                 snapshot.concurrency(),
                 snapshot.companyOverrides(),

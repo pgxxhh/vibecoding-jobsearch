@@ -4,7 +4,6 @@ import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.config.IngestionProperties;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 public record IngestionSettingsRequest(
@@ -12,7 +11,6 @@ public record IngestionSettingsRequest(
         long initialDelayMs,
         int pageSize,
         String mode,
-        List<String> companies,
         int recentDays,
         int concurrency,
         IngestionProperties.LocationFilter locationFilter,
@@ -31,7 +29,6 @@ public record IngestionSettingsRequest(
                 initialDelayMs,
                 pageSize,
                 resolvedMode,
-                companies,
                 recentDays,
                 concurrency,
                 companyOverrides,

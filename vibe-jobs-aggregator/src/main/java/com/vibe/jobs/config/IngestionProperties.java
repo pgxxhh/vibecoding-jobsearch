@@ -16,7 +16,6 @@ public class IngestionProperties {
     private Mode mode = Mode.RECENT;
     private int recentDays = 7;
     private int concurrency = 4;
-    private List<String> companies = new ArrayList<>();
     private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
     private LocationFilter locationFilter = new LocationFilter();
     private RoleFilter roleFilter = new RoleFilter();
@@ -92,13 +91,7 @@ public class IngestionProperties {
         this.roleFilter = roleFilter == null ? new RoleFilter() : roleFilter;
     }
 
-    public List<String> getCompanies() {
-        return companies;
-    }
 
-    public void setCompanies(List<String> companies) {
-        this.companies = companies == null ? new ArrayList<>() : new ArrayList<>(companies);
-    }
 
     public Map<String, CompanyOverride> getCompanyOverrides() {
         return companyOverrides;
