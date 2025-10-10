@@ -1,6 +1,7 @@
 package com.vibe.jobs.repo;
 
 import com.vibe.jobs.domain.JobDetail;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,9 +13,14 @@ import java.util.List;
 import java.util.Optional;
 
 public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
-    
+
+    @EntityGraph(attributePaths = {"skills", "highlights"})
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id = :jobId AND jd.deleted = false")
     Optional<JobDetail> findByJobId(@Param("jobId") Long jobId);
+
+    @EntityGraph(attributePaths = {"skills", "highlights"})
+    @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
+    List<JobDetail> findAllByJobIds(@Param("jobIds") Collection<Long> jobIds);
 
     @Query("SELECT jd.job.id AS jobId, jd.contentText AS contentText FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
     List<ContentTextView> findContentTextByJobIds(@Param("jobIds") Collection<Long> jobIds);

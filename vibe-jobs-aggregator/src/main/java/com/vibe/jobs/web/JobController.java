@@ -91,8 +91,14 @@ public class JobController {
 
         var detailMatches = detailEnabled ? findDetailMatches(jobs, normalizedQuery) : java.util.Collections.<Long>emptySet();
 
+        var detailByJobId = jobDetailService.findByJobIds(jobs.stream()
+                .map(com.vibe.jobs.domain.Job::getId)
+                .collect(Collectors.toSet()));
+
         var items = jobs.stream()
-                .map(job -> com.vibe.jobs.web.JobMapper.toDto(job, detailMatches.contains(job.getId())))
+                .map(job -> com.vibe.jobs.web.JobMapper.toDto(job,
+                        detailMatches.contains(job.getId()),
+                        detailByJobId.get(job.getId())))
                 .collect(Collectors.toList());
         long total = repo.countSearch(normalizedQuery, emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter, detailEnabled);
         return new JobsResponse(items, total, nextCursor, hasMore, size);
@@ -102,16 +108,23 @@ public class JobController {
     public JobDetailResponse detail(@PathVariable Long id) {
         var job = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
-        String content = jobDetailService.findByJob(job)
-                .map(com.vibe.jobs.domain.JobDetail::getContent)
-                .orElse("");
+        var detail = jobDetailService.findByJob(job).orElse(null);
+        String content = detail != null ? detail.getContent() : "";
+        String summary = detail != null ? trimToNull(detail.getSummary()) : null;
+        var skills = detail != null ? sanitizeList(detail.getSkills()) : java.util.List.<String>of();
+        var highlights = detail != null ? sanitizeList(detail.getHighlights()) : java.util.List.<String>of();
+        String structuredData = detail != null ? trimToNull(detail.getStructuredData()) : null;
         return new JobDetailResponse(
                 job.getId(),
                 job.getTitle(),
                 job.getCompany(),
                 job.getLocation(),
                 job.getPostedAt(),
-                content
+                content,
+                summary,
+                skills,
+                highlights,
+                structuredData
         );
     }
 
@@ -181,4 +194,23 @@ public class JobController {
     }
 
     private record CursorPosition(Instant postedAt, long id) {}
+
+    private java.util.List<String> sanitizeList(java.util.List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return java.util.List.of();
+        }
+        return values.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 }

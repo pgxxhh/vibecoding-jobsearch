@@ -32,3 +32,11 @@ logging:
   level:
     com.vibe.jobs: DEBUG
     org.springframework.security: DEBUG
+
+jobs:
+  detail-enhancement:
+    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
+    chatgpt:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      path: ${OPENAI_RESPONSES_PATH:${OPENAI_CHAT_COMPLETIONS_PATH:/v1/responses}}
+      timeout: ${OPENAI_TIMEOUT:PT20S}
