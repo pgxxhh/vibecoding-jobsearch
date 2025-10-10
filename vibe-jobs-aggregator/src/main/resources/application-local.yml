@@ -35,7 +35,8 @@ logging:
 
 jobs:
   detail-enhancement:
-    enrichment-service:
-      base-url: ${JOBS_ENRICHMENT_BASE_URL:http://localhost:8900}
-      endpoint: ${JOBS_ENRICHMENT_ENDPOINT:/v1/enrich}
-      timeout: ${JOBS_ENRICHMENT_TIMEOUT:PT10S}
+    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
+    chatgpt:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      path: ${OPENAI_CHAT_COMPLETIONS_PATH:/v1/chat/completions}
+      timeout: ${OPENAI_TIMEOUT:PT20S}

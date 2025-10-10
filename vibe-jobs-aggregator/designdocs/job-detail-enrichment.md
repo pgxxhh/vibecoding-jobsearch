@@ -31,11 +31,14 @@
   - 增加基于 `jobIds` 的批量查询与纯文本映射，支持列表页标记搜索命中。
 
 ## 外部服务集成
-- `JobContentEnrichmentClient` 基于 `WebClient` 实现：
-  - 通过配置前缀 `jobs.detail-enhancement` 控制开关、URL、密钥、超时。
-  - 请求体包含 Job 元信息与 HTML/纯文本双份内容，方便模型多模态解析。
-  - 序列化结构化数据为 JSON 字符串存储，失败时仅记录日志不影响主流程。
-  - 所有异常以 warn 级别落日志并兜底为空结果，确保采集链路稳定。
+- `JobContentEnrichmentClient` 作为策略编排器：
+  - 通过 `JobContentEnrichmentProvider` 抽象屏蔽具体 LLM 实现，按配置挑选可用 Provider。
+  - 当配置项指向的 Provider 不可用时，会回退到首个可用实现并打印告警。
+  - 保持幂等与容错，任何异常都只记日志、返回空结果，不阻塞主流程。
+- 默认实现 `ChatGptJobContentEnrichmentProvider`：
+  - 直接调用 OpenAI Chat Completions API，System Prompt 要求输出包含 `summary`、`skills`、`highlights`、`structured` 的 JSON。
+  - 支持超时、温度、输出 token 等参数化配置，凭 `OPENAI_API_KEY` 环境变量启用。
+  - 对响应 JSON 做严格解析与字段清洗，结构化字段序列化失败时仅记录 warn。
 
 ## 接口与前端
 - `JobController`：
@@ -49,8 +52,10 @@
   - I18n 字典补充占位文案，兼容中英文。
 
 ## 配置与可运维性
-- `application.yml` 暴露增强服务配置，可在不同环境通过环境变量控制。
-- 客户端默认超时 15s，可调整。
+- `application.yml` 暴露 `jobs.detail-enhancement` 配置树：
+  - `enabled` 控制全局开关，`provider` 指定策略名称（默认 `chatgpt`）。
+  - `chatgpt` 节点配置 API Key、模型、路径、超时等参数，可通过环境变量覆盖。
+- ChatGPT Provider 默认超时 20s，可按环境调整。
 - 失败不影响核心采集流程，下一次内容更新会再次尝试增强。
 
 ## 测试策略

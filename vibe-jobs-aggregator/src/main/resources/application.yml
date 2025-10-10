@@ -50,9 +50,13 @@ security:
 jobs:
   detail-enhancement:
     enabled: true
-    enrichment-service:
-      base-url: ${JOBS_ENRICHMENT_BASE_URL:}
-      api-key: ${JOBS_ENRICHMENT_API_KEY:}
-      endpoint: ${JOBS_ENRICHMENT_ENDPOINT:/v1/enrich}
-      timeout: ${JOBS_ENRICHMENT_TIMEOUT:PT15S}
+    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
+    chatgpt:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      path: ${OPENAI_CHAT_COMPLETIONS_PATH:/v1/chat/completions}
+      model: ${OPENAI_MODEL:gpt-4o-mini}
+      timeout: ${OPENAI_TIMEOUT:PT20S}
+      temperature: ${OPENAI_TEMPERATURE:0.2}
+      max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:800}
 
