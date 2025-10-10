@@ -13,13 +13,16 @@
 
 > 参考：  
 > - 用户前台（搜索/浏览/订阅）：
-<img width="1411" height="910" alt="image" src="https://github.com/user-attachments/assets/f3aec622-4f8b-448e-bfc9-615b00de9419" />
+<img width="1440" height="903" alt="image" src="https://github.com/user-attachments/assets/219b80a7-12db-4f85-ba2b-c0f13f775258" />
+点详情进入数据源官方页面
+<img width="1576" height="896" alt="image" src="https://github.com/user-attachments/assets/8468715b-6856-488d-8d35-27b9eb4a351a" />
 
 > - 管理后台（采集调度配置）：
-<img width="1345" height="881" alt="image" src="https://github.com/user-attachments/assets/1c3d5a9b-df72-438c-b738-cb1b7f3750be" />
+<img width="1352" height="772" alt="image" src="https://github.com/user-attachments/assets/4d1a5b04-d174-47e5-ad49-29c7988d1794" />
+
 
 > - 管理后台（数据源管理）：
-<img width="1611" height="921" alt="image" src="https://github.com/user-attachments/assets/76534435-0dfe-4709-9af0-feab8bde9256" />
+<img width="1368" height="900" alt="image" src="https://github.com/user-attachments/assets/84db79c6-35e2-4f73-a373-edd5de21c165" />
 
 
 ---
