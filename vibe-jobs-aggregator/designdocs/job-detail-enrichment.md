@@ -36,7 +36,7 @@
   - 当配置项指向的 Provider 不可用时，会回退到首个可用实现并打印告警。
   - 保持幂等与容错，任何异常都只记日志、返回空结果，不阻塞主流程。
 - 默认实现 `ChatGptJobContentEnrichmentProvider`：
-  - 直接调用 OpenAI Chat Completions API，System Prompt 要求输出包含 `summary`、`skills`、`highlights`、`structured` 的 JSON。
+  - 通过 OpenAI Responses API (`/v1/responses`) 触发结构化补全，System Prompt 要求输出包含 `summary`、`skills`、`highlights`、`structured` 的 JSON。
   - 支持超时、温度、输出 token 等参数化配置，凭 `OPENAI_API_KEY` 环境变量启用。
   - 对响应 JSON 做严格解析与字段清洗，结构化字段序列化失败时仅记录 warn。
 

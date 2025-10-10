@@ -38,7 +38,7 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     public ChatGptJobContentEnrichmentProvider(ObjectMapper objectMapper,
                                                @Value("${jobs.detail-enhancement.chatgpt.api-key:}") String apiKey,
                                                @Value("${jobs.detail-enhancement.chatgpt.base-url:https://api.openai.com}") String baseUrl,
-                                               @Value("${jobs.detail-enhancement.chatgpt.path:/v1/chat/completions}") String path,
+                                               @Value("${jobs.detail-enhancement.chatgpt.path:/v1/responses}") String path,
                                                @Value("${jobs.detail-enhancement.chatgpt.model:gpt-4o-mini}") String model,
                                                @Value("${jobs.detail-enhancement.chatgpt.timeout:PT20S}") Duration timeout,
                                                @Value("${jobs.detail-enhancement.chatgpt.temperature:0.2}") double temperature,
@@ -78,18 +78,18 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             return Optional.empty();
         }
         try {
-            ChatCompletionRequest request = buildRequest(job, rawContent, contentText);
-            ChatCompletionResponse response = webClient.post()
+            ResponsesRequest request = buildRequest(job, rawContent, contentText);
+            ResponsesResponse response = webClient.post()
                     .uri(path)
                     .bodyValue(request)
                     .retrieve()
-                    .bodyToMono(ChatCompletionResponse.class)
+                    .bodyToMono(ResponsesResponse.class)
                     .timeout(timeout)
                     .block();
-            if (response == null || CollectionUtils.isEmpty(response.choices())) {
+            if (response == null) {
                 return Optional.empty();
             }
-            String content = response.choices().get(0).message() != null ? response.choices().get(0).message().content() : null;
+            String content = extractContent(response);
             if (!StringUtils.hasText(content)) {
                 return Optional.empty();
             }
@@ -115,7 +115,7 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         }
     }
 
-    private ChatCompletionRequest buildRequest(Job job, String rawContent, String contentText) {
+    private ResponsesRequest buildRequest(Job job, String rawContent, String contentText) {
         String title = job.getTitle();
         String company = job.getCompany();
         String location = job.getLocation();
@@ -136,12 +136,53 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             userPrompt.append(truncate(rawContent, 4000));
         }
 
-        List<Message> messages = List.of(
-                new Message("system", SystemInstructions.TEXT),
-                new Message("user", userPrompt.toString())
+        List<InputMessage> input = List.of(
+                new InputMessage("system", List.of(Content.text(SystemInstructions.TEXT))),
+                new InputMessage("user", List.of(Content.text(userPrompt.toString())))
         );
-        return new ChatCompletionRequest(model, messages, temperature, maxTokens,
+        return new ResponsesRequest(model, input, temperature, maxTokens,
                 new ResponseFormat("json_object"));
+    }
+
+    private String extractContent(ResponsesResponse response) {
+        if (!CollectionUtils.isEmpty(response.outputText())) {
+            return response.outputText().get(0);
+        }
+        if (CollectionUtils.isEmpty(response.output())) {
+            return null;
+        }
+        String messageContent = response.output().stream()
+                .filter(item -> "message".equals(item.type()))
+                .findFirst()
+                .map(OutputItem::content)
+                .filter(content -> !CollectionUtils.isEmpty(content))
+                .map(content -> content.stream()
+                        .filter(part -> isTextType(part.type()))
+                        .map(Content::text)
+                        .filter(StringUtils::hasText)
+                        .findFirst()
+                        .orElse(null))
+                .orElse(null);
+        if (StringUtils.hasText(messageContent)) {
+            return messageContent;
+        }
+        return response.output().stream()
+                .map(OutputItem::content)
+                .filter(content -> !CollectionUtils.isEmpty(content))
+                .flatMap(List::stream)
+                .filter(part -> isTextType(part.type()))
+                .map(Content::text)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isTextType(String type) {
+        if (!StringUtils.hasText(type)) {
+            return false;
+        }
+        String normalized = type.trim().toLowerCase();
+        return "text".equals(normalized) || "output_text".equals(normalized);
     }
 
     private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
@@ -178,23 +219,32 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         return value.substring(0, Math.max(maxChars, 0));
     }
 
-    private record ChatCompletionRequest(String model,
-                                         List<Message> messages,
-                                         double temperature,
-                                         int max_tokens,
-                                         ResponseFormat response_format) {
+    private record ResponsesRequest(String model,
+                                    List<InputMessage> input,
+                                    double temperature,
+                                    int max_output_tokens,
+                                    ResponseFormat response_format) {
     }
 
-    private record Message(String role, String content) {
+    private record InputMessage(String role, List<Content> content) {
+    }
+
+    private record Content(String type, String text) {
+        static Content text(String value) {
+            return new Content("text", value);
+        }
     }
 
     private record ResponseFormat(String type) {
     }
 
-    private record ChatCompletionResponse(List<Choice> choices) {
+    private record ResponsesResponse(List<OutputItem> output, List<String> output_text) {
+        List<String> outputText() {
+            return output_text;
+        }
     }
 
-    private record Choice(Message message) {
+    private record OutputItem(String type, String role, List<Content> content) {
     }
 
     private record ChatCompletionPayload(String summary,
