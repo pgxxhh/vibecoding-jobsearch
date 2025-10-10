@@ -9,6 +9,7 @@ import com.vibe.jobs.ingestion.domain.IngestionCursor;
 import com.vibe.jobs.ingestion.domain.IngestionCursorKey;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
+import com.vibe.jobs.service.LocationEnhancementService;
 import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.service.RoleFilterService;
 import com.vibe.jobs.sources.FetchedJob;
@@ -40,6 +41,7 @@ public class JobIngestionScheduler {
     private final JobDetailService jobDetailService;
     private final LocationFilterService locationFilterService;
     private final RoleFilterService roleFilterService;
+    private final LocationEnhancementService locationEnhancementService;
     private final IngestionExecutorManager executorManager;
     private final TaskScheduler taskScheduler;
     private final IngestionSettingsService settingsService;
@@ -53,6 +55,7 @@ public class JobIngestionScheduler {
                                  JobDetailService jobDetailService,
                                  LocationFilterService locationFilterService,
                                  RoleFilterService roleFilterService,
+                                 LocationEnhancementService locationEnhancementService,
                                  IngestionExecutorManager executorManager,
                                  TaskScheduler taskScheduler,
                                  IngestionSettingsService settingsService,
@@ -64,6 +67,7 @@ public class JobIngestionScheduler {
         this.jobDetailService = jobDetailService;
         this.locationFilterService = locationFilterService;
         this.roleFilterService = roleFilterService;
+        this.locationEnhancementService = locationEnhancementService;
         this.executorManager = executorManager;
         this.taskScheduler = taskScheduler;
         this.settingsService = settingsService;
@@ -160,7 +164,8 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             List<FetchedJob> cursorFiltered = filterByCursor(roleFiltered, cursor);
             if (cursorFiltered.isEmpty()) {

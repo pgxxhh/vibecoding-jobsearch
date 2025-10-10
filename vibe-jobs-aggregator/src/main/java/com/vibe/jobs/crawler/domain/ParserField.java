@@ -118,9 +118,15 @@ public class ParserField {
                         .filter(value -> !value.isBlank())
                         .orElse(null);
                 
-                // 如果是location字段且没有提取到值，使用智能location提取
-                if (textValue == null && "location".equalsIgnoreCase(name)) {
-                    textValue = extractLocationIntelligently(element);
+                // 如果是location字段且没有提取到值，或者值无效，使用智能location提取
+                if ("location".equalsIgnoreCase(name)) {
+                    if (textValue == null || !isValidLocationText(textValue)) {
+                        String intelligentLocation = extractLocationIntelligently(element);
+                        if (intelligentLocation != null) {
+                            log.debug("Location field enhanced: '{}' -> '{}'", textValue, intelligentLocation);
+                            textValue = intelligentLocation;
+                        }
+                    }
                 }
                 
                 yield textValue;
@@ -285,7 +291,14 @@ public class ParserField {
      * 智能location提取 - 通用能力，适用于各种网站结构
      */
     private String extractLocationIntelligently(Element element) {
-        // 定义常见的location相关选择器，按优先级排序
+        // 策略1: 从当前元素及其父元素的文本中提取location
+        String locationFromText = extractLocationFromText(element);
+        if (locationFromText != null) {
+            log.debug("Location extracted from element text: '{}'", locationFromText);
+            return locationFromText;
+        }
+        
+        // 策略2: 使用选择器搜索
         String[] locationSelectors = {
             // 直接的location类和属性
             ".location", "[data-location]", "[class*='location']", 
@@ -299,12 +312,8 @@ public class ParserField {
             "[data-testid*='location']", "[data-test*='location']",
             "[data-cy*='location']", "[aria-label*='location']",
             
-            // 通用结构选择器
-            "span:contains('China')", "span:contains('Beijing')", "span:contains('Shanghai')",
-            "div:contains('China')", ".text:contains('China')",
-            
             // 兄弟元素和相邻元素（适用于标题旁边的位置信息）
-            "~ span", "~ div", "+ span", "+ div"
+            "~ span", "~ div", "+ span", "+ div", "~ *", "+ *"
         };
         
         for (String sel : locationSelectors) {
@@ -323,7 +332,7 @@ public class ParserField {
             }
         }
         
-        // 最后尝试：在父元素或祖父元素中寻找location信息
+        // 策略3: 在父元素或祖父元素中寻找location信息
         Element parent = element.parent();
         if (parent != null) {
             String locationFromParent = extractLocationFromElementTree(parent, 2);
@@ -333,8 +342,106 @@ public class ParserField {
             }
         }
         
+        // 策略4: URL参数推断（如?_offices=china）
+        String locationFromUrl = extractLocationFromUrl(element);
+        if (locationFromUrl != null) {
+            log.debug("Location extracted from URL context: '{}'", locationFromUrl);
+            return locationFromUrl;
+        }
+        
         log.debug("No location information found for element: {}", 
                  element.text().length() > 50 ? element.text().substring(0, 50) + "..." : element.text());
+        return null;
+    }
+    
+    /**
+     * 从元素文本中提取location信息（处理如"Job Title, China"这样的格式）
+     */
+    private String extractLocationFromText(Element element) {
+        // 检查当前元素及其父元素的文本
+        Element current = element;
+        for (int i = 0; i < 3 && current != null; i++) {
+            String text = current.text().trim();
+            if (!text.isEmpty()) {
+                String location = parseLocationFromText(text);
+                if (location != null) {
+                    return location;
+                }
+            }
+            current = current.parent();
+        }
+        return null;
+    }
+    
+    /**
+     * 从文本中解析location信息
+     */
+    private String parseLocationFromText(String text) {
+        if (text == null || text.length() < 3) {
+            return null;
+        }
+        
+        // 模式1: "Title, Location" 格式
+        if (text.contains(",")) {
+            String[] parts = text.split(",");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (isValidLocationText(trimmed)) {
+                    return trimmed;
+                }
+            }
+        }
+        
+        // 模式2: 直接包含location关键词
+        String[] locationKeywords = {
+            "China", "Beijing", "Shanghai", "Shenzhen", "Guangzhou", "Hangzhou",
+            "中国", "北京", "上海", "深圳", "广州", "杭州",
+            "Singapore", "Hong Kong", "Taiwan", "Macau"
+        };
+        
+        for (String keyword : locationKeywords) {
+            if (text.contains(keyword)) {
+                // 尝试提取包含关键词的词组
+                String[] words = text.split("\\s+");
+                for (int i = 0; i < words.length; i++) {
+                    if (words[i].contains(keyword)) {
+                        // 返回关键词及其前后词组
+                        StringBuilder location = new StringBuilder();
+                        int start = Math.max(0, i - 1);
+                        int end = Math.min(words.length, i + 2);
+                        for (int j = start; j < end; j++) {
+                            if (location.length() > 0) location.append(" ");
+                            location.append(words[j].replaceAll("[^\\w\\s,-]", ""));
+                        }
+                        String result = location.toString().trim();
+                        if (isValidLocationText(result)) {
+                            return result;
+                        }
+                        // 如果词组无效，至少返回关键词本身
+                        return keyword;
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 从URL上下文推断location（如?_offices=china）
+     */
+    private String extractLocationFromUrl(Element element) {
+        try {
+            String docUrl = element.ownerDocument() != null ? element.ownerDocument().location() : null;
+            if (docUrl != null && docUrl.contains("_offices=china")) {
+                return "China";
+            }
+            if (docUrl != null && docUrl.contains("location=china")) {
+                return "China";
+            }
+        } catch (Exception e) {
+            log.trace("Failed to extract location from URL: {}", e.getMessage());
+        }
         return null;
     }
     
