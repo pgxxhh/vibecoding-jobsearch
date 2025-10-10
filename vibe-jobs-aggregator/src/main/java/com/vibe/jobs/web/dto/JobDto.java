@@ -10,5 +10,6 @@ public record JobDto(
         String level,
         Instant postedAt,
         List<String> tags,
-        String url
+        String url,
+        boolean detailMatch
 ) {}

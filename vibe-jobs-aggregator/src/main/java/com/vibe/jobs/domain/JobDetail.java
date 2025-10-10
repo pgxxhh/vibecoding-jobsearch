@@ -25,6 +25,10 @@ public class JobDetail {
     @Column(columnDefinition = "longtext")
     private String content;
 
+    @Lob
+    @Column(name = "content_text", columnDefinition = "longtext")
+    private String contentText;
+
     @Column(nullable = false, columnDefinition = "timestamp")
     private Instant createdAt;
 
@@ -38,9 +42,10 @@ public class JobDetail {
     protected JobDetail() {
     }
 
-    public JobDetail(Job job, String content) {
+    public JobDetail(Job job, String content, String contentText) {
         this.job = job;
         this.content = content;
+        this.contentText = contentText;
     }
 
     @PrePersist
@@ -82,6 +87,14 @@ public class JobDetail {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getContentText() {
+        return contentText;
+    }
+
+    public void setContentText(String contentText) {
+        this.contentText = contentText;
     }
 
     public Instant getCreatedAt() {

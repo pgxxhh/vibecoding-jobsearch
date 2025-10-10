@@ -5,6 +5,10 @@ import com.vibe.jobs.web.dto.JobDto;
 import java.util.ArrayList;
 public class JobMapper {
     public static JobDto toDto(Job j) {
+        return toDto(j, false);
+    }
+
+    public static JobDto toDto(Job j, boolean detailMatch) {
         return new JobDto(
                 String.valueOf(j.getId()),
                 j.getTitle(),
@@ -13,7 +17,8 @@ public class JobMapper {
                 j.getLevel(),
                 j.getPostedAt(),
                 new ArrayList<>(j.getTags()),
-                j.getUrl()
+                j.getUrl(),
+                detailMatch
         );
     }
 }

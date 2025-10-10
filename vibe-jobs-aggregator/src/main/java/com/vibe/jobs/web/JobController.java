@@ -40,6 +40,7 @@ public class JobController {
                              @RequestParam(value = "location", required = false) String location,
                              @RequestParam(value = "level", required = false) String level,
                              @RequestParam(value = "datePosted", required = false) Integer datePosted,
+                             @RequestParam(value = "searchDetail", defaultValue = "false") boolean searchDetail,
                              @RequestParam(value = "cursor", required = false) String cursor,
                              @RequestParam(value = "size", defaultValue = "10") int size) {
         if (size < 1) size = DEFAULT_SIZE;
@@ -60,14 +61,18 @@ public class JobController {
                 Sort.by(Sort.Direction.DESC, "postedAt", "id")
         );
 
+        String normalizedQuery = emptyToNull(q);
+        boolean detailEnabled = searchDetail && normalizedQuery != null;
+
         var jobs = new ArrayList<>(repo.searchAfter(
-                emptyToNull(q),
+                normalizedQuery,
                 emptyToNull(company),
                 emptyToNull(location),
                 emptyToNull(level),
                 postedAfter,
                 cursorPosition != null ? cursorPosition.postedAt() : null,
                 cursorPosition != null ? cursorPosition.id() : null,
+                detailEnabled,
                 pageable
         ));
 
@@ -84,8 +89,12 @@ public class JobController {
             }
         }
 
-        var items = jobs.stream().map(com.vibe.jobs.web.JobMapper::toDto).collect(Collectors.toList());
-        long total = repo.countSearch(emptyToNull(q), emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter);
+        var detailMatches = detailEnabled ? findDetailMatches(jobs, normalizedQuery) : java.util.Collections.<Long>emptySet();
+
+        var items = jobs.stream()
+                .map(job -> com.vibe.jobs.web.JobMapper.toDto(job, detailMatches.contains(job.getId())))
+                .collect(Collectors.toList());
+        long total = repo.countSearch(normalizedQuery, emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter, detailEnabled);
         return new JobsResponse(items, total, nextCursor, hasMore, size);
     }
 
@@ -131,6 +140,44 @@ public class JobController {
     private String encodeCursor(Instant postedAt, Long id) {
         String payload = postedAt.toEpochMilli() + ":" + id;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private java.util.Set<Long> findDetailMatches(java.util.List<com.vibe.jobs.domain.Job> jobs, String query) {
+        var jobIds = jobs.stream()
+                .map(com.vibe.jobs.domain.Job::getId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toList());
+        if (jobIds.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+        var contentByJobId = jobDetailService.findContentTextByJobIds(jobIds);
+        if (contentByJobId.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+
+        var tokens = java.util.Arrays.stream(query.split("\\s+"))
+                .map(token -> token.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]", ""))
+                .map(token -> token.toLowerCase(java.util.Locale.ROOT))
+                .filter(token -> !token.isBlank())
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        if (tokens.isEmpty()) {
+            tokens.add(query.toLowerCase(java.util.Locale.ROOT));
+        }
+
+        java.util.Set<Long> matched = new java.util.HashSet<>();
+        for (var entry : contentByJobId.entrySet()) {
+            Long jobId = entry.getKey();
+            String content = entry.getValue();
+            if (jobId == null || content == null || content.isBlank()) {
+                continue;
+            }
+            String normalizedContent = content.toLowerCase(java.util.Locale.ROOT);
+            boolean matches = tokens.stream().allMatch(normalizedContent::contains);
+            if (matches) {
+                matched.add(jobId);
+            }
+        }
+        return matched;
     }
 
     private record CursorPosition(Instant postedAt, long id) {}
