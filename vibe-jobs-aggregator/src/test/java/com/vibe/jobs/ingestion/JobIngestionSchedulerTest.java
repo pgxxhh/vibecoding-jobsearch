@@ -2,6 +2,7 @@ package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.admin.application.IngestionSettingsService;
 import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.domain.Job;
@@ -9,6 +10,7 @@ import com.vibe.jobs.ingestion.IngestionCursorService;
 import com.vibe.jobs.service.JobDetailService;
 import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
+import com.vibe.jobs.service.LocationEnhancementService;
 import com.vibe.jobs.service.RoleFilterService;
 import com.vibe.jobs.sources.FetchedJob;
 import com.vibe.jobs.sources.SourceClient;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +56,9 @@ class JobIngestionSchedulerTest {
 
     @Mock
     private RoleFilterService roleFilterService;
+
+    @Mock
+    private LocationEnhancementService locationEnhancementService;
 
     @Mock
     private IngestionExecutorManager executorManager;
@@ -131,8 +137,17 @@ class JobIngestionSchedulerTest {
         // Mock location filter service to return all jobs unchanged
         when(locationFilterService.filterJobs(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
+        // Mock location enhancement service to return all jobs unchanged
+        when(locationEnhancementService.enhanceLocationFields(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
         // Mock role filter service to return all jobs unchanged  
         when(roleFilterService.filter(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Provide snapshot and cursor defaults for scheduler setup
+        when(settingsService.initializeIfNeeded()).thenReturn(IngestionSettingsSnapshot.fromProperties(properties, Instant.now()));
+        when(ingestionCursorService.find(any())).thenReturn(Optional.empty());
+        when(executorManager.getExecutor()).thenReturn(executor);
+        when(dataSourceQueryService.getNormalizedCompanyNames()).thenReturn(Set.of());
 
         JobIngestionScheduler scheduler = new JobIngestionScheduler(
                 jobService,
@@ -142,6 +157,7 @@ class JobIngestionSchedulerTest {
                 jobDetailService,
                 locationFilterService,
                 roleFilterService,
+                locationEnhancementService,
                 executorManager,
                 taskScheduler,
                 settingsService,
