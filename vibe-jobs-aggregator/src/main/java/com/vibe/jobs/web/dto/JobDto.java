@@ -2,6 +2,7 @@
 package com.vibe.jobs.web.dto;
 import java.time.Instant;
 import java.util.List;
+
 public record JobDto(
         String id,
         String title,
@@ -11,5 +12,8 @@ public record JobDto(
         Instant postedAt,
         List<String> tags,
         String url,
+        String summary,
+        List<String> skills,
+        List<String> highlights,
         boolean detailMatch
 ) {}

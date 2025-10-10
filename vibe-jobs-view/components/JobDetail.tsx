@@ -4,6 +4,12 @@ import type { Job } from '@/lib/types';
 
 type Labels = {
   empty: string;
+  summary: string;
+  summaryPlaceholder: string;
+  skills: string;
+  skillsPlaceholder: string;
+  highlights: string;
+  highlightsPlaceholder: string;
   description: string;
   noDescription: string;
   error: string;
@@ -70,6 +76,13 @@ function sanitizeJobContent(raw: string): string {
   return removeDangerousAttributes(withoutTags);
 }
 
+function normalizeStringList(values: string[] | null | undefined): string[] {
+  if (!values || values.length === 0) return [];
+  return values
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
+}
+
 export default function JobDetail({ job, isLoading, isError, isRefreshing, onRetry, labels }: Props) {
   if (!job) {
     return (
@@ -82,6 +95,11 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
 
   const sanitizedContent = job.content ? sanitizeJobContent(job.content) : '';
   const hasDescription = sanitizedContent.trim().length > 0;
+  const summary = typeof job.summary === 'string' ? job.summary.trim() : '';
+  const normalizedSkills = normalizeStringList(job.skills);
+  const normalizedTags = normalizeStringList(job.tags ?? []);
+  const skillBadges = normalizedSkills.length > 0 ? normalizedSkills : normalizedTags;
+  const highlights = normalizeStringList(job.highlights);
 
   return (
     <div className="space-y-6">
@@ -96,15 +114,60 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
         </div>
       </div>
-      {job.tags && job.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {job.tags.map((tag) => (
-            <Badge key={tag} tone="muted">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        ) : summary ? (
+          <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
+        ) : (
+          <p className="text-xs italic text-gray-400">{labels.summaryPlaceholder}</p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700">{labels.skills}</h3>
+        {isLoading ? (
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+        ) : skillBadges.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {skillBadges.map((skill) => (
+              <Badge key={skill} tone="muted">
+                {skill}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs italic text-gray-400">{labels.skillsPlaceholder}</p>
+        )}
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-700">{labels.highlights}</h3>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-3 w-4/5" />
+          </div>
+        ) : highlights.length > 0 ? (
+          <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
+            {highlights.map((highlight) => (
+              <li key={highlight} className="flex items-start gap-2">
+                <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                <span className="flex-1">{highlight}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs italic text-gray-400">{labels.highlightsPlaceholder}</p>
+        )}
+      </div>
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-700">{labels.description}</h3>
         {isError ? (
