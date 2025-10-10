@@ -13,13 +13,14 @@ public class IngestionProperties {
     private long fixedDelayMs = 3_600_000L;
     private long initialDelayMs = 10_000L;
     private int pageSize = 100;
-    private Mode mode = Mode.RECENT;
     private int recentDays = 7;
     private int concurrency = 4;
     private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
     private LocationFilter locationFilter = new LocationFilter();
     private RoleFilter roleFilter = new RoleFilter();
 
+    // Mode 枚举已弃用，保留仅为兼容性，实际逻辑不再使用
+    @Deprecated
     public enum Mode {
         COMPANIES,
         RECENT
@@ -47,16 +48,6 @@ public class IngestionProperties {
 
     public void setPageSize(int pageSize) {
         this.pageSize = pageSize;
-    }
-
-    public Mode getMode() {
-        return mode;
-    }
-
-    public void setMode(Mode mode) {
-        if (mode != null) {
-            this.mode = mode;
-        }
     }
 
     public int getRecentDays() {

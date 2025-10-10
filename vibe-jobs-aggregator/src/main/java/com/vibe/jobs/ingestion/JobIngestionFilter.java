@@ -29,39 +29,36 @@ public class JobIngestionFilter {
             return List.of();
         }
 
-        IngestionProperties.Mode mode = properties.getMode();
-        if (mode == IngestionProperties.Mode.COMPANIES) {
-            Set<String> allowedCompanies = new HashSet<>(queryService.getNormalizedCompanyNames());
-            if (allowedCompanies.isEmpty()) {
-                return jobs; // nothing to filter against
-            }
-            return jobs.stream()
-                    .filter(job -> matchesCompany(job.job(), allowedCompanies))
-                    .toList();
-        }
-
-        if (mode == IngestionProperties.Mode.RECENT) {
-            Instant cutoff = Instant.now().minus(Duration.ofDays(Math.max(properties.getRecentDays(), 1)));
-            return jobs.stream()
-                    .filter(job -> isRecent(job.job(), cutoff))
-                    .toList();
-        }
-
-        return jobs;
+        // 1. 首先按启用的公司过滤 (必须条件)
+        Set<String> enabledCompanies = new HashSet<>(queryService.getNormalizedCompanyNames());
+        
+        // 2. 按时间范围过滤 (必须条件)
+        Instant cutoff = Instant.now().minus(Duration.ofDays(Math.max(properties.getRecentDays(), 1)));
+        
+        return jobs.stream()
+                .filter(job -> matchesEnabledCompany(job.job(), enabledCompanies))
+                .filter(job -> isRecent(job.job(), cutoff))
+                .toList();
     }
 
-    private boolean matchesCompany(Job job, Set<String> allowed) {
+    private boolean matchesEnabledCompany(Job job, Set<String> enabledCompanies) {
         if (job == null) return false;
         String company = job.getCompany();
         if (company == null) return false;
-        return allowed.contains(company.trim().toLowerCase(Locale.ROOT));
+        
+        // 如果没有启用的公司，则跳过公司过滤
+        if (enabledCompanies.isEmpty()) {
+            return true;
+        }
+        
+        return enabledCompanies.contains(company.trim().toLowerCase(Locale.ROOT));
     }
 
     private boolean isRecent(Job job, Instant cutoff) {
         if (job == null) return false;
         Instant postedAt = job.getPostedAt();
         if (postedAt == null) {
-            return true; // keep if timestamp unknown
+            return true; // 如果时间戳未知，保留职位
         }
         return !postedAt.isBefore(cutoff);
     }

@@ -16,7 +16,6 @@ public final class IngestionSettingsSnapshot {
     private final long fixedDelayMs;
     private final long initialDelayMs;
     private final int pageSize;
-    private final IngestionProperties.Mode mode;
     private final int recentDays;
     private final int concurrency;
     private final Map<String, IngestionProperties.CompanyOverride> companyOverrides;
@@ -29,7 +28,6 @@ public final class IngestionSettingsSnapshot {
             @JsonProperty("fixedDelayMs") long fixedDelayMs,
             @JsonProperty("initialDelayMs") long initialDelayMs,
             @JsonProperty("pageSize") int pageSize,
-            @JsonProperty("mode") IngestionProperties.Mode mode,
             @JsonProperty("recentDays") int recentDays,
             @JsonProperty("concurrency") int concurrency,
             @JsonProperty("companyOverrides") Map<String, IngestionProperties.CompanyOverride> companyOverrides,
@@ -39,7 +37,6 @@ public final class IngestionSettingsSnapshot {
         this.fixedDelayMs = fixedDelayMs <= 0 ? 3_600_000L : fixedDelayMs;
         this.initialDelayMs = Math.max(0, initialDelayMs);
         this.pageSize = Math.max(1, pageSize);
-        this.mode = mode == null ? IngestionProperties.Mode.RECENT : mode;
         this.recentDays = Math.max(1, recentDays);
         this.concurrency = Math.max(1, concurrency);
         this.companyOverrides = sanitizeOverrides(companyOverrides);
@@ -54,7 +51,6 @@ public final class IngestionSettingsSnapshot {
                 properties.getFixedDelayMs(),
                 properties.getInitialDelayMs(),
                 properties.getPageSize(),
-                properties.getMode(),
                 properties.getRecentDays(),
                 properties.getConcurrency(),
                 properties.getCompanyOverrides(),
@@ -69,7 +65,6 @@ public final class IngestionSettingsSnapshot {
         properties.setFixedDelayMs(fixedDelayMs);
         properties.setInitialDelayMs(initialDelayMs);
         properties.setPageSize(pageSize);
-        properties.setMode(mode);
         properties.setRecentDays(recentDays);
         properties.setConcurrency(concurrency);
         properties.setCompanyOverrides(companyOverrides);
@@ -91,13 +86,6 @@ public final class IngestionSettingsSnapshot {
     public int pageSize() {
         return pageSize;
     }
-
-    @JsonProperty("mode")
-    public IngestionProperties.Mode mode() {
-        return mode;
-    }
-
-
 
     @JsonProperty("recentDays")
     public int recentDays() {

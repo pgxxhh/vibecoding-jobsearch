@@ -7,8 +7,6 @@ interface IngestionSettingsResponse {
   fixedDelayMs: number;
   initialDelayMs: number;
   pageSize: number;
-  mode: 'RECENT' | 'COMPANIES';
-  companies: string[];
   recentDays: number;
   concurrency: number;
   companyOverrides: Record<string, unknown>;
@@ -37,8 +35,6 @@ export default function IngestionSettingsPage() {
   const [pageSize, setPageSize] = useState('100');
   const [recentDays, setRecentDays] = useState('7');
   const [concurrency, setConcurrency] = useState('4');
-  const [mode, setMode] = useState<'RECENT' | 'COMPANIES'>('RECENT');
-  const [companiesText, setCompaniesText] = useState('');
   const [locationJson, setLocationJson] = useState('');
   const [roleJson, setRoleJson] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -51,8 +47,6 @@ export default function IngestionSettingsPage() {
       setPageSize(String(data.pageSize));
       setRecentDays(String(data.recentDays));
       setConcurrency(String(data.concurrency));
-      setMode(data.mode);
-      setCompaniesText((data.companies ?? []).join('\\n'));
       setLocationJson(JSON.stringify(data.locationFilter ?? {}, null, 2));
       setRoleJson(JSON.stringify(data.roleFilter ?? {}, null, 2));
     }
@@ -87,10 +81,6 @@ export default function IngestionSettingsPage() {
     try {
       const location = locationJson.trim() ? JSON.parse(locationJson) : {};
       const role = roleJson.trim() ? JSON.parse(roleJson) : {};
-      const companies = companiesText
-        .split('\\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
 
       if (!fixedDelayMs || !initialDelayMs || !pageSize || !recentDays || !concurrency) {
         throw new Error('请填写所有必填字段');
@@ -100,8 +90,6 @@ export default function IngestionSettingsPage() {
         fixedDelayMs: Number(fixedDelayMs) || data?.fixedDelayMs,
         initialDelayMs: Number(initialDelayMs) || data?.initialDelayMs,
         pageSize: Number(pageSize) || data?.pageSize,
-        mode,
-        companies,
         recentDays: Number(recentDays) || data?.recentDays,
         concurrency: Number(concurrency) || data?.concurrency,
         companyOverrides: data?.companyOverrides ?? {},
@@ -206,66 +194,23 @@ export default function IngestionSettingsPage() {
           </div>
         </div>
 
-        {/* 采集模式 */}
+        {/* 采集配置 */}
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 采集模式</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 采集配置</h3>
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="flex items-center space-x-3 text-sm">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="RECENT"
-                  checked={mode === 'RECENT'}
-                  onChange={(e) => setMode(e.target.value as 'RECENT' | 'COMPANIES')}
-                  className="h-4 w-4 text-brand-600 focus:ring-brand-500"
-                />
-                <span className="font-medium text-gray-700">最近模式 (RECENT)</span>
-              </label>
-              <label className="flex items-center space-x-3 text-sm">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="COMPANIES"
-                  checked={mode === 'COMPANIES'}
-                  onChange={(e) => setMode(e.target.value as 'RECENT' | 'COMPANIES')}
-                  className="h-4 w-4 text-brand-600 focus:ring-brand-500"
-                />
-                <span className="font-medium text-gray-700">指定公司模式 (COMPANIES)</span>
-              </label>
-            </div>
-
-            {mode === 'RECENT' && (
-              <label className="flex flex-col space-y-2 text-sm">
-                <span className="font-medium text-gray-700">最近天数*</span>
-                <input
-                  value={recentDays}
-                  onChange={(e) => setRecentDays(e.target.value)}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 max-w-xs"
-                  type="number"
-                  min={1}
-                  max={90}
-                  required
-                />
-                <span className="text-xs text-gray-500">采集最近 {recentDays} 天更新的职位</span>
-              </label>
-            )}
-
-            {mode === 'COMPANIES' && (
-              <label className="flex flex-col space-y-2 text-sm">
-                <span className="font-medium text-gray-700">指定公司列表（每行一个）</span>
-                <textarea
-                  value={companiesText}
-                  onChange={(e) => setCompaniesText(e.target.value)}
-                  rows={8}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  placeholder={`google\napple\nmicrosoft\n...`}
-                />
-                <span className="text-xs text-gray-500">
-                  当前有 {companiesText.split('\\n').filter(line => line.trim()).length} 个公司
-                </span>
-              </label>
-            )}
+            <label className="flex flex-col space-y-2 text-sm">
+              <span className="font-medium text-gray-700">采集时间范围（天数）*</span>
+              <input
+                value={recentDays}
+                onChange={(e) => setRecentDays(e.target.value)}
+                className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15 max-w-xs"
+                type="number"
+                min={1}
+                max={90}
+                required
+              />
+              <span className="text-xs text-gray-500">只采集最近 {recentDays} 天更新且来自启用公司的职位</span>
+            </label>
           </div>
         </div>
 

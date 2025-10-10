@@ -1,16 +1,17 @@
 package com.vibe.jobs.admin.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.config.IngestionProperties;
 
 import java.time.Instant;
 import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record IngestionSettingsRequest(
         long fixedDelayMs,
         long initialDelayMs,
         int pageSize,
-        String mode,
         int recentDays,
         int concurrency,
         IngestionProperties.LocationFilter locationFilter,
@@ -18,20 +19,13 @@ public record IngestionSettingsRequest(
         Map<String, IngestionProperties.CompanyOverride> companyOverrides
 ) {
     public IngestionSettingsSnapshot toSnapshot() {
-        IngestionProperties.Mode resolvedMode;
-        try {
-            resolvedMode = mode == null ? IngestionProperties.Mode.RECENT : IngestionProperties.Mode.valueOf(mode.toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            resolvedMode = IngestionProperties.Mode.RECENT;
-        }
         return new IngestionSettingsSnapshot(
                 fixedDelayMs,
                 initialDelayMs,
                 pageSize,
-                resolvedMode,
                 recentDays,
-                concurrency,
-                companyOverrides,
+                Math.max(1, concurrency), // 确保并发数至少为1
+                companyOverrides != null ? companyOverrides : Map.of(),
                 locationFilter,
                 roleFilter,
                 Instant.now()
