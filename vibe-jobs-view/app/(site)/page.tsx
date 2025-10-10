@@ -32,6 +32,10 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
     location: detail.location ?? '',
     postedAt: detail.postedAt ?? '',
     content: detail.content ?? '',
+    summary: detail.summary ?? null,
+    skills: Array.isArray(detail.skills) ? detail.skills : [],
+    highlights: Array.isArray(detail.highlights) ? detail.highlights : [],
+    structuredData: detail.structuredData ?? null,
   };
 }
 
@@ -325,6 +329,12 @@ export default function Page() {
   const jobDetailLabels = useMemo(
     () => ({
       empty: t('jobDetail.empty'),
+      summary: t('jobDetail.summary'),
+      summaryPlaceholder: t('jobDetail.summaryPlaceholder'),
+      skills: t('jobDetail.skills'),
+      skillsPlaceholder: t('jobDetail.skillsPlaceholder'),
+      highlights: t('jobDetail.highlights'),
+      highlightsPlaceholder: t('jobDetail.highlightsPlaceholder'),
       description: t('jobDetail.description'),
       noDescription: t('jobDetail.noDescription'),
       error: t('jobDetail.error'),
@@ -407,10 +417,18 @@ export default function Page() {
   const combinedSelectedJob = useMemo<Job | null>(() => {
     if (!selectedJob) return null;
     if (!jobDetail) return selectedJob;
+    const baseSkills = Array.isArray(selectedJob.skills) ? selectedJob.skills : [];
+    const detailSkills = Array.isArray(jobDetail.skills) ? jobDetail.skills : [];
+    const baseHighlights = Array.isArray(selectedJob.highlights) ? selectedJob.highlights : [];
+    const detailHighlights = Array.isArray(jobDetail.highlights) ? jobDetail.highlights : [];
     return {
       ...selectedJob,
       ...jobDetail,
       content: jobDetail.content ?? selectedJob.content,
+      summary: jobDetail.summary ?? selectedJob.summary,
+      skills: detailSkills.length > 0 ? detailSkills : baseSkills,
+      highlights: detailHighlights.length > 0 ? detailHighlights : baseHighlights,
+      structuredData: jobDetail.structuredData ?? selectedJob.structuredData,
     };
   }, [selectedJob, jobDetail]);
 

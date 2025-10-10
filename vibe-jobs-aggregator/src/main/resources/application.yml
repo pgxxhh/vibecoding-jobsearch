@@ -50,4 +50,9 @@ security:
 jobs:
   detail-enhancement:
     enabled: true
+    enrichment-service:
+      base-url: ${JOBS_ENRICHMENT_BASE_URL:}
+      api-key: ${JOBS_ENRICHMENT_API_KEY:}
+      endpoint: ${JOBS_ENRICHMENT_ENDPOINT:/v1/enrich}
+      timeout: ${JOBS_ENRICHMENT_TIMEOUT:PT15S}
 

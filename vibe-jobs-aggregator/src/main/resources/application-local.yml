@@ -32,3 +32,10 @@ logging:
   level:
     com.vibe.jobs: DEBUG
     org.springframework.security: DEBUG
+
+jobs:
+  detail-enhancement:
+    enrichment-service:
+      base-url: ${JOBS_ENRICHMENT_BASE_URL:http://localhost:8900}
+      endpoint: ${JOBS_ENRICHMENT_ENDPOINT:/v1/enrich}
+      timeout: ${JOBS_ENRICHMENT_TIMEOUT:PT10S}

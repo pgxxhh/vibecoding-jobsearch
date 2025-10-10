@@ -8,6 +8,11 @@ export type Job = {
   postedAt: string;
   tags?: string[];
   url: string;
+  summary?: string;
+  skills?: string[];
+  highlights?: string[];
+  structuredData?: string;
+  detailMatch?: boolean;
   content?: string;
 };
 export type JobDetail = {
@@ -17,6 +22,10 @@ export type JobDetail = {
   location: string;
   postedAt: string;
   content: string;
+  summary?: string | null;
+  skills?: string[];
+  highlights?: string[];
+  structuredData?: string | null;
 };
 export type JobsQuery = {
   q?: string;
