@@ -43,12 +43,40 @@ public class BrowserSessionManager implements Closeable {
                 return browser;
             }
             log.info("Starting shared Playwright browser instance for crawler automation");
-            playwright = Playwright.create();
-            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions();
-            launchOptions.setHeadless(true);
-            launchOptions.setArgs(Arrays.asList("--disable-dev-shm-usage", "--no-sandbox"));
-            browser = playwright.chromium().launch(launchOptions);
-            return browser;
+            try {
+                playwright = Playwright.create();
+                BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions();
+                launchOptions.setHeadless(true);
+                launchOptions.setArgs(Arrays.asList(
+                    "--disable-dev-shm-usage", 
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-gpu",
+                    "--disable-web-security",
+                    "--disable-extensions"
+                ));
+                browser = playwright.chromium().launch(launchOptions);
+                log.info("Playwright browser started successfully");
+                return browser;
+            } catch (Exception e) {
+                log.error("Failed to start Playwright browser: {}", e.getMessage());
+                // 清理资源
+                if (browser != null) {
+                    try { browser.close(); } catch (Exception ignored) {}
+                    browser = null;
+                }
+                if (playwright != null) {
+                    try { playwright.close(); } catch (Exception ignored) {}
+                    playwright = null;
+                }
+                
+                // 检查是否为依赖问题
+                if (e.getMessage() != null && e.getMessage().contains("dependencies")) {
+                    throw new RuntimeException("Playwright dependencies missing. Please install required system packages. " +
+                                             "In Docker: apt-get install libx11-xcb1 libxcursor1 libgtk-3-0 libpangocairo-1.0-0 libcairo-gobject2 libgdk-pixbuf-2.0-0", e);
+                }
+                throw e;
+            }
         } finally {
             playwrightInit.release();
         }

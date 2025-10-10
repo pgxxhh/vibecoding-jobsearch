@@ -7,8 +7,16 @@ RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:17-jre-jammy
 
-# 安装 Chromium 运行所需系统库（与 Playwright 校验一致）
+# 安装 Chromium 和 Playwright 运行所需系统库
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    # Playwright 必需依赖
+    libx11-xcb1 \
+    libxcursor1 \
+    libgtk-3-0 \
+    libpangocairo-1.0-0 \
+    libcairo-gobject2 \
+    libgdk-pixbuf-2.0-0 \
+    # 现有的 Chromium 依赖
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
