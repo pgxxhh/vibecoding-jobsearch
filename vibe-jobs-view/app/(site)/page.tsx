@@ -419,6 +419,9 @@ export default function Page() {
     setLoading(true);
     try {
       const baseParams: Record<string, any> = { q, location, size: PAGE_SIZE, ...filters };
+      if (q.trim()) {
+        baseParams.searchDetail = true;
+      }
       const cutoff = computeDateCutoff(filters.datePosted);
       const isDateFilterActive = cutoff !== null;
       const maxFetches = isDateFilterActive ? MAX_FILTER_PAGINATION_FETCHES : 1;

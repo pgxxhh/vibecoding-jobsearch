@@ -6,7 +6,12 @@ import com.vibe.jobs.repo.JobDetailRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class JobDetailService {
@@ -31,12 +36,18 @@ public class JobDetailService {
             return;
         }
 
+        String contentText = HtmlTextExtractor.toPlainText(content);
         JobDetail detail = repository.findByJobId(jobId)
-                .orElseGet(() -> new JobDetail(job, content));
+                .orElseGet(() -> new JobDetail(job, content, contentText));
 
         boolean changed = detail.getId() == null;
         if (!content.equals(detail.getContent())) {
             detail.setContent(content);
+            changed = true;
+        }
+
+        if (!Objects.equals(contentText, detail.getContentText())) {
+            detail.setContentText(contentText);
             changed = true;
         }
 
@@ -51,5 +62,21 @@ public class JobDetailService {
             return Optional.empty();
         }
         return repository.findByJobId(job.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> findContentTextByJobIds(Collection<Long> jobIds) {
+        if (jobIds == null || jobIds.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> distinctIds = jobIds.stream()
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toSet());
+        if (distinctIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findContentTextByJobIds(distinctIds).stream()
+                .collect(Collectors.toMap(JobDetailRepository.ContentTextView::getJobId,
+                        JobDetailRepository.ContentTextView::getContentText));
     }
 }

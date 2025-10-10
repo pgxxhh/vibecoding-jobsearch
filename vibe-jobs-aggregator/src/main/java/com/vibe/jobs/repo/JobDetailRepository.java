@@ -7,12 +7,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
     
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id = :jobId AND jd.deleted = false")
     Optional<JobDetail> findByJobId(@Param("jobId") Long jobId);
+
+    @Query("SELECT jd.job.id AS jobId, jd.contentText AS contentText FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
+    List<ContentTextView> findContentTextByJobIds(@Param("jobIds") Collection<Long> jobIds);
 
     // 软删除方法 - 避免与JpaRepository的deleteById冲突
     @Modifying
@@ -27,4 +32,10 @@ public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
     // 查找所有（包括软删除的）
     @Query("SELECT jd FROM JobDetail jd WHERE jd.id = :id")
     Optional<JobDetail> findByIdIncludingDeleted(@Param("id") Long id);
+
+    interface ContentTextView {
+        Long getJobId();
+
+        String getContentText();
+    }
 }
