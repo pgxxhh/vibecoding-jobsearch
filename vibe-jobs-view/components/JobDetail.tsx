@@ -85,6 +85,20 @@ function normalizeStringList(values: string[] | null | undefined): string[] {
     .filter((value, index, array) => value.length > 0 && array.indexOf(value) === index);
 }
 
+export function resolveEnrichmentStatus(job: Job | null): Record<string, unknown> | undefined {
+  if (!job) return undefined;
+  if (job.enrichmentStatus && typeof job.enrichmentStatus === 'object' && !Array.isArray(job.enrichmentStatus)) {
+    return job.enrichmentStatus as Record<string, unknown>;
+  }
+  if (job.enrichments && typeof job.enrichments === 'object' && !Array.isArray(job.enrichments)) {
+    const status = (job.enrichments as Record<string, unknown>)['status'];
+    if (status && typeof status === 'object' && !Array.isArray(status)) {
+      return status as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}
+
 export default function JobDetail({ job, isLoading, isError, isRefreshing, onRetry, labels }: Props) {
   if (!job) {
     return (
@@ -97,9 +111,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
 
   const sanitizedContent = job.content ? sanitizeJobContent(job.content) : '';
   const hasDescription = sanitizedContent.trim().length > 0;
-  const enrichmentStatus = job.enrichmentStatus && typeof job.enrichmentStatus === 'object'
-    ? (job.enrichmentStatus as Record<string, unknown>)
-    : undefined;
+  const enrichmentStatus = resolveEnrichmentStatus(job);
 
   const normalizeStatus = (value: unknown): string | null => {
     if (typeof value !== 'string') return null;
