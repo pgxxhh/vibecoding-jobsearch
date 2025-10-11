@@ -1,9 +1,5 @@
 package com.vibe.jobs.service.enrichment;
 
-import com.vibe.jobs.domain.Job;
-
-import java.util.Optional;
-
 /**
  * Strategy abstraction for job content enrichment backed by different LLM providers.
  */
@@ -22,5 +18,5 @@ public interface JobContentEnrichmentProvider {
     /**
      * Enriches the job content returning structured details if available.
      */
-    Optional<JobContentEnrichment> enrich(Job job, String rawContent, String contentText);
+    JobContentEnrichmentResult enrich(JobSnapshot job, String rawContent, String contentText, String fingerprint);
 }

@@ -3,13 +3,18 @@ package com.vibe.jobs.service;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.domain.JobDetail;
 import com.vibe.jobs.repo.JobDetailRepository;
-import com.vibe.jobs.service.enrichment.JobContentEnrichment;
-import com.vibe.jobs.service.enrichment.JobContentEnrichmentClient;
+import com.vibe.jobs.service.HtmlTextExtractor;
+import com.vibe.jobs.service.enrichment.JobDetailContentUpdatedEvent;
+import com.vibe.jobs.service.enrichment.JobSnapshot;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,12 +25,12 @@ import java.util.stream.Collectors;
 public class JobDetailService {
 
     private final JobDetailRepository repository;
-    private final JobContentEnrichmentClient enrichmentClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     public JobDetailService(JobDetailRepository repository,
-                            JobContentEnrichmentClient enrichmentClient) {
+                            ApplicationEventPublisher eventPublisher) {
         this.repository = repository;
-        this.enrichmentClient = enrichmentClient;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -61,14 +66,26 @@ public class JobDetailService {
         }
 
         if (contentChanged) {
-            Optional<JobContentEnrichment> enrichment = enrichmentClient.enrich(job, content, contentText);
-            if (enrichment.isPresent() && applyEnrichment(detail, enrichment.get())) {
-                changed = true;
-            }
+            detail.incrementContentVersion();
         }
 
         if (changed) {
             repository.save(detail);
+        }
+
+        if (contentChanged) {
+            long newVersion = detail.getContentVersion();
+            String fingerprint = computeFingerprint(jobId, contentText);
+            JobSnapshot snapshot = toSnapshot(job);
+            eventPublisher.publishEvent(new JobDetailContentUpdatedEvent(
+                    detail.getId(),
+                    jobId,
+                    snapshot,
+                    content,
+                    contentText,
+                    newVersion,
+                    fingerprint
+            ));
         }
     }
 
@@ -113,36 +130,31 @@ public class JobDetailService {
                         JobDetailRepository.ContentTextView::getContentText));
     }
 
-    private boolean applyEnrichment(JobDetail detail, JobContentEnrichment enrichment) {
-        boolean updated = false;
-        String normalizedSummary = trimToNull(enrichment.summary());
-        if (!Objects.equals(trimToNull(detail.getSummary()), normalizedSummary)) {
-            detail.setSummary(normalizedSummary);
-            updated = true;
-        }
-
-        String normalizedStructured = trimToNull(enrichment.structuredData());
-        if (!Objects.equals(trimToNull(detail.getStructuredData()), normalizedStructured)) {
-            detail.setStructuredData(normalizedStructured);
-            updated = true;
-        }
-
-        if (detail.replaceSkills(enrichment.skills() != null ? enrichment.skills() : Collections.emptyList())) {
-            updated = true;
-        }
-
-        if (detail.replaceHighlights(enrichment.highlights() != null ? enrichment.highlights() : Collections.emptyList())) {
-            updated = true;
-        }
-
-        return updated;
+    private JobSnapshot toSnapshot(Job job) {
+        List<String> tags = job.getTags() == null ? List.of() : List.copyOf(job.getTags());
+        return new JobSnapshot(
+                job.getId(),
+                job.getTitle(),
+                job.getCompany(),
+                job.getLocation(),
+                job.getLevel(),
+                job.getUrl(),
+                tags
+        );
     }
 
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
+    private String computeFingerprint(Long jobId, String contentText) {
+        String source = (jobId != null ? jobId : 0L) + ":" + (contentText != null ? contentText : "");
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(source.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm not available", e);
         }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

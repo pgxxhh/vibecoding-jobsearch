@@ -1,6 +1,5 @@
 package com.vibe.jobs.service.enrichment;
 
-import com.vibe.jobs.domain.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,10 +7,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import java.util.List;
 
 @Component
 public class JobContentEnrichmentClient {
@@ -30,15 +28,25 @@ public class JobContentEnrichmentClient {
         this.providersByName = buildProviderMap(providers);
     }
 
-    public Optional<JobContentEnrichment> enrich(Job job, String rawContent, String contentText) {
-        if (!enabled || job == null) {
-            return Optional.empty();
+    public JobContentEnrichmentResult enrich(JobSnapshot job, String rawContent, String contentText, String fingerprint) {
+        if (!enabled) {
+            return JobContentEnrichmentResult.failure(null, fingerprint, "CLIENT_DISABLED", "Enrichment disabled");
+        }
+        if (job == null || job.id() == null) {
+            return JobContentEnrichmentResult.failure(null, fingerprint, "INVALID_JOB", "Job is required");
         }
         JobContentEnrichmentProvider provider = resolveProvider();
         if (provider == null) {
-            return Optional.empty();
+            return JobContentEnrichmentResult.failure(null, fingerprint, "NO_PROVIDER", "No provider available");
         }
-        return provider.enrich(job, rawContent, contentText);
+        JobContentEnrichmentResult result = provider.enrich(job, rawContent, contentText, fingerprint);
+        if (result == null) {
+            return JobContentEnrichmentResult.failure(provider.name(), fingerprint, "EMPTY_RESULT", "Provider returned null result");
+        }
+        if (result.sourceFingerprint() == null) {
+            return result.withFingerprint(fingerprint);
+        }
+        return result;
     }
 
     private JobContentEnrichmentProvider resolveProvider() {

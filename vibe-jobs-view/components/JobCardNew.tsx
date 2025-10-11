@@ -21,11 +21,7 @@ function normalizeStringList(values?: string[] | null): string[] {
 
 export default function JobCardNew({ job, className }: { job: Job; className?: string }) {
   const { t } = useI18n();
-  const summary = typeof job.summary === 'string' ? job.summary.trim() : '';
-  const normalizedSkills = normalizeStringList(job.skills);
-  const normalizedTags = normalizeStringList(job.tags);
-  const displaySkills = (normalizedSkills.length > 0 ? normalizedSkills : normalizedTags).slice(0, 6);
-  const highlights = normalizeStringList(job.highlights).slice(0, 3);
+  const normalizedTags = normalizeStringList(job.tags).slice(0, 8);
 
   return (
     <Card className={cn('p-4 transition will-change-transform hover:shadow-brand-lg', className)}>
@@ -42,30 +38,15 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
               {job.level ? ` · ${job.level}` : ''}
             </p>
           </div>
-          <p className="text-sm leading-relaxed text-gray-700">
-            {summary || <span className="text-xs italic text-gray-400">{t('jobCard.summaryPlaceholder')}</span>}
-          </p>
           <div className="flex flex-wrap gap-2">
-            {displaySkills.length > 0 ? (
-              displaySkills.map((skill) => (
-                <Badge key={skill} tone="muted">
-                  {skill}
+            {normalizedTags.length > 0 ? (
+              normalizedTags.map((tag) => (
+                <Badge key={tag} tone="muted">
+                  {tag}
                 </Badge>
               ))
             ) : (
-              <Badge tone="muted">{t('jobCard.skillsPlaceholder')}</Badge>
-            )}
-          </div>
-          <div className="space-y-1 text-xs text-gray-600">
-            {highlights.length > 0 ? (
-              highlights.map((highlight) => (
-                <div key={highlight} className="flex items-start gap-2">
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
-                  <span className="flex-1 leading-relaxed">{highlight}</span>
-                </div>
-              ))
-            ) : (
-              <span className="italic text-gray-400">{t('jobCard.highlightsPlaceholder')}</span>
+              <Badge tone="muted">{t('jobCard.tagsPlaceholder')}</Badge>
             )}
           </div>
         </div>
