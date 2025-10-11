@@ -100,11 +100,14 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   const enrichmentStatus = job.enrichmentStatus && typeof job.enrichmentStatus === 'object'
     ? (job.enrichmentStatus as Record<string, unknown>)
     : undefined;
-  const statusState = typeof enrichmentStatus?.state === 'string'
-    ? enrichmentStatus.state.toUpperCase()
-    : typeof (enrichmentStatus?.['state']) === 'string'
-      ? String(enrichmentStatus['state']).toUpperCase()
-      : null;
+
+  const normalizeStatus = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed.toUpperCase() : null;
+  };
+
+  const statusState = normalizeStatus(enrichmentStatus?.state) ?? normalizeStatus(enrichmentStatus?.['state']);
   const shouldShowEnrichment = statusState === 'SUCCESS';
   const summary = shouldShowEnrichment && typeof job.summary === 'string' ? job.summary.trim() : '';
   const normalizedSkills = shouldShowEnrichment ? normalizeStringList(job.skills) : [];
