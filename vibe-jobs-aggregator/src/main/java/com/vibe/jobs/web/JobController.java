@@ -111,11 +111,11 @@ public class JobController {
         var detail = jobDetailService.findByJob(job).orElse(null);
         String content = detail != null ? detail.getContent() : "";
         String summary = detail != null ? JobEnrichmentExtractor.summary(detail)
-                .orElse(trimToNull(detail.getSummary())) : null;
+                .orElse(null) : null;
         var skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : java.util.List.<String>of();
         var highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : java.util.List.<String>of();
         String structuredData = detail != null ? JobEnrichmentExtractor.structured(detail)
-                .orElse(trimToNull(detail.getStructuredData())) : null;
+                .orElse(null) : null;
         var enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : java.util.Map.<String, Object>of();
         var status = detail != null ? JobEnrichmentExtractor.status(detail).orElse(java.util.Map.of()) : java.util.Map.<String, Object>of();
         return new JobDetailResponse(
@@ -210,13 +210,5 @@ public class JobController {
                 .map(String::trim)
                 .filter(token -> !token.isEmpty())
                 .collect(Collectors.toList());
-    }
-
-    private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

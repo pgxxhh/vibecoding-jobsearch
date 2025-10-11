@@ -74,12 +74,6 @@ public class JobDetailEnrichmentWriter {
                 enrichment.updateValue(valueJson, result.provider(), event.contentFingerprint(), null, metadata);
                 changed = true;
 
-                if (key == JobEnrichmentKey.SUMMARY) {
-                    String summaryText = value.isTextual() ? value.asText() : valueJson;
-                    detail.setSummary(StringUtils.hasText(summaryText) ? summaryText : null);
-                } else if (key == JobEnrichmentKey.STRUCTURED_DATA) {
-                    detail.setStructuredData(value.isNull() ? null : valueJson);
-                }
             } catch (JsonProcessingException ex) {
                 log.warn("Failed to serialize enrichment value for jobDetail {} key {}: {}",
                         detail.getId(), key, ex.getMessage());
