@@ -1,15 +1,15 @@
 package com.vibe.jobs.domain;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.Where;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.Set;
 
 @Entity
 @Table(name = "job_details", indexes = {
@@ -43,19 +43,9 @@ public class JobDetail {
     @Column(name = "structured_data", columnDefinition = "longtext")
     private String structuredData;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "job_detail_skills", joinColumns = @JoinColumn(name = "job_detail_id"))
-    @SQLRestriction("deleted = 0")
-    @Column(name = "skill")
-    @OrderColumn(name = "list_order")
-    private List<String> skills = new ArrayList<>();
-
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "job_detail_highlights", joinColumns = @JoinColumn(name = "job_detail_id"))
-    @SQLRestriction("deleted = 0")
-    @Column(name = "highlight")
-    @OrderColumn(name = "list_order")
-    private List<String> highlights = new ArrayList<>();
+    @OneToMany(mappedBy = "jobDetail", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Where(clause = "deleted = 0")
+    private Set<JobDetailEnrichment> enrichments = new LinkedHashSet<>();
 
     @Column(nullable = false, columnDefinition = "timestamp")
     private Instant createdAt;
@@ -66,6 +56,9 @@ public class JobDetail {
     // 软删除字段
     @Column(nullable = false)
     private boolean deleted = false;
+
+    @Column(name = "content_version", nullable = false)
+    private long contentVersion = 0L;
 
     protected JobDetail() {
     }
@@ -141,22 +134,6 @@ public class JobDetail {
         this.structuredData = structuredData;
     }
 
-    public List<String> getSkills() {
-        return skills;
-    }
-
-    public boolean replaceSkills(List<String> newSkills) {
-        return replaceList(this.skills, newSkills);
-    }
-
-    public List<String> getHighlights() {
-        return highlights;
-    }
-
-    public boolean replaceHighlights(List<String> newHighlights) {
-        return replaceList(this.highlights, newHighlights);
-    }
-
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -173,44 +150,48 @@ public class JobDetail {
         this.deleted = deleted;
     }
 
-    private boolean replaceList(List<String> target, List<String> incoming) {
-        List<String> normalized = normalizeList(incoming);
-        if (listsEqual(target, normalized)) {
-            return false;
-        }
-        target.clear();
-        target.addAll(normalized);
-        return true;
+    public Set<JobDetailEnrichment> getEnrichments() {
+        return enrichments;
     }
 
-    private List<String> normalizeList(List<String> values) {
-        if (values == null || values.isEmpty()) {
-            return List.of();
+    public Optional<JobDetailEnrichment> findEnrichment(JobEnrichmentKey key) {
+        if (key == null || enrichments == null || enrichments.isEmpty()) {
+            return Optional.empty();
         }
-        return values.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .collect(Collectors.collectingAndThen(
-                        Collectors.toCollection(LinkedHashSet::new),
-                        ArrayList::new));
+        return enrichments.stream()
+                .filter(enrichment -> enrichment.getEnrichmentKey() == key)
+                .findFirst();
     }
 
-    private boolean listsEqual(List<String> current, List<String> other) {
-        if (current == other) {
-            return true;
+    public JobDetailEnrichment upsertEnrichment(JobEnrichmentKey key) {
+        Objects.requireNonNull(key, "enrichment key must not be null");
+        if (enrichments == null) {
+            enrichments = new LinkedHashSet<>();
         }
-        if (current == null || other == null) {
-            return false;
+        return findEnrichment(key)
+                .orElseGet(() -> {
+                    JobDetailEnrichment enrichment = new JobDetailEnrichment(this, key);
+                    enrichments.add(enrichment);
+                    return enrichment;
+                });
+    }
+
+    public Map<JobEnrichmentKey, JobDetailEnrichment> getEnrichmentsByKey() {
+        if (enrichments == null || enrichments.isEmpty()) {
+            return Map.of();
         }
-        if (current.size() != other.size()) {
-            return false;
+        Map<JobEnrichmentKey, JobDetailEnrichment> map = new LinkedHashMap<>();
+        for (JobDetailEnrichment enrichment : enrichments) {
+            map.put(enrichment.getEnrichmentKey(), enrichment);
         }
-        for (int i = 0; i < current.size(); i++) {
-            if (!Objects.equals(current.get(i), other.get(i))) {
-                return false;
-            }
-        }
-        return true;
+        return map;
+    }
+
+    public long getContentVersion() {
+        return contentVersion;
+    }
+
+    public void incrementContentVersion() {
+        this.contentVersion = Math.max(0, this.contentVersion) + 1;
     }
 }

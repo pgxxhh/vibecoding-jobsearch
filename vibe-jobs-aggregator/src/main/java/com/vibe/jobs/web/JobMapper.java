@@ -7,6 +7,7 @@ import com.vibe.jobs.web.dto.JobDto;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -21,9 +22,11 @@ public class JobMapper {
 
     public static JobDto toDto(Job j, boolean detailMatch, JobDetail detail) {
         List<String> tags = new ArrayList<>(j.getTags());
-        String summary = detail != null ? trimToNull(detail.getSummary()) : null;
-        List<String> skills = detail != null ? sanitizeList(detail.getSkills()) : List.of();
-        List<String> highlights = detail != null ? sanitizeList(detail.getHighlights()) : List.of();
+        String summary = detail != null ? JobEnrichmentExtractor.summary(detail)
+                .orElse(trimToNull(detail.getSummary())) : null;
+        List<String> skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : List.of();
+        List<String> highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : List.of();
+        Map<String, Object> enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : Map.of();
 
         return new JobDto(
                 String.valueOf(j.getId()),
@@ -34,6 +37,7 @@ public class JobMapper {
                 j.getPostedAt(),
                 tags,
                 j.getUrl(),
+                enrichments,
                 summary,
                 skills,
                 highlights,

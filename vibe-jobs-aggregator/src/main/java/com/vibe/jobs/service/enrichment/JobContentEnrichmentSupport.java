@@ -1,6 +1,5 @@
 package com.vibe.jobs.service.enrichment;
 
-import com.vibe.jobs.domain.Job;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -43,21 +42,21 @@ final class JobContentEnrichmentSupport {
         return RESPONSE_SCHEMA;
     }
 
-    static String buildUserPrompt(Job job, String rawContent, String contentText) {
+    static String buildUserPrompt(JobSnapshot job, String rawContent, String contentText) {
         return buildUserPrompt(job, rawContent, contentText, DEFAULT_CONTENT_TEXT_LIMIT, DEFAULT_RAW_CONTENT_LIMIT);
     }
 
-    static String buildUserPrompt(Job job, String rawContent, String contentText, int contentLimit, int rawLimit) {
+    static String buildUserPrompt(JobSnapshot job, String rawContent, String contentText, int contentLimit, int rawLimit) {
         StringBuilder userPrompt = new StringBuilder();
         if (job != null) {
-            if (StringUtils.hasText(job.getTitle())) {
-                userPrompt.append("职位: ").append(job.getTitle()).append('\n');
+            if (StringUtils.hasText(job.title())) {
+                userPrompt.append("职位: ").append(job.title()).append('\n');
             }
-            if (StringUtils.hasText(job.getCompany())) {
-                userPrompt.append("公司: ").append(job.getCompany()).append('\n');
+            if (StringUtils.hasText(job.company())) {
+                userPrompt.append("公司: ").append(job.company()).append('\n');
             }
-            if (StringUtils.hasText(job.getLocation())) {
-                userPrompt.append("地点: ").append(job.getLocation()).append('\n');
+            if (StringUtils.hasText(job.location())) {
+                userPrompt.append("地点: ").append(job.location()).append('\n');
             }
         }
         userPrompt.append("\n职位描述（纯文本）:\n");
