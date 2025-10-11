@@ -16,6 +16,8 @@ type Labels = {
   retry: string;
   refreshing: string;
   viewOriginal: string;
+  enrichmentPending: string;
+  enrichmentFailed: string;
 };
 
 type Props = {
@@ -100,6 +102,27 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   const normalizedTags = normalizeStringList(job.tags ?? []);
   const skillBadges = normalizedSkills.length > 0 ? normalizedSkills : normalizedTags;
   const highlights = normalizeStringList(job.highlights);
+  const enrichmentStatus = job.enrichmentStatus && typeof job.enrichmentStatus === 'object'
+    ? (job.enrichmentStatus as Record<string, unknown>)
+    : undefined;
+  const statusState = typeof enrichmentStatus?.state === 'string'
+    ? enrichmentStatus.state.toUpperCase()
+    : typeof (enrichmentStatus?.['state']) === 'string'
+      ? String(enrichmentStatus['state']).toUpperCase()
+      : null;
+  const isPending = statusState === 'PENDING';
+  const isFailed = statusState === 'FAILED';
+  const statusMessage = (() => {
+    if (!enrichmentStatus) return '';
+    const error = enrichmentStatus.error as Record<string, unknown> | undefined;
+    if (error && typeof error.message === 'string' && error.message.trim()) {
+      return error.message.trim();
+    }
+    if (typeof enrichmentStatus.message === 'string' && enrichmentStatus.message.trim()) {
+      return enrichmentStatus.message.trim();
+    }
+    return '';
+  })();
 
   return (
     <div className="space-y-6">
@@ -114,6 +137,17 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
         </div>
       </div>
+      {isPending && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-700">
+          {labels.enrichmentPending}
+        </div>
+      )}
+      {isFailed && (
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
+          <p>{labels.enrichmentFailed}</p>
+          {statusMessage && <p className="mt-1 text-red-600/80">{statusMessage}</p>}
+        </div>
+      )}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
         {isLoading ? (
