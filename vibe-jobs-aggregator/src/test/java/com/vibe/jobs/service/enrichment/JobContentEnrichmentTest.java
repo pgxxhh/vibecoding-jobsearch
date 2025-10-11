@@ -1,129 +1,89 @@
 package com.vibe.jobs.service.enrichment;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibe.jobs.domain.JobEnrichmentKey;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JobContentEnrichmentTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Test
-    void testRecordCreation() {
-        JobContentEnrichment enrichment = new JobContentEnrichment(
-                "职位摘要",
-                List.of("Java", "Spring"),
-                List.of("高薪", "福利好"),
-                "{\"salary\": \"20k\"}"
+    void successResultShouldExposeImmutablePayload() {
+        Map<JobEnrichmentKey, JsonNode> payload = new EnumMap<>(JobEnrichmentKey.class);
+        payload.put(JobEnrichmentKey.SUMMARY, objectMapper.valueToTree("summary"));
+        payload.put(JobEnrichmentKey.SKILLS, objectMapper.valueToTree(List.of("Java", "Spring")));
+
+        JobContentEnrichmentResult result = JobContentEnrichmentResult.success(
+                payload,
+                "chatgpt",
+                Duration.ofMillis(1200),
+                "fingerprint",
+                List.of("warning")
         );
 
-        assertThat(enrichment.summary()).isEqualTo("职位摘要");
-        assertThat(enrichment.skills()).containsExactly("Java", "Spring");
-        assertThat(enrichment.highlights()).containsExactly("高薪", "福利好");
-        assertThat(enrichment.structuredData()).isEqualTo("{\"salary\": \"20k\"}");
+        assertThat(result.success()).isTrue();
+        assertThat(result.provider()).isEqualTo("chatgpt");
+        assertThat(result.latency()).isEqualTo(Duration.ofMillis(1200));
+        assertThat(result.sourceFingerprint()).isEqualTo("fingerprint");
+        assertThat(result.warnings()).containsExactly("warning");
+        assertThat(result.payload()).containsKeys(JobEnrichmentKey.SUMMARY, JobEnrichmentKey.SKILLS);
+
+        assertThatThrownBy(() -> result.payload().put(JobEnrichmentKey.HIGHLIGHTS, objectMapper.createObjectNode()))
+                .isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
-    void testRecordWithNullValues() {
-        JobContentEnrichment enrichment = new JobContentEnrichment(
-                null,
-                null,
-                null,
-                null
+    void failureResultShouldContainError() {
+        JobContentEnrichmentResult failure = JobContentEnrichmentResult.failure(
+                "chatgpt",
+                "abc",
+                "TIMEOUT",
+                "Timed out"
         );
 
-        assertThat(enrichment.summary()).isNull();
-        assertThat(enrichment.skills()).isEmpty();
-        assertThat(enrichment.highlights()).isEmpty();
-        assertThat(enrichment.structuredData()).isNull();
+        assertThat(failure.success()).isFalse();
+        assertThat(failure.payload()).isEmpty();
+        assertThat(failure.provider()).isEqualTo("chatgpt");
+        assertThat(failure.sourceFingerprint()).isEqualTo("abc");
+        assertThat(failure.error()).isNotNull();
+        assertThat(failure.error().code()).isEqualTo("TIMEOUT");
+        assertThat(failure.error().message()).isEqualTo("Timed out");
     }
 
     @Test
-    void testRecordWithEmptyLists() {
-        JobContentEnrichment enrichment = new JobContentEnrichment(
-                "摘要",
-                List.of(),
-                List.of(),
-                "{}"
+    void withFingerprintShouldReturnNewInstanceWhenDifferent() {
+        JobContentEnrichmentResult result = JobContentEnrichmentResult.failure(
+                "provider",
+                "old",
+                "ERROR",
+                "oops"
         );
 
-        assertThat(enrichment.summary()).isEqualTo("摘要");
-        assertThat(enrichment.skills()).isEmpty();
-        assertThat(enrichment.highlights()).isEmpty();
-        assertThat(enrichment.structuredData()).isEqualTo("{}");
+        JobContentEnrichmentResult updated = result.withFingerprint("new");
+        assertThat(updated).isNotSameAs(result);
+        assertThat(updated.sourceFingerprint()).isEqualTo("new");
+        assertThat(updated.error()).isEqualTo(result.error());
     }
 
     @Test
-    void testListsAreImmutable() {
-        List<String> originalSkills = new java.util.ArrayList<>(List.of("Java"));
-        List<String> originalHighlights = new java.util.ArrayList<>(List.of("高薪"));
-        
-        JobContentEnrichment enrichment = new JobContentEnrichment(
-                "摘要",
-                originalSkills,
-                originalHighlights,
-                "{}"
+    void withFingerprintShouldReturnSameInstanceWhenUnchanged() {
+        JobContentEnrichmentResult result = JobContentEnrichmentResult.failure(
+                "provider",
+                "same",
+                "ERROR",
+                "oops"
         );
 
-        // 验证返回的是不可变列表的副本
-        assertThat(enrichment.skills()).isNotSameAs(originalSkills);
-        assertThat(enrichment.highlights()).isNotSameAs(originalHighlights);
-        
-        // 验证内容相同
-        assertThat(enrichment.skills()).isEqualTo(originalSkills);
-        assertThat(enrichment.highlights()).isEqualTo(originalHighlights);
-        
-        // 验证列表是不可变的
-        org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class, () -> {
-            enrichment.skills().add("Python");
-        });
-    }
-
-    @Test
-    void testEqualsAndHashCode() {
-        JobContentEnrichment enrichment1 = new JobContentEnrichment(
-                "摘要",
-                List.of("Java"),
-                List.of("高薪"),
-                "{\"test\": true}"
-        );
-        
-        JobContentEnrichment enrichment2 = new JobContentEnrichment(
-                "摘要",
-                List.of("Java"),
-                List.of("高薪"),
-                "{\"test\": true}"
-        );
-        
-        JobContentEnrichment enrichment3 = new JobContentEnrichment(
-                "不同摘要",
-                List.of("Java"),
-                List.of("高薪"),
-                "{\"test\": true}"
-        );
-
-        assertThat(enrichment1).isEqualTo(enrichment2);
-        assertThat(enrichment1.hashCode()).isEqualTo(enrichment2.hashCode());
-        
-        assertThat(enrichment1).isNotEqualTo(enrichment3);
-        assertThat(enrichment1.hashCode()).isNotEqualTo(enrichment3.hashCode());
-    }
-
-    @Test
-    void testToString() {
-        JobContentEnrichment enrichment = new JobContentEnrichment(
-                "职位摘要",
-                List.of("Java", "Spring"),
-                List.of("高薪"),
-                "{\"salary\": \"20k\"}"
-        );
-
-        String toString = enrichment.toString();
-        
-        assertThat(toString).contains("职位摘要");
-        assertThat(toString).contains("Java");
-        assertThat(toString).contains("Spring");
-        assertThat(toString).contains("高薪");
-        assertThat(toString).contains("{\"salary\": \"20k\"}");
+        assertThat(result.withFingerprint("same")).isSameAs(result);
     }
 }

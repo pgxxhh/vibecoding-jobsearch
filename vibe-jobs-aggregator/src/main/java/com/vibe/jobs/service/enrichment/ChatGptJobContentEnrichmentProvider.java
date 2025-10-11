@@ -1,8 +1,10 @@
 package com.vibe.jobs.service.enrichment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vibe.jobs.domain.Job;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.vibe.jobs.domain.JobEnrichmentKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +19,9 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichmentProvider {
@@ -90,10 +94,12 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     }
 
     @Override
-    public Optional<JobContentEnrichment> enrich(Job job, String rawContent, String contentText) {
+    public JobContentEnrichmentResult enrich(JobSnapshot job, String rawContent, String contentText, String fingerprint) {
         if (!isEnabled() || job == null) {
-            return Optional.empty();
+            return JobContentEnrichmentResult.failure(providerName, fingerprint, "PROVIDER_DISABLED",
+                    "Provider is disabled");
         }
+        long start = System.nanoTime();
         try {
             ResponsesRequest request = buildRequest(job, rawContent, contentText);
             if (log.isDebugEnabled()) {
@@ -112,38 +118,48 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                     .timeout(timeout)
                     .block();
             if (response == null) {
-                return Optional.empty();
+                return JobContentEnrichmentResult.failure(providerName, fingerprint, "EMPTY_RESPONSE",
+                        "Provider returned empty response");
             }
             String content = extractContent(response);
             if (!StringUtils.hasText(content)) {
-                return Optional.empty();
+                return JobContentEnrichmentResult.failure(providerName, fingerprint, "EMPTY_CONTENT",
+                        "Provider returned empty content");
             }
             ChatCompletionPayload payload = objectMapper.readValue(content, ChatCompletionPayload.class);
-            String structuredJson = serializeStructured(payload.structured());
+            Map<JobEnrichmentKey, JsonNode> values = new EnumMap<>(JobEnrichmentKey.class);
+            String normalizedSummary = JobContentEnrichmentSupport.normalize(payload.summary());
+            if (StringUtils.hasText(normalizedSummary)) {
+                values.put(JobEnrichmentKey.SUMMARY, objectMapper.valueToTree(normalizedSummary));
+            }
             List<String> skills = JobContentEnrichmentSupport.normalizeList(payload.skills());
+            values.put(JobEnrichmentKey.SKILLS, objectMapper.valueToTree(skills));
             List<String> highlights = JobContentEnrichmentSupport.normalizeList(payload.highlights());
-            return Optional.of(new JobContentEnrichment(
-                    JobContentEnrichmentSupport.normalize(payload.summary()),
-                    skills,
-                    highlights,
-                    structuredJson
-            ));
+            values.put(JobEnrichmentKey.HIGHLIGHTS, objectMapper.valueToTree(highlights));
+            JsonNode structuredNode = toJsonNode(payload.structured());
+            if (structuredNode != null && !structuredNode.isNull()) {
+                values.put(JobEnrichmentKey.STRUCTURED_DATA, structuredNode);
+            }
+            long end = System.nanoTime();
+            return JobContentEnrichmentResult.success(values, providerName,
+                    Duration.ofNanos(Math.max(0, end - start)), fingerprint, List.of());
         } catch (WebClientResponseException ex) {
             String responseBody = ex.getResponseBodyAsString();
             log.warn("ChatGPT enrichment failed for job {} with HTTP {}: {}{}",
                     job.getId(), ex.getStatusCode(), ex.getMessage(),
                     StringUtils.hasText(responseBody) ? "; body=" + responseBody : "");
-            return Optional.empty();
+            return JobContentEnrichmentResult.failure(providerName, fingerprint,
+                    "HTTP_" + ex.getStatusCode().value(), ex.getMessage());
         } catch (JsonProcessingException ex) {
             log.warn("ChatGPT enrichment returned invalid JSON for job {}: {}", job.getId(), ex.getMessage());
-            return Optional.empty();
+            return JobContentEnrichmentResult.failure(providerName, fingerprint, "INVALID_JSON", ex.getMessage());
         } catch (Exception ex) {
             log.warn("ChatGPT enrichment failed for job {}: {}", job.getId(), ex.getMessage());
-            return Optional.empty();
+            return JobContentEnrichmentResult.failure(providerName, fingerprint, "UNKNOWN_ERROR", ex.getMessage());
         }
     }
 
-    private ResponsesRequest buildRequest(Job job, String rawContent, String contentText) {
+    private ResponsesRequest buildRequest(JobSnapshot job, String rawContent, String contentText) {
         String userPrompt = JobContentEnrichmentSupport.buildUserPrompt(job, rawContent, contentText);
         List<InputMessage> input = List.of(
                 new InputMessage("system", List.of(Content.ofText(requestContentType, JobContentEnrichmentSupport.systemPrompt()))),
@@ -151,6 +167,13 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         );
         TextOptions textOptions = new TextOptions(responseFormat);
         return new ResponsesRequest(model, input, textOptions, temperature, maxTokens);
+    }
+
+    private JsonNode toJsonNode(Map<String, Object> structured) {
+        if (structured == null || structured.isEmpty()) {
+            return null;
+        }
+        return objectMapper.convertValue(structured, ObjectNode.class);
     }
 
     private String extractContent(ResponsesResponse response) {
@@ -195,13 +218,6 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             return true;
         }
         return "text".equals(normalized);
-    }
-
-    private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
-        if (structured == null || structured.isEmpty()) {
-            return null;
-        }
-        return objectMapper.writeValueAsString(structured);
     }
 
     private record ResponsesRequest(String model,
