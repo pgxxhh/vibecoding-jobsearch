@@ -174,7 +174,7 @@ DROP TABLE IF EXISTS job_detail_highlights;
      - 标题/公司/地点
      - `tags` 徽章（最多 8 个）
      - “最近发布时间”。
-   - 若 tags 为空，显示 `jobCard.tagsPlaceholder`。
+   - 若 `tags` 为空，则隐藏徽章区域，保持卡片干净简洁。
 4. **详情页 (`components/JobDetail.tsx`)**：
    - 从 `job.enrichments` 解析摘要、亮点、技能，仅在状态为 `SUCCESS` 时渲染增强组件；其余状态只展示基础信息。
    - 若 `status.state === 'FAILED'`，展示告警 banner，但不再显示“处理中”类提示。
