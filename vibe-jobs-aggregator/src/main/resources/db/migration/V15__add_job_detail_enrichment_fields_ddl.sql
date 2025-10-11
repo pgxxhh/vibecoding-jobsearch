@@ -1,8 +1,8 @@
 ALTER TABLE job_details
-    ADD COLUMN IF NOT EXISTS summary LONGTEXT NULL AFTER content_text;
+    ADD COLUMN summary LONGTEXT NULL AFTER content_text;
 
 ALTER TABLE job_details
-    ADD COLUMN IF NOT EXISTS structured_data LONGTEXT NULL AFTER summary;
+    ADD COLUMN structured_data LONGTEXT NULL AFTER summary;
 
 CREATE TABLE IF NOT EXISTS job_detail_skills (
     job_detail_id BIGINT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS job_detail_skills (
     CONSTRAINT fk_job_detail_skills_job_detail FOREIGN KEY (job_detail_id) REFERENCES job_details (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
 
-CREATE INDEX IF NOT EXISTS idx_job_detail_skills_job_detail_id ON job_detail_skills (job_detail_id);
+CREATE INDEX idx_job_detail_skills_job_detail_id ON job_detail_skills (job_detail_id);
 
 CREATE TABLE IF NOT EXISTS job_detail_highlights (
     job_detail_id BIGINT NOT NULL,
@@ -28,4 +28,4 @@ CREATE TABLE IF NOT EXISTS job_detail_highlights (
     CONSTRAINT fk_job_detail_highlights_job_detail FOREIGN KEY (job_detail_id) REFERENCES job_details (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
 
-CREATE INDEX IF NOT EXISTS idx_job_detail_highlights_job_detail_id ON job_detail_highlights (job_detail_id);
+CREATE INDEX idx_job_detail_highlights_job_detail_id ON job_detail_highlights (job_detail_id);

@@ -1,8 +1,8 @@
 package com.vibe.jobs.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.Where;
-import org.hibernate.annotations.WhereJoinTable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,14 +45,14 @@ public class JobDetail {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "job_detail_skills", joinColumns = @JoinColumn(name = "job_detail_id"))
-    @WhereJoinTable(clause = "deleted = 0")
+    @SQLRestriction("deleted = 0")
     @Column(name = "skill")
     @OrderColumn(name = "list_order")
     private List<String> skills = new ArrayList<>();
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "job_detail_highlights", joinColumns = @JoinColumn(name = "job_detail_id"))
-    @WhereJoinTable(clause = "deleted = 0")
+    @SQLRestriction("deleted = 0")
     @Column(name = "highlight")
     @OrderColumn(name = "list_order")
     private List<String> highlights = new ArrayList<>();
@@ -214,4 +214,3 @@ public class JobDetail {
         return true;
     }
 }
-

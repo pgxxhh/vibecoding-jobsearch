@@ -34,6 +34,7 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     private final int maxTokens;
     private final String path;
     private final boolean enabled;
+    private final ResponseFormat responseFormat;
 
     public ChatGptJobContentEnrichmentProvider(ObjectMapper objectMapper,
                                                @Value("${jobs.detail-enhancement.chatgpt.api-key:}") String apiKey,
@@ -51,12 +52,16 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         this.path = path;
         this.providerName = "chatgpt";
         this.enabled = StringUtils.hasText(apiKey);
+        this.responseFormat = buildResponseFormat();
         if (this.enabled) {
-            this.webClient = WebClient.builder()
+            WebClient.Builder builder = WebClient.builder()
                     .baseUrl(baseUrl)
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .build();
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+            if (path != null && path.contains("/responses")) {
+                builder.defaultHeader("OpenAI-Beta", "responses-2024-05-21");
+            }
+            this.webClient = builder.build();
         } else {
             this.webClient = null;
         }
@@ -79,6 +84,14 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         }
         try {
             ResponsesRequest request = buildRequest(job, rawContent, contentText);
+            if (log.isDebugEnabled()) {
+                try {
+                    String payload = objectMapper.writeValueAsString(request);
+                    log.debug("ChatGPT request payload for job {}: {}", job.getId(), payload);
+                } catch (JsonProcessingException ignored) {
+                    // ignore payload logging failures
+                }
+            }
             ResponsesResponse response = webClient.post()
                     .uri(path)
                     .bodyValue(request)
@@ -104,7 +117,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                     structuredJson
             ));
         } catch (WebClientResponseException ex) {
-            log.warn("ChatGPT enrichment failed for job {} with HTTP {}: {}", job.getId(), ex.getStatusCode(), ex.getMessage());
+            String responseBody = ex.getResponseBodyAsString();
+            log.warn("ChatGPT enrichment failed for job {} with HTTP {}: {}{}",
+                    job.getId(), ex.getStatusCode(), ex.getMessage(),
+                    StringUtils.hasText(responseBody) ? "; body=" + responseBody : "");
             return Optional.empty();
         } catch (JsonProcessingException ex) {
             log.warn("ChatGPT enrichment returned invalid JSON for job {}: {}", job.getId(), ex.getMessage());
@@ -140,8 +156,8 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                 new InputMessage("system", List.of(Content.text(SystemInstructions.TEXT))),
                 new InputMessage("user", List.of(Content.text(userPrompt.toString())))
         );
-        return new ResponsesRequest(model, input, temperature, maxTokens,
-                new ResponseFormat("json_object"));
+        TextOptions textOptions = new TextOptions(responseFormat);
+        return new ResponsesRequest(model, input, textOptions, temperature, maxTokens);
     }
 
     private String extractContent(ResponsesResponse response) {
@@ -182,7 +198,9 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             return false;
         }
         String normalized = type.trim().toLowerCase();
-        return "text".equals(normalized) || "output_text".equals(normalized);
+        return "text".equals(normalized)
+                || "output_text".equals(normalized)
+                || "summary_text".equals(normalized);
     }
 
     private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
@@ -221,9 +239,9 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
 
     private record ResponsesRequest(String model,
                                     List<InputMessage> input,
-                                    double temperature,
-                                    int max_output_tokens,
-                                    ResponseFormat response_format) {
+                                    TextOptions text,
+                                    Double temperature,
+                                    Integer max_output_tokens) {
     }
 
     private record InputMessage(String role, List<Content> content) {
@@ -231,11 +249,48 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
 
     private record Content(String type, String text) {
         static Content text(String value) {
-            return new Content("text", value);
+            return new Content("input_text", value);
         }
     }
 
-    private record ResponseFormat(String type) {
+    private ResponseFormat buildResponseFormat() {
+        Map<String, Object> structuredSchema = Map.of(
+                "type", "object",
+                "additionalProperties", true
+        );
+        Map<String, Object> schema = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "summary", Map.of(
+                                "type", "string",
+                                "description", "中文摘要"
+                        ),
+                        "skills", Map.of(
+                                "type", "array",
+                                "items", Map.of("type", "string"),
+                                "description", "关键技能列表"
+                        ),
+                        "highlights", Map.of(
+                                "type", "array",
+                                "items", Map.of("type", "string"),
+                                "description", "职位亮点"
+                        ),
+                        "structured", structuredSchema
+                ),
+                "required", List.of("summary", "skills", "highlights"),
+                "additionalProperties", false
+        );
+        JsonSchema jsonSchema = new JsonSchema("job_detail_enrichment", schema);
+        return new ResponseFormat("json_schema", jsonSchema);
+    }
+
+    private record TextOptions(ResponseFormat format) {
+    }
+
+    private record ResponseFormat(String type, JsonSchema json_schema) {
+    }
+
+    private record JsonSchema(String name, Map<String, Object> schema) {
     }
 
     private record ResponsesResponse(List<OutputItem> output, List<String> output_text) {
