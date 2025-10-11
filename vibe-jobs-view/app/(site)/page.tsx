@@ -57,7 +57,7 @@ function toJsonString(value: unknown): string | null {
 
 function normalizeJobFromApi(item: any): Job {
   const enrichments = toRecord(item?.enrichments);
-  const enrichmentStatus = toRecord(item?.enrichmentStatus);
+  const enrichmentStatus = toRecord(item?.enrichmentStatus) ?? toRecord(enrichments?.status);
   const statusStateRaw = enrichmentStatus && 'state' in enrichmentStatus
     ? (enrichmentStatus as Record<string, unknown>)['state']
     : undefined;
@@ -104,7 +104,7 @@ function normalizeJobFromApi(item: any): Job {
 
 function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailData {
   const enrichments = toRecord(detail?.enrichments);
-  const enrichmentStatus = toRecord(detail?.enrichmentStatus);
+  const enrichmentStatus = toRecord(detail?.enrichmentStatus) ?? toRecord(enrichments?.status);
   const statusStateRaw = enrichmentStatus && 'state' in enrichmentStatus
     ? (enrichmentStatus as Record<string, unknown>)['state']
     : undefined;
@@ -135,6 +135,8 @@ function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailDa
     structuredData: isEnrichmentReady ? toJsonString(structuredRaw) : undefined,
   };
 }
+
+export { normalizeJobFromApi, normalizeJobDetailFromApi };
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(

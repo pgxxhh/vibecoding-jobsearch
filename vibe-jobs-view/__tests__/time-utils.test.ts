@@ -1,6 +1,3 @@
-/**
- * @jest-environment jsdom
- */
 import { TimeUtils } from '@/lib/time-utils';
 
 describe('TimeUtils', () => {
@@ -50,7 +47,7 @@ describe('TimeUtils', () => {
     });
 
     it('should throw error for invalid dates', () => {
-      expect(() => TimeUtils.toSearchUTC('invalid-date')).toThrow();
+      expect(() => TimeUtils.toSearchUTC('2024-13-01')).toThrow();
     });
   });
 
