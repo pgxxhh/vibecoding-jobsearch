@@ -105,7 +105,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
     : typeof (enrichmentStatus?.['state']) === 'string'
       ? String(enrichmentStatus['state']).toUpperCase()
       : null;
-  const shouldShowEnrichment = !statusState || statusState === 'SUCCESS';
+  const shouldShowEnrichment = statusState === 'SUCCESS';
   const summary = shouldShowEnrichment && typeof job.summary === 'string' ? job.summary.trim() : '';
   const normalizedSkills = shouldShowEnrichment ? normalizeStringList(job.skills) : [];
   const normalizedTags = normalizeStringList(job.tags ?? []);

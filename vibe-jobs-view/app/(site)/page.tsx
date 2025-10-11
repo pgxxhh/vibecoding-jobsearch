@@ -62,7 +62,7 @@ function normalizeJobFromApi(item: any): Job {
     ? (enrichmentStatus as Record<string, unknown>)['state']
     : undefined;
   const statusState = toStringValue(statusStateRaw)?.toUpperCase() ?? null;
-  const isEnrichmentReady = !statusState || statusState === 'SUCCESS';
+  const isEnrichmentReady = statusState === 'SUCCESS';
   const summaryFromEnrichment = isEnrichmentReady && enrichments
     ? toStringValue(enrichments['summary'])
     : null;
@@ -109,7 +109,7 @@ function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailDa
     ? (enrichmentStatus as Record<string, unknown>)['state']
     : undefined;
   const statusState = toStringValue(statusStateRaw)?.toUpperCase() ?? null;
-  const isEnrichmentReady = !statusState || statusState === 'SUCCESS';
+  const isEnrichmentReady = statusState === 'SUCCESS';
   const summary = isEnrichmentReady && enrichments ? toStringValue(enrichments['summary']) : null;
   const skills = isEnrichmentReady && enrichments ? toStringArray(enrichments['skills']) : [];
   const highlights = isEnrichmentReady && enrichments ? toStringArray(enrichments['highlights']) : [];
