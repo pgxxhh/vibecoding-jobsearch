@@ -52,7 +52,7 @@ jobs:
     enabled: true
     provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
     chatgpt:
-      api-key: ${OPENAI_API_KEY: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}
+      api-key: ${OPENAI_API_KEY:test}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       path: ${OPENAI_RESPONSES_PATH:${OPENAI_CHAT_COMPLETIONS_PATH:/v1/responses}}
       model: ${OPENAI_MODEL:gpt-4o-mini}
