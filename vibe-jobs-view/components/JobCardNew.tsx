@@ -3,7 +3,6 @@ import { Card, Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { RelativeTime } from '@/components/TimeDisplay';
 import type { Job } from '@/lib/types';
-import { useI18n } from '@/lib/i18n';
 
 function normalizeStringList(values?: string[] | null): string[] {
   if (!values || values.length === 0) return [];
@@ -20,7 +19,6 @@ function normalizeStringList(values?: string[] | null): string[] {
 }
 
 export default function JobCardNew({ job, className }: { job: Job; className?: string }) {
-  const { t } = useI18n();
   const normalizedTags = normalizeStringList(job.tags).slice(0, 8);
 
   return (
@@ -38,17 +36,15 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
               {job.level ? ` · ${job.level}` : ''}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {normalizedTags.length > 0 ? (
-              normalizedTags.map((tag) => (
+          {normalizedTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {normalizedTags.map((tag) => (
                 <Badge key={tag} tone="muted">
                   {tag}
                 </Badge>
-              ))
-            ) : (
-              <Badge tone="muted">{t('jobCard.tagsPlaceholder')}</Badge>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
         <RelativeTime
           utcTime={job.postedAt}

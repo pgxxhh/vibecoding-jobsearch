@@ -35,14 +35,6 @@ public class JobDetail {
     @Column(name = "content_text", columnDefinition = "longtext")
     private String contentText;
 
-    @Lob
-    @Column(name = "summary", columnDefinition = "longtext")
-    private String summary;
-
-    @Lob
-    @Column(name = "structured_data", columnDefinition = "longtext")
-    private String structuredData;
-
     @OneToMany(mappedBy = "jobDetail", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Where(clause = "deleted = 0")
     private Set<JobDetailEnrichment> enrichments = new LinkedHashSet<>();
@@ -116,22 +108,6 @@ public class JobDetail {
 
     public void setContentText(String contentText) {
         this.contentText = contentText;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public void setSummary(String summary) {
-        this.summary = summary;
-    }
-
-    public String getStructuredData() {
-        return structuredData;
-    }
-
-    public void setStructuredData(String structuredData) {
-        this.structuredData = structuredData;
     }
 
     public Instant getCreatedAt() {
