@@ -18,7 +18,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichmentProvider {
@@ -121,10 +120,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             }
             ChatCompletionPayload payload = objectMapper.readValue(content, ChatCompletionPayload.class);
             String structuredJson = serializeStructured(payload.structured());
-            List<String> skills = normalizeList(payload.skills());
-            List<String> highlights = normalizeList(payload.highlights());
+            List<String> skills = JobContentEnrichmentSupport.normalizeList(payload.skills());
+            List<String> highlights = JobContentEnrichmentSupport.normalizeList(payload.highlights());
             return Optional.of(new JobContentEnrichment(
-                    normalize(payload.summary()),
+                    JobContentEnrichmentSupport.normalize(payload.summary()),
                     skills,
                     highlights,
                     structuredJson
@@ -145,29 +144,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     }
 
     private ResponsesRequest buildRequest(Job job, String rawContent, String contentText) {
-        String title = job.getTitle();
-        String company = job.getCompany();
-        String location = job.getLocation();
-        StringBuilder userPrompt = new StringBuilder();
-        if (StringUtils.hasText(title)) {
-            userPrompt.append("职位: ").append(title).append('\n');
-        }
-        if (StringUtils.hasText(company)) {
-            userPrompt.append("公司: ").append(company).append('\n');
-        }
-        if (StringUtils.hasText(location)) {
-            userPrompt.append("地点: ").append(location).append('\n');
-        }
-        userPrompt.append("\n职位描述（纯文本）:\n");
-        userPrompt.append(truncate(contentText, 6000));
-        if (StringUtils.hasText(rawContent)) {
-            userPrompt.append("\n\n职位描述（原始 HTML，仅供参考）:\n");
-            userPrompt.append(truncate(rawContent, 4000));
-        }
-
+        String userPrompt = JobContentEnrichmentSupport.buildUserPrompt(job, rawContent, contentText);
         List<InputMessage> input = List.of(
-                new InputMessage("system", List.of(Content.ofText(requestContentType, SystemInstructions.TEXT))),
-                new InputMessage("user", List.of(Content.ofText(requestContentType, userPrompt.toString())))
+                new InputMessage("system", List.of(Content.ofText(requestContentType, JobContentEnrichmentSupport.systemPrompt()))),
+                new InputMessage("user", List.of(Content.ofText(requestContentType, userPrompt)))
         );
         TextOptions textOptions = new TextOptions(responseFormat);
         return new ResponsesRequest(model, input, textOptions, temperature, maxTokens);
@@ -224,33 +204,6 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         return objectMapper.writeValueAsString(structured);
     }
 
-    private List<String> normalizeList(List<String> values) {
-        if (values == null) {
-            return List.of();
-        }
-        return values.stream()
-                .filter(StringUtils::hasText)
-                .map(value -> value.trim().replaceAll("\\s+", " "))
-                .collect(Collectors.toList());
-    }
-
-    private String normalize(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        return value.trim();
-    }
-
-    private String truncate(String value, int maxChars) {
-        if (value == null) {
-            return "";
-        }
-        if (value.length() <= maxChars) {
-            return value;
-        }
-        return value.substring(0, Math.max(maxChars, 0));
-    }
-
     private record ResponsesRequest(String model,
                                     List<InputMessage> input,
                                     TextOptions text,
@@ -268,79 +221,7 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     }
 
     private ResponseFormat buildResponseFormat() {
-        Map<String, Object> structuredProperties = Map.ofEntries(
-                Map.entry("summary", Map.of("type", "string")),
-                Map.entry("details", Map.of("type", "string")),
-                Map.entry("salary", Map.of("type", "string")),
-                Map.entry("experienceLevel", Map.of("type", "string")),
-                Map.entry("employmentType", Map.of("type", "string")),
-                Map.entry("location", Map.of("type", "string")),
-                Map.entry("remotePolicy", Map.of("type", "string")),
-                Map.entry("compensation", Map.of("type", "string")),
-                Map.entry("requirements", Map.of("type", "string")),
-                Map.entry("benefits", Map.of("type", "string")),
-                Map.entry("notes", Map.of("type", "string")),
-                Map.entry("keywords", Map.of("type", "string")),
-                Map.entry("tags", Map.of("type", "string")),
-                Map.entry("industry", Map.of("type", "string")),
-                Map.entry("level", Map.of("type", "string")),
-                Map.entry("language", Map.of("type", "string")),
-                Map.entry("education", Map.of("type", "string")),
-                Map.entry("experience", Map.of("type", "string")),
-                Map.entry("skills", Map.of("type", "string")),
-                Map.entry("responsibilities", Map.of("type", "string")),
-                Map.entry("requirementsSummary", Map.of("type", "string")),
-                Map.entry("benefitsSummary", Map.of("type", "string")),
-                Map.entry("company", Map.of("type", "string")),
-                Map.entry("department", Map.of("type", "string")),
-                Map.entry("team", Map.of("type", "string")),
-                Map.entry("project", Map.of("type", "string")),
-                Map.entry("mission", Map.of("type", "string")),
-                Map.entry("vision", Map.of("type", "string")),
-                Map.entry("culture", Map.of("type", "string")),
-                Map.entry("values", Map.of("type", "string")),
-                Map.entry("travelRequirements", Map.of("type", "string")),
-                Map.entry("certifications", Map.of("type", "string")),
-                Map.entry("securityClearance", Map.of("type", "string")),
-                Map.entry("visaSponsorship", Map.of("type", "string")),
-                Map.entry("contractLength", Map.of("type", "string")),
-                Map.entry("workHours", Map.of("type", "string")),
-                Map.entry("startDate", Map.of("type", "string")),
-                Map.entry("endDate", Map.of("type", "string")),
-                Map.entry("deadline", Map.of("type", "string")),
-                Map.entry("applicationProcess", Map.of("type", "string")),
-                Map.entry("other", Map.of("type", "string"))
-        );
-        List<String> structuredRequired = List.copyOf(structuredProperties.keySet());
-        Map<String, Object> structuredSchema = Map.of(
-                "type", "object",
-                "properties", structuredProperties,
-                "required", structuredRequired,
-                "additionalProperties", false
-        );
-        Map<String, Object> schema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "summary", Map.of(
-                                "type", "string",
-                                "description", "中文摘要"
-                        ),
-                        "skills", Map.of(
-                                "type", "array",
-                                "items", Map.of("type", "string"),
-                                "description", "关键技能列表"
-                        ),
-                        "highlights", Map.of(
-                                "type", "array",
-                                "items", Map.of("type", "string"),
-                                "description", "职位亮点"
-                        ),
-                        "structured", structuredSchema
-                ),
-                "required", List.of("summary", "skills", "highlights", "structured"),
-                "additionalProperties", false
-        );
-        return new ResponseFormat("json_schema", "job_detail_enrichment", schema);
+        return new ResponseFormat("json_schema", JobContentEnrichmentSupport.schemaName(), JobContentEnrichmentSupport.responseSchema());
     }
 
     private record TextOptions(ResponseFormat format) {
@@ -364,17 +245,4 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                                          Map<String, Object> structured) {
     }
 
-    private static final class SystemInstructions {
-        private static final String TEXT = String.join("\n",
-                "你是一个帮助提炼职位描述信息的助手，需输出 JSON 对象，字段包括:",
-                "- summary: 200 字以内的中文摘要，突出核心职责与要求。",
-                "- skills: 字符串数组，列出 3~8 个关键技能，使用简体中文。",
-                "- highlights: 字符串数组，列出亮点或福利，如无则返回空数组。",
-                "- structured: JSON 对象，可包含 salary, experienceLevel, employmentType 等可选键，值保持原始语言。",
-                "请勿额外输出解释或 markdown。"
-        );
-
-        private SystemInstructions() {
-        }
-    }
 }

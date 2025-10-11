@@ -40,3 +40,7 @@ jobs:
       base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       path: ${OPENAI_RESPONSES_PATH:${OPENAI_CHAT_COMPLETIONS_PATH:/v1/responses}}
       timeout: ${OPENAI_TIMEOUT:PT20S}
+    deepseek:
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      path: ${DEEPSEEK_CHAT_COMPLETIONS_PATH:/chat/completions}
+      timeout: ${DEEPSEEK_TIMEOUT:PT20S}
