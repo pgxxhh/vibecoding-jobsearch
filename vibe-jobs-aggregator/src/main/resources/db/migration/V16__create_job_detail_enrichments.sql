@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS job_detail_enrichments (
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
 
 ALTER TABLE job_details
-    ADD COLUMN content_version BIGINT NOT NULL DEFAULT 0 AFTER structured_data;
+    ADD COLUMN content_version BIGINT NOT NULL DEFAULT 0 AFTER content_text;
 
 DROP TABLE IF EXISTS job_detail_skills;
 DROP TABLE IF EXISTS job_detail_highlights;
