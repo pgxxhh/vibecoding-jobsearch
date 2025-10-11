@@ -30,7 +30,7 @@
    - 写入时对比 `content_version` 和 `source_fingerprint`，若已过期则丢弃旧结果。
 4. **前端契约**：
    - 列表接口继续返回 `tags` 与 `enrichments`（新的 map 结构），但前端列表页仅渲染 tags。
-   - 详情接口解析 `enrichments`，渲染摘要、亮点、技能；若缺失则展示占位文案。
+   - 详情接口解析 `enrichments`，仅在状态为 `SUCCESS` 时渲染摘要、亮点、技能与结构化数据；其他状态直接降级为普通详情页展示，不出现“处理中”提示。
 5. **可观测性**：记录 LLM 请求/响应摘要，失败信息写入 `STATUS` value，方便后台排查。
 
 ## 领域建模
@@ -39,7 +39,7 @@
 
 ```
 JobDetail (Aggregate Root)
- ├─ id, job, content, contentText, summary?, structuredData?, contentVersion, ...
+ ├─ id, job, content, contentText, contentVersion, ...
  └─ enrichments : Set<JobDetailEnrichment>
         ├─ enrichmentKey : JobEnrichmentKey
         ├─ valueJson     : String (标准化 JSON)
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS job_detail_enrichments (
 ) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
 
 ALTER TABLE job_details
-    ADD COLUMN content_version BIGINT NOT NULL DEFAULT 0 AFTER structured_data;
+    ADD COLUMN content_version BIGINT NOT NULL DEFAULT 0;
 
 DROP TABLE IF EXISTS job_detail_skills;
 DROP TABLE IF EXISTS job_detail_highlights;
@@ -145,7 +145,7 @@ DROP TABLE IF EXISTS job_detail_highlights;
   - 增加 `status`（可选，前端用来展示“生成中/失败”提示）。
 - `JobDetailService.findByJobIds` 改为批量抓取 `enrichments`，避免 N+1：使用 `@EntityGraph(attributePaths = "enrichments")` 或定制查询。
 - `JobMapper`：
-  - 优先从 `enrichments` 解析 `summary`、`skills` 等；若缺失则回退旧字段。
+  - 仅从 `enrichments` 解析 `summary`、`skills` 等派生字段，保持 API 兼容但不再依赖已删除的旧列。
   - 提供 `JobDtoEnrichments` builder，前端可直接消费 map。
 
 ### JobContentEnrichmentClient
@@ -174,12 +174,12 @@ DROP TABLE IF EXISTS job_detail_highlights;
      - 标题/公司/地点
      - `tags` 徽章（最多 8 个）
      - “最近发布时间”。
-   - 若 tags 为空，显示 `jobCard.tagsPlaceholder`。
+   - 若 `tags` 为空，则隐藏徽章区域，保持卡片干净简洁。
 4. **详情页 (`components/JobDetail.tsx`)**：
-   - 从 `job.enrichments` 解析摘要、亮点、技能。
-   - 若 `status.state === 'FAILED'`，展示告警 banner；`PENDING` 时展示骨架。
+   - 从 `job.enrichments` 解析摘要、亮点、技能，仅在状态为 `SUCCESS` 时渲染增强组件；其余状态只展示基础信息。
+   - 若 `status.state === 'FAILED'`，展示告警 banner，但不再显示“处理中”类提示。
 5. **国际化文案** (`lib/i18n` & `public/locales`)：
-   - 新增 `jobCard.tagsPlaceholder`、`jobDetail.enrichmentPending`、`jobDetail.enrichmentFailed`.
+   - 新增 `jobCard.tagsPlaceholder`、`jobDetail.enrichmentFailed`，移除“处理中”类文案。
 6. **UI 轻量化**：
    - 列表页上去掉 highlights 列表 DOM，减小 bundle。
    - 考虑懒加载详情页 enrichment（骨架屏 + loading 指示）。
@@ -227,9 +227,9 @@ DROP TABLE IF EXISTS job_detail_highlights;
   - Spring `@DataJpaTest` 验证 `job_detail_enrichments` 唯一约束、软删除行为。
   - `JobDetailService` 事务流程：模拟 LLM 成功/失败，断言内容与状态。
   - Web 层：`/jobs` & `/jobs/{id}/detail` 返回结构。
-- **前端测试**
-  - 单元：`JobCardNew` 快照确保不再渲染摘要/亮点。
-  - E2E：打开列表页展示标签，详情页展示摘要/亮点占位。
+  - **前端测试**
+    - 单元：`JobCardNew` 快照确保不再渲染摘要/亮点。
+    - E2E：打开列表页展示标签，详情页在增强成功后展示摘要/亮点，未完成增强时保持精简布局。
 - **回归**：搜索、筛选、分页逻辑保持不变。
 
 ## 风险与缓解

@@ -26,6 +26,9 @@ final class JobEnrichmentExtractor {
     }
 
     static Optional<String> summary(JobDetail detail) {
+        if (!isEnrichmentReady(detail)) {
+            return Optional.empty();
+        }
         return readNode(detail, JobEnrichmentKey.SUMMARY)
                 .map(JobEnrichmentExtractor::nodeToText)
                 .filter(StringUtils::hasText)
@@ -33,14 +36,23 @@ final class JobEnrichmentExtractor {
     }
 
     static List<String> skills(JobDetail detail) {
+        if (!isEnrichmentReady(detail)) {
+            return List.of();
+        }
         return readArray(detail, JobEnrichmentKey.SKILLS);
     }
 
     static List<String> highlights(JobDetail detail) {
+        if (!isEnrichmentReady(detail)) {
+            return List.of();
+        }
         return readArray(detail, JobEnrichmentKey.HIGHLIGHTS);
     }
 
     static Optional<String> structured(JobDetail detail) {
+        if (!isEnrichmentReady(detail)) {
+            return Optional.empty();
+        }
         return readNode(detail, JobEnrichmentKey.STRUCTURED_DATA)
                 .map(node -> node.isTextual() ? node.asText() : node.toString())
                 .filter(StringUtils::hasText);
@@ -69,6 +81,20 @@ final class JobEnrichmentExtractor {
                 .map(JobEnrichmentExtractor::treeToObject)
                 .filter(Map.class::isInstance)
                 .map(value -> (Map<String, Object>) value);
+    }
+
+    private static boolean isEnrichmentReady(JobDetail detail) {
+        return status(detail)
+                .map(JobEnrichmentExtractor::isSuccessState)
+                .orElse(true);
+    }
+
+    private static boolean isSuccessState(Map<String, Object> status) {
+        Object state = status.get("state");
+        if (state instanceof String stateText && StringUtils.hasText(stateText)) {
+            return "SUCCESS".equalsIgnoreCase(stateText.trim());
+        }
+        return true;
     }
 
     private static List<String> readArray(JobDetail detail, JobEnrichmentKey key) {

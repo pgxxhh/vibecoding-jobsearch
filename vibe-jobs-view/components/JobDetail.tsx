@@ -97,20 +97,23 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
 
   const sanitizedContent = job.content ? sanitizeJobContent(job.content) : '';
   const hasDescription = sanitizedContent.trim().length > 0;
-  const summary = typeof job.summary === 'string' ? job.summary.trim() : '';
-  const normalizedSkills = normalizeStringList(job.skills);
-  const normalizedTags = normalizeStringList(job.tags ?? []);
-  const skillBadges = normalizedSkills.length > 0 ? normalizedSkills : normalizedTags;
-  const highlights = normalizeStringList(job.highlights);
   const enrichmentStatus = job.enrichmentStatus && typeof job.enrichmentStatus === 'object'
     ? (job.enrichmentStatus as Record<string, unknown>)
     : undefined;
-  const statusState = typeof enrichmentStatus?.state === 'string'
-    ? enrichmentStatus.state.toUpperCase()
-    : typeof (enrichmentStatus?.['state']) === 'string'
-      ? String(enrichmentStatus['state']).toUpperCase()
-      : null;
-  const isPending = statusState === 'PENDING';
+
+  const normalizeStatus = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed.toUpperCase() : null;
+  };
+
+  const statusState = normalizeStatus(enrichmentStatus?.state) ?? normalizeStatus(enrichmentStatus?.['state']);
+  const shouldShowEnrichment = statusState === 'SUCCESS';
+  const summary = shouldShowEnrichment && typeof job.summary === 'string' ? job.summary.trim() : '';
+  const normalizedSkills = shouldShowEnrichment ? normalizeStringList(job.skills) : [];
+  const normalizedTags = normalizeStringList(job.tags ?? []);
+  const skillBadges = normalizedSkills.length > 0 ? normalizedSkills : normalizedTags;
+  const highlights = shouldShowEnrichment ? normalizeStringList(job.highlights) : [];
   const isFailed = statusState === 'FAILED';
   const statusMessage = (() => {
     if (!enrichmentStatus) return '';
@@ -137,71 +140,72 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
         </div>
       </div>
-      {isPending && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-700">
-          {labels.enrichmentPending}
-        </div>
-      )}
       {isFailed && (
         <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
           <p>{labels.enrichmentFailed}</p>
           {statusMessage && <p className="mt-1 text-red-600/80">{statusMessage}</p>}
         </div>
       )}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-5/6" />
-            <Skeleton className="h-3 w-3/4" />
-          </div>
-        ) : summary ? (
-          <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
-        ) : (
-          <p className="text-xs italic text-gray-400">{labels.summaryPlaceholder}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">{labels.skills}</h3>
-        {isLoading ? (
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-6 w-16 rounded-full" />
-            <Skeleton className="h-6 w-24 rounded-full" />
-          </div>
-        ) : skillBadges.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {skillBadges.map((skill) => (
-              <Badge key={skill} tone="muted">
-                {skill}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs italic text-gray-400">{labels.skillsPlaceholder}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">{labels.highlights}</h3>
-        {isLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-3/4" />
-            <Skeleton className="h-3 w-2/3" />
-            <Skeleton className="h-3 w-4/5" />
-          </div>
-        ) : highlights.length > 0 ? (
-          <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
-            {highlights.map((highlight) => (
-              <li key={highlight} className="flex items-start gap-2">
-                <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
-                <span className="flex-1">{highlight}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs italic text-gray-400">{labels.highlightsPlaceholder}</p>
-        )}
-      </div>
+      {(shouldShowEnrichment || isLoading) && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+          ) : summary ? (
+            <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
+          ) : (
+            <p className="text-xs italic text-gray-400">{labels.summaryPlaceholder}</p>
+          )}
+        </div>
+      )}
+      {(shouldShowEnrichment || isLoading) && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">{labels.skills}</h3>
+          {isLoading ? (
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+          ) : skillBadges.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {skillBadges.map((skill) => (
+                <Badge key={skill} tone="muted">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs italic text-gray-400">{labels.skillsPlaceholder}</p>
+          )}
+        </div>
+      )}
+      {(shouldShowEnrichment || isLoading) && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700">{labels.highlights}</h3>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          ) : highlights.length > 0 ? (
+            <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
+              {highlights.map((highlight) => (
+                <li key={highlight} className="flex items-start gap-2">
+                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                  <span className="flex-1">{highlight}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs italic text-gray-400">{labels.highlightsPlaceholder}</p>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-gray-700">{labels.description}</h3>
         {isError ? (
