@@ -57,20 +57,31 @@ function toJsonString(value: unknown): string | null {
 
 function normalizeJobFromApi(item: any): Job {
   const enrichments = toRecord(item?.enrichments);
-  const summaryFromEnrichment = enrichments ? toStringValue(enrichments['summary']) : null;
-  const summary = summaryFromEnrichment ?? toStringValue(item?.summary) ?? undefined;
-  const skillList = enrichments ? toStringArray(enrichments['skills']) : [];
-  const fallbackSkills = Array.isArray(item?.skills) ? toStringArray(item.skills) : [];
-  const skills = (skillList.length > 0 ? skillList : fallbackSkills) as string[];
-  const highlightList = enrichments ? toStringArray(enrichments['highlights']) : [];
-  const fallbackHighlights = Array.isArray(item?.highlights) ? toStringArray(item.highlights) : [];
-  const highlights = (highlightList.length > 0 ? highlightList : fallbackHighlights) as string[];
-  const structuredRaw = enrichments && enrichments['structured_data'] !== undefined
-    ? enrichments['structured_data']
-    : item?.structuredData;
-  const structuredData = toJsonString(structuredRaw) ?? undefined;
-  const tags = Array.isArray(item?.tags) ? toStringArray(item.tags) : [];
   const enrichmentStatus = toRecord(item?.enrichmentStatus);
+  const statusStateRaw = enrichmentStatus && 'state' in enrichmentStatus
+    ? (enrichmentStatus as Record<string, unknown>)['state']
+    : undefined;
+  const statusState = toStringValue(statusStateRaw)?.toUpperCase() ?? null;
+  const isEnrichmentReady = statusState === 'SUCCESS';
+  const summaryFromEnrichment = isEnrichmentReady && enrichments
+    ? toStringValue(enrichments['summary'])
+    : null;
+  const summary = isEnrichmentReady
+    ? summaryFromEnrichment ?? toStringValue(item?.summary) ?? undefined
+    : undefined;
+  const skillList = isEnrichmentReady && enrichments ? toStringArray(enrichments['skills']) : [];
+  const fallbackSkills = isEnrichmentReady && Array.isArray(item?.skills) ? toStringArray(item.skills) : [];
+  const skills = (skillList.length > 0 ? skillList : fallbackSkills) as string[];
+  const highlightList = isEnrichmentReady && enrichments ? toStringArray(enrichments['highlights']) : [];
+  const fallbackHighlights = isEnrichmentReady && Array.isArray(item?.highlights)
+    ? toStringArray(item.highlights)
+    : [];
+  const highlights = (highlightList.length > 0 ? highlightList : fallbackHighlights) as string[];
+  const structuredRaw = isEnrichmentReady && enrichments && enrichments['structured_data'] !== undefined
+    ? enrichments['structured_data']
+    : (isEnrichmentReady ? item?.structuredData : null);
+  const structuredData = isEnrichmentReady ? toJsonString(structuredRaw) ?? undefined : undefined;
+  const tags = Array.isArray(item?.tags) ? toStringArray(item.tags) : [];
 
   return {
     id: String(item?.id ?? ''),
@@ -94,12 +105,17 @@ function normalizeJobFromApi(item: any): Job {
 function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailData {
   const enrichments = toRecord(detail?.enrichments);
   const enrichmentStatus = toRecord(detail?.enrichmentStatus);
-  const summary = enrichments ? toStringValue(enrichments['summary']) : null;
-  const skills = enrichments ? toStringArray(enrichments['skills']) : [];
-  const highlights = enrichments ? toStringArray(enrichments['highlights']) : [];
-  const structuredRaw = enrichments && enrichments['structured_data'] !== undefined
+  const statusStateRaw = enrichmentStatus && 'state' in enrichmentStatus
+    ? (enrichmentStatus as Record<string, unknown>)['state']
+    : undefined;
+  const statusState = toStringValue(statusStateRaw)?.toUpperCase() ?? null;
+  const isEnrichmentReady = statusState === 'SUCCESS';
+  const summary = isEnrichmentReady && enrichments ? toStringValue(enrichments['summary']) : null;
+  const skills = isEnrichmentReady && enrichments ? toStringArray(enrichments['skills']) : [];
+  const highlights = isEnrichmentReady && enrichments ? toStringArray(enrichments['highlights']) : [];
+  const structuredRaw = isEnrichmentReady && enrichments && enrichments['structured_data'] !== undefined
     ? enrichments['structured_data']
-    : detail?.structuredData;
+    : (isEnrichmentReady ? detail?.structuredData : null);
   return {
     id: String(detail?.id ?? fallbackId),
     title: toStringValue(detail?.title) ?? '',
@@ -109,10 +125,14 @@ function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailDa
     content: typeof detail?.content === 'string' ? detail.content : '',
     enrichments: enrichments ?? undefined,
     enrichmentStatus: enrichmentStatus ?? undefined,
-    summary: summary ?? toStringValue(detail?.summary),
-    skills: skills.length > 0 ? skills : (Array.isArray(detail?.skills) ? toStringArray(detail.skills) : []),
-    highlights: highlights.length > 0 ? highlights : (Array.isArray(detail?.highlights) ? toStringArray(detail.highlights) : []),
-    structuredData: toJsonString(structuredRaw),
+    summary: isEnrichmentReady ? (summary ?? toStringValue(detail?.summary)) : undefined,
+    skills: isEnrichmentReady && skills.length > 0
+      ? skills
+      : (isEnrichmentReady && Array.isArray(detail?.skills) ? toStringArray(detail.skills) : []),
+    highlights: isEnrichmentReady && highlights.length > 0
+      ? highlights
+      : (isEnrichmentReady && Array.isArray(detail?.highlights) ? toStringArray(detail.highlights) : []),
+    structuredData: isEnrichmentReady ? toJsonString(structuredRaw) : undefined,
   };
 }
 
