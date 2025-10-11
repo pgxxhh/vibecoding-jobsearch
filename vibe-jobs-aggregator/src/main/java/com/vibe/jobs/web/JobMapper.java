@@ -22,8 +22,9 @@ public class JobMapper {
 
     public static JobDto toDto(Job j, boolean detailMatch, JobDetail detail) {
         List<String> tags = new ArrayList<>(j.getTags());
-        String summary = detail != null ? JobEnrichmentExtractor.summary(detail)
-                .orElse(null) : null;
+        
+        // 使用JobEnrichmentExtractor来提取enrichment数据
+        String summary = detail != null ? JobEnrichmentExtractor.summary(detail).orElse(null) : null;
         List<String> skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : List.of();
         List<String> highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : List.of();
         Map<String, Object> enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : Map.of();

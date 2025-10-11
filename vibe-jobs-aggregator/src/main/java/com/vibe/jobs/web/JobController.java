@@ -110,14 +110,15 @@ public class JobController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job not found"));
         var detail = jobDetailService.findByJob(job).orElse(null);
         String content = detail != null ? detail.getContent() : "";
-        String summary = detail != null ? JobEnrichmentExtractor.summary(detail)
-                .orElse(null) : null;
+        
+        // 使用JobEnrichmentExtractor来提取enrichment数据
+        String summary = detail != null ? JobEnrichmentExtractor.summary(detail).orElse(null) : null;
         var skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : java.util.List.<String>of();
         var highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : java.util.List.<String>of();
-        String structuredData = detail != null ? JobEnrichmentExtractor.structured(detail)
-                .orElse(null) : null;
+        String structuredData = detail != null ? JobEnrichmentExtractor.structured(detail).orElse(null) : null;
         var enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : java.util.Map.<String, Object>of();
         var status = detail != null ? JobEnrichmentExtractor.status(detail).orElse(java.util.Map.of()) : java.util.Map.<String, Object>of();
+        
         return new JobDetailResponse(
                 job.getId(),
                 job.getTitle(),

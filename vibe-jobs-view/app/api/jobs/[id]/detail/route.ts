@@ -17,19 +17,11 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   try {
     const json = JSON.parse(text);
-    const content = json.content ?? json.description ?? '';
-    return NextResponse.json(
-      {
-        id: String(json.id ?? id),
-        title: json.title ?? '',
-        company: json.company ?? '',
-        location: json.location ?? '',
-        postedAt: json.postedAt ?? '',
-        content,
-      },
-      { status: res.status },
-    );
-  } catch {
+    
+    // 直接返回所有后端字段
+    return NextResponse.json(json, { status: res.status });
+  } catch (error) {
+    console.error('JSON parse error:', error, 'Raw response:', text);
     return NextResponse.json({ error: 'Invalid JSON from backend', raw: text }, { status: 502 });
   }
 }
