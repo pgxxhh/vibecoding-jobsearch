@@ -75,9 +75,9 @@ const translations: Translations = {
     'jobDetail.error': '职位详情获取失败，请稍后重试',
     'jobDetail.refreshing': '正在刷新职位详情…',
     'jobDetail.viewOriginal': '查看原职位',
-    'jobCard.summaryPlaceholder': '摘要生成中…',
-    'jobCard.skillsPlaceholder': '技能整理中',
-    'jobCard.highlightsPlaceholder': '亮点敬请期待',
+    'jobDetail.enrichmentPending': '智能增强生成中…',
+    'jobDetail.enrichmentFailed': '智能增强失败，可稍后重试',
+    'jobCard.tagsPlaceholder': '暂无标签',
   },
   en: {
     'header.languageSwitcherLabel': 'Switch language',
@@ -145,9 +145,9 @@ const translations: Translations = {
     'jobDetail.error': 'Unable to fetch job detail, please try again later.',
     'jobDetail.refreshing': 'Refreshing job detail…',
     'jobDetail.viewOriginal': 'View job posting',
-    'jobCard.summaryPlaceholder': 'Summary coming soon…',
-    'jobCard.skillsPlaceholder': 'Skills will appear here soon',
-    'jobCard.highlightsPlaceholder': 'Highlights coming soon…',
+    'jobDetail.enrichmentPending': 'Enrichment is in progress…',
+    'jobDetail.enrichmentFailed': 'Enrichment failed. Please try again later.',
+    'jobCard.tagsPlaceholder': 'Tags coming soon…',
   },
 };
 

@@ -8,6 +8,8 @@ export type Job = {
   postedAt: string;
   tags?: string[];
   url: string;
+  enrichments?: Record<string, unknown>;
+  enrichmentStatus?: Record<string, unknown>;
   summary?: string;
   skills?: string[];
   highlights?: string[];
@@ -22,6 +24,8 @@ export type JobDetail = {
   location: string;
   postedAt: string;
   content: string;
+  enrichments?: Record<string, unknown>;
+  enrichmentStatus?: Record<string, unknown>;
   summary?: string | null;
   skills?: string[];
   highlights?: string[];

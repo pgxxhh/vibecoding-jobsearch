@@ -14,11 +14,11 @@ import java.util.Optional;
 
 public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
 
-    @EntityGraph(attributePaths = {"skills", "highlights"})
+    @EntityGraph(attributePaths = "enrichments")
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id = :jobId AND jd.deleted = false")
     Optional<JobDetail> findByJobId(@Param("jobId") Long jobId);
 
-    @EntityGraph(attributePaths = {"skills", "highlights"})
+    @EntityGraph(attributePaths = "enrichments")
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
     List<JobDetail> findAllByJobIds(@Param("jobIds") Collection<Long> jobIds);
 

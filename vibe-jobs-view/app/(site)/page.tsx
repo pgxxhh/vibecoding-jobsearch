@@ -12,31 +12,132 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   '/api';
 
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return undefined;
+}
+
+function toStringValue(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return null;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const result: string[] = [];
+  for (const item of value) {
+    const str = toStringValue(item);
+    if (!str) continue;
+    if (result.includes(str)) continue;
+    result.push(str);
+  }
+  return result;
+}
+
+function toJsonString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeJobFromApi(item: any): Job {
+  const enrichments = toRecord(item?.enrichments);
+  const summaryFromEnrichment = enrichments ? toStringValue(enrichments['summary']) : null;
+  const summary = summaryFromEnrichment ?? toStringValue(item?.summary) ?? undefined;
+  const skillList = enrichments ? toStringArray(enrichments['skills']) : [];
+  const fallbackSkills = Array.isArray(item?.skills) ? toStringArray(item.skills) : [];
+  const skills = (skillList.length > 0 ? skillList : fallbackSkills) as string[];
+  const highlightList = enrichments ? toStringArray(enrichments['highlights']) : [];
+  const fallbackHighlights = Array.isArray(item?.highlights) ? toStringArray(item.highlights) : [];
+  const highlights = (highlightList.length > 0 ? highlightList : fallbackHighlights) as string[];
+  const structuredRaw = enrichments && enrichments['structured_data'] !== undefined
+    ? enrichments['structured_data']
+    : item?.structuredData;
+  const structuredData = toJsonString(structuredRaw) ?? undefined;
+  const tags = Array.isArray(item?.tags) ? toStringArray(item.tags) : [];
+  const enrichmentStatus = toRecord(item?.enrichmentStatus);
+
+  return {
+    id: String(item?.id ?? ''),
+    title: toStringValue(item?.title) ?? '',
+    company: toStringValue(item?.company) ?? '',
+    location: toStringValue(item?.location) ?? '',
+    level: toStringValue(item?.level) ?? undefined,
+    postedAt: toStringValue(item?.postedAt) ?? '',
+    tags,
+    url: toStringValue(item?.url) ?? '',
+    enrichments: enrichments ?? undefined,
+    enrichmentStatus: enrichmentStatus ?? undefined,
+    summary: summary ?? undefined,
+    skills,
+    highlights,
+    structuredData,
+    detailMatch: Boolean(item?.detailMatch),
+  };
+}
+
+function normalizeJobDetailFromApi(detail: any, fallbackId: string): JobDetailData {
+  const enrichments = toRecord(detail?.enrichments);
+  const enrichmentStatus = toRecord(detail?.enrichmentStatus);
+  const summary = enrichments ? toStringValue(enrichments['summary']) : null;
+  const skills = enrichments ? toStringArray(enrichments['skills']) : [];
+  const highlights = enrichments ? toStringArray(enrichments['highlights']) : [];
+  const structuredRaw = enrichments && enrichments['structured_data'] !== undefined
+    ? enrichments['structured_data']
+    : detail?.structuredData;
+  return {
+    id: String(detail?.id ?? fallbackId),
+    title: toStringValue(detail?.title) ?? '',
+    company: toStringValue(detail?.company) ?? '',
+    location: toStringValue(detail?.location) ?? '',
+    postedAt: toStringValue(detail?.postedAt) ?? '',
+    content: typeof detail?.content === 'string' ? detail.content : '',
+    enrichments: enrichments ?? undefined,
+    enrichmentStatus: enrichmentStatus ?? undefined,
+    summary: summary ?? toStringValue(detail?.summary),
+    skills: skills.length > 0 ? skills : (Array.isArray(detail?.skills) ? toStringArray(detail.skills) : []),
+    highlights: highlights.length > 0 ? highlights : (Array.isArray(detail?.highlights) ? toStringArray(detail.highlights) : []),
+    structuredData: toJsonString(structuredRaw),
+  };
+}
+
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== '' && v !== undefined && v !== null) as any,
   );
   const res = await fetch(`${API_BASE}/jobs?` + qs.toString(), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch jobs');
-  return res.json();
+  const data = await res.json();
+  const items = Array.isArray(data?.items) ? data.items.map(normalizeJobFromApi) : [];
+  return {
+    items,
+    total: Number.isFinite(Number(data?.total)) ? Number(data.total) : items.length,
+    nextCursor: typeof data?.nextCursor === 'string' ? data.nextCursor : null,
+    hasMore: Boolean(data?.hasMore),
+    size: Number.isFinite(Number(data?.size)) ? Number(data.size) : items.length,
+  };
 }
 
 async function fetchJobDetail(id: string): Promise<JobDetailData> {
   const res = await fetch(`${API_BASE}/jobs/${id}/detail`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch job detail');
   const detail = await res.json();
-  return {
-    id: String(detail.id ?? id),
-    title: detail.title ?? '',
-    company: detail.company ?? '',
-    location: detail.location ?? '',
-    postedAt: detail.postedAt ?? '',
-    content: detail.content ?? '',
-    summary: detail.summary ?? null,
-    skills: Array.isArray(detail.skills) ? detail.skills : [],
-    highlights: Array.isArray(detail.highlights) ? detail.highlights : [],
-    structuredData: detail.structuredData ?? null,
-  };
+  return normalizeJobDetailFromApi(detail, id);
 }
 
 const PAGE_SIZE = 10;
@@ -341,6 +442,8 @@ export default function Page() {
       retry: t('actions.retry'),
       refreshing: t('jobDetail.refreshing'),
       viewOriginal: t('jobDetail.viewOriginal'),
+      enrichmentPending: t('jobDetail.enrichmentPending'),
+      enrichmentFailed: t('jobDetail.enrichmentFailed'),
     }),
     [t],
   );
