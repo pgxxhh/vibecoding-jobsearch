@@ -32,8 +32,6 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
     private final int maxTokens;
     private final String path;
     private final boolean enabled;
-    private final Map<String, Object> responseFormat;
-
     public DeepSeekJobContentEnrichmentProvider(ObjectMapper objectMapper,
                                                 @Value("${jobs.detail-enhancement.deepseek.api-key:}") String apiKey,
                                                 @Value("${jobs.detail-enhancement.deepseek.base-url:https://api.deepseek.com}") String baseUrl,
@@ -50,13 +48,6 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
         this.path = path;
         this.providerName = "deepseek";
         this.enabled = StringUtils.hasText(apiKey);
-        this.responseFormat = Map.of(
-                "type", "json_schema",
-                "json_schema", Map.of(
-                        "name", JobContentEnrichmentSupport.schemaName(),
-                        "schema", JobContentEnrichmentSupport.responseSchema()
-                )
-        );
         if (this.enabled) {
             this.webClient = WebClient.builder()
                     .baseUrl(baseUrl)
@@ -107,7 +98,14 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
             if (!StringUtils.hasText(content)) {
                 return Optional.empty();
             }
-            ChatCompletionPayload payload = objectMapper.readValue(content, ChatCompletionPayload.class);
+            
+            // Try to parse as JSON, if that fails, it might be wrapped in markdown or other text
+            String jsonContent = extractJsonFromResponse(content);
+            if (!StringUtils.hasText(jsonContent)) {
+                return Optional.empty();
+            }
+            
+            ChatCompletionPayload payload = objectMapper.readValue(jsonContent, ChatCompletionPayload.class);
             String structuredJson = serializeStructured(payload.structured());
             List<String> skills = JobContentEnrichmentSupport.normalizeList(payload.skills());
             List<String> highlights = JobContentEnrichmentSupport.normalizeList(payload.highlights());
@@ -138,7 +136,7 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
                 new Message("system", JobContentEnrichmentSupport.systemPrompt()),
                 new Message("user", userPrompt)
         );
-        return new DeepSeekRequest(model, messages, temperature, maxTokens, responseFormat);
+        return new DeepSeekRequest(model, messages, temperature, maxTokens);
     }
 
     private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
@@ -148,11 +146,74 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
         return objectMapper.writeValueAsString(structured);
     }
 
+    private String extractJsonFromResponse(String content) {
+        if (!StringUtils.hasText(content)) {
+            return null;
+        }
+        
+        content = content.trim();
+        
+        // Check if content is already valid JSON
+        if (content.startsWith("{") && content.endsWith("}")) {
+            return content;
+        }
+        
+        // Try to extract JSON from markdown code blocks
+        String[] lines = content.split("\n");
+        StringBuilder jsonBuilder = new StringBuilder();
+        boolean inJsonBlock = false;
+        boolean foundJson = false;
+        
+        for (String line : lines) {
+            String trimmed = line.trim();
+            
+            // Start of JSON block
+            if (!inJsonBlock && (trimmed.equals("```json") || trimmed.equals("```"))) {
+                inJsonBlock = true;
+                continue;
+            }
+            
+            // End of JSON block
+            if (inJsonBlock && trimmed.equals("```")) {
+                foundJson = true;
+                break;
+            }
+            
+            // JSON content
+            if (inJsonBlock) {
+                jsonBuilder.append(line).append("\n");
+            }
+            
+            // Direct JSON start without markdown
+            if (!inJsonBlock && trimmed.startsWith("{")) {
+                jsonBuilder.append(line).append("\n");
+                inJsonBlock = true;
+                foundJson = true;
+            }
+        }
+        
+        if (foundJson) {
+            String extracted = jsonBuilder.toString().trim();
+            if (StringUtils.hasText(extracted)) {
+                return extracted;
+            }
+        }
+        
+        // If no JSON block found, try to find JSON in the content
+        int startIndex = content.indexOf('{');
+        int endIndex = content.lastIndexOf('}');
+        
+        if (startIndex >= 0 && endIndex > startIndex) {
+            return content.substring(startIndex, endIndex + 1);
+        }
+        
+        return null;
+    }
+
     private record DeepSeekRequest(String model,
                                    List<Message> messages,
                                    Double temperature,
-                                   Integer max_tokens,
-                                   Map<String, Object> response_format) {
+                                   Integer max_tokens) {
     }
 
     private record Message(String role, String content) {

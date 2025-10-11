@@ -110,8 +110,8 @@ class DeepSeekJobContentEnrichmentProviderTest {
         assertThat(recordedRequest.getHeader("Authorization")).isEqualTo("Bearer test-api-key");
         assertThat(recordedRequest.getHeader("Content-Type")).isEqualTo("application/json");
         String requestBody = recordedRequest.getBody().readUtf8();
-        assertThat(requestBody).contains("\"response_format\"");
-        assertThat(requestBody).contains("job_detail_enrichment");
+        assertThat(requestBody).doesNotContain("response_format");
+        assertThat(requestBody).doesNotContain("job_detail_enrichment");
     }
 
     @Test
@@ -175,9 +175,9 @@ class DeepSeekJobContentEnrichmentProviderTest {
         assertThat(requestBody).contains("上海");
         assertThat(requestBody).contains("纯文本内容");
         assertThat(requestBody).contains("原始HTML");
-        assertThat(requestBody).contains("\"response_format\"");
-        assertThat(requestBody).contains("\"json_schema\"");
-        assertThat(requestBody).contains("job_detail_enrichment");
+        assertThat(requestBody).doesNotContain("response_format");
+        assertThat(requestBody).doesNotContain("json_schema");
+        assertThat(requestBody).doesNotContain("job_detail_enrichment");
     }
 
     @Test
@@ -204,5 +204,31 @@ class DeepSeekJobContentEnrichmentProviderTest {
         assertThat(result).isPresent();
         assertThat(result.get().skills()).containsExactly("Java", "Spring Boot");
         assertThat(result.get().highlights()).containsExactly("高薪");
+    }
+
+    @Test
+    void testJsonExtractionFromMarkdown() throws Exception {
+        String mockResponseJson = """
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": "Here is the JSON response:\\n\\n```json\\n{\\"summary\\": \\"Markdown JSON test\\", \\"skills\\": [\\"Java\\"], \\"highlights\\": [], \\"structured\\": {}}\\n```"
+                            }
+                        }
+                    ]
+                }
+                """;
+
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(mockResponseJson)
+                .setHeader("Content-Type", "application/json"));
+
+        Optional<JobContentEnrichment> result = provider.enrich(testJob, null, "职位描述");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().summary()).isEqualTo("Markdown JSON test");
+        assertThat(result.get().skills()).containsExactly("Java");
     }
 }
