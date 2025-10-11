@@ -34,6 +34,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     private final int maxTokens;
     private final String path;
     private final boolean enabled;
+    private final String requestContentType;
+    private final String responseTextType;
+    private final String responseTextTypeNormalized;
+    private final String betaHeader;
 
     public ChatGptJobContentEnrichmentProvider(ObjectMapper objectMapper,
                                                @Value("${jobs.detail-enhancement.chatgpt.api-key:}") String apiKey,
@@ -42,7 +46,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                                                @Value("${jobs.detail-enhancement.chatgpt.model:gpt-4o-mini}") String model,
                                                @Value("${jobs.detail-enhancement.chatgpt.timeout:PT20S}") Duration timeout,
                                                @Value("${jobs.detail-enhancement.chatgpt.temperature:0.2}") double temperature,
-                                               @Value("${jobs.detail-enhancement.chatgpt.max-output-tokens:800}") int maxTokens) {
+                                               @Value("${jobs.detail-enhancement.chatgpt.max-output-tokens:800}") int maxTokens,
+                                               @Value("${jobs.detail-enhancement.chatgpt.request-content-type:input_text}") String requestContentType,
+                                               @Value("${jobs.detail-enhancement.chatgpt.response-text-type:output_text}") String responseTextType,
+                                               @Value("${jobs.detail-enhancement.chatgpt.beta-header:responses=v1}") String betaHeader) {
         this.objectMapper = objectMapper;
         this.timeout = timeout;
         this.model = model;
@@ -51,11 +58,20 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         this.path = path;
         this.providerName = "chatgpt";
         this.enabled = StringUtils.hasText(apiKey);
+        this.requestContentType = StringUtils.hasText(requestContentType) ? requestContentType.trim() : "input_text";
+        this.responseTextType = StringUtils.hasText(responseTextType) ? responseTextType.trim() : "output_text";
+        this.responseTextTypeNormalized = this.responseTextType.toLowerCase();
+        this.betaHeader = StringUtils.hasText(betaHeader) ? betaHeader.trim() : null;
         if (this.enabled) {
             this.webClient = WebClient.builder()
                     .baseUrl(baseUrl)
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultHeaders(headers -> {
+                        if (StringUtils.hasText(this.betaHeader)) {
+                            headers.add("OpenAI-Beta", this.betaHeader);
+                        }
+                    })
                     .build();
         } else {
             this.webClient = null;
@@ -137,8 +153,8 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         }
 
         List<InputMessage> input = List.of(
-                new InputMessage("system", List.of(Content.text(SystemInstructions.TEXT))),
-                new InputMessage("user", List.of(Content.text(userPrompt.toString())))
+                new InputMessage("system", List.of(Content.ofText(requestContentType, SystemInstructions.TEXT))),
+                new InputMessage("user", List.of(Content.ofText(requestContentType, userPrompt.toString())))
         );
         return new ResponsesRequest(model, input, temperature, maxTokens,
                 new ResponseFormat("json_object"));
@@ -182,7 +198,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             return false;
         }
         String normalized = type.trim().toLowerCase();
-        return "text".equals(normalized) || "output_text".equals(normalized);
+        if (normalized.equals(responseTextTypeNormalized)) {
+            return true;
+        }
+        return "text".equals(normalized);
     }
 
     private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
@@ -230,8 +249,8 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     }
 
     private record Content(String type, String text) {
-        static Content text(String value) {
-            return new Content("text", value);
+        static Content ofText(String type, String value) {
+            return new Content(type, value);
         }
     }
 
