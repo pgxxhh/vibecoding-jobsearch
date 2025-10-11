@@ -34,6 +34,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     private final int maxTokens;
     private final String path;
     private final boolean enabled;
+    private final String requestContentType;
+    private final String responseTextType;
+    private final String responseTextTypeNormalized;
+    private final String betaHeader;
     private final ResponseFormat responseFormat;
 
     public ChatGptJobContentEnrichmentProvider(ObjectMapper objectMapper,
@@ -43,7 +47,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                                                @Value("${jobs.detail-enhancement.chatgpt.model:gpt-4o-mini}") String model,
                                                @Value("${jobs.detail-enhancement.chatgpt.timeout:PT20S}") Duration timeout,
                                                @Value("${jobs.detail-enhancement.chatgpt.temperature:0.2}") double temperature,
-                                               @Value("${jobs.detail-enhancement.chatgpt.max-output-tokens:800}") int maxTokens) {
+                                               @Value("${jobs.detail-enhancement.chatgpt.max-output-tokens:800}") int maxTokens,
+                                               @Value("${jobs.detail-enhancement.chatgpt.request-content-type:input_text}") String requestContentType,
+                                               @Value("${jobs.detail-enhancement.chatgpt.response-text-type:output_text}") String responseTextType,
+                                               @Value("${jobs.detail-enhancement.chatgpt.beta-header:responses-2024-05-21}") String betaHeader) {
         this.objectMapper = objectMapper;
         this.timeout = timeout;
         this.model = model;
@@ -52,16 +59,22 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         this.path = path;
         this.providerName = "chatgpt";
         this.enabled = StringUtils.hasText(apiKey);
+        this.requestContentType = StringUtils.hasText(requestContentType) ? requestContentType.trim() : "input_text";
+        this.responseTextType = StringUtils.hasText(responseTextType) ? responseTextType.trim() : "output_text";
+        this.responseTextTypeNormalized = this.responseTextType.toLowerCase();
+        this.betaHeader = StringUtils.hasText(betaHeader) ? betaHeader.trim() : null;
         this.responseFormat = buildResponseFormat();
         if (this.enabled) {
-            WebClient.Builder builder = WebClient.builder()
+           this.webClient = WebClient.builder()
                     .baseUrl(baseUrl)
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-            if (path != null && path.contains("/responses")) {
-                builder.defaultHeader("OpenAI-Beta", "responses-2024-05-21");
-            }
-            this.webClient = builder.build();
+                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .defaultHeaders(headers -> {
+                        if (StringUtils.hasText(this.betaHeader)) {
+                            headers.add("OpenAI-Beta", this.betaHeader);
+                        }
+                    })
+                    .build();
         } else {
             this.webClient = null;
         }
@@ -153,8 +166,8 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         }
 
         List<InputMessage> input = List.of(
-                new InputMessage("system", List.of(Content.text(SystemInstructions.TEXT))),
-                new InputMessage("user", List.of(Content.text(userPrompt.toString())))
+                new InputMessage("system", List.of(Content.ofText(requestContentType, SystemInstructions.TEXT))),
+                new InputMessage("user", List.of(Content.ofText(requestContentType, userPrompt.toString())))
         );
         TextOptions textOptions = new TextOptions(responseFormat);
         return new ResponsesRequest(model, input, textOptions, temperature, maxTokens);
@@ -198,9 +211,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             return false;
         }
         String normalized = type.trim().toLowerCase();
-        return "text".equals(normalized)
-                || "output_text".equals(normalized)
-                || "summary_text".equals(normalized);
+        if (normalized.equals(responseTextTypeNormalized)) {
+            return true;
+        }
+        return "text".equals(normalized);
     }
 
     private String serializeStructured(Map<String, Object> structured) throws JsonProcessingException {
@@ -248,15 +262,61 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
     }
 
     private record Content(String type, String text) {
-        static Content text(String value) {
-            return new Content("input_text", value);
+        static Content ofText(String type, String value) {
+            return new Content(type, value);
         }
     }
 
     private ResponseFormat buildResponseFormat() {
+        Map<String, Object> structuredProperties = Map.ofEntries(
+                Map.entry("summary", Map.of("type", "string")),
+                Map.entry("details", Map.of("type", "string")),
+                Map.entry("salary", Map.of("type", "string")),
+                Map.entry("experienceLevel", Map.of("type", "string")),
+                Map.entry("employmentType", Map.of("type", "string")),
+                Map.entry("location", Map.of("type", "string")),
+                Map.entry("remotePolicy", Map.of("type", "string")),
+                Map.entry("compensation", Map.of("type", "string")),
+                Map.entry("requirements", Map.of("type", "string")),
+                Map.entry("benefits", Map.of("type", "string")),
+                Map.entry("notes", Map.of("type", "string")),
+                Map.entry("keywords", Map.of("type", "string")),
+                Map.entry("tags", Map.of("type", "string")),
+                Map.entry("industry", Map.of("type", "string")),
+                Map.entry("level", Map.of("type", "string")),
+                Map.entry("language", Map.of("type", "string")),
+                Map.entry("education", Map.of("type", "string")),
+                Map.entry("experience", Map.of("type", "string")),
+                Map.entry("skills", Map.of("type", "string")),
+                Map.entry("responsibilities", Map.of("type", "string")),
+                Map.entry("requirementsSummary", Map.of("type", "string")),
+                Map.entry("benefitsSummary", Map.of("type", "string")),
+                Map.entry("company", Map.of("type", "string")),
+                Map.entry("department", Map.of("type", "string")),
+                Map.entry("team", Map.of("type", "string")),
+                Map.entry("project", Map.of("type", "string")),
+                Map.entry("mission", Map.of("type", "string")),
+                Map.entry("vision", Map.of("type", "string")),
+                Map.entry("culture", Map.of("type", "string")),
+                Map.entry("values", Map.of("type", "string")),
+                Map.entry("travelRequirements", Map.of("type", "string")),
+                Map.entry("certifications", Map.of("type", "string")),
+                Map.entry("securityClearance", Map.of("type", "string")),
+                Map.entry("visaSponsorship", Map.of("type", "string")),
+                Map.entry("contractLength", Map.of("type", "string")),
+                Map.entry("workHours", Map.of("type", "string")),
+                Map.entry("startDate", Map.of("type", "string")),
+                Map.entry("endDate", Map.of("type", "string")),
+                Map.entry("deadline", Map.of("type", "string")),
+                Map.entry("applicationProcess", Map.of("type", "string")),
+                Map.entry("other", Map.of("type", "string"))
+        );
+        List<String> structuredRequired = List.copyOf(structuredProperties.keySet());
         Map<String, Object> structuredSchema = Map.of(
                 "type", "object",
-                "additionalProperties", true
+                "properties", structuredProperties,
+                "required", structuredRequired,
+                "additionalProperties", false
         );
         Map<String, Object> schema = Map.of(
                 "type", "object",
@@ -277,20 +337,16 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
                         ),
                         "structured", structuredSchema
                 ),
-                "required", List.of("summary", "skills", "highlights"),
+                "required", List.of("summary", "skills", "highlights", "structured"),
                 "additionalProperties", false
         );
-        JsonSchema jsonSchema = new JsonSchema("job_detail_enrichment", schema);
-        return new ResponseFormat("json_schema", jsonSchema);
+        return new ResponseFormat("json_schema", "job_detail_enrichment", schema);
     }
 
     private record TextOptions(ResponseFormat format) {
     }
 
-    private record ResponseFormat(String type, JsonSchema json_schema) {
-    }
-
-    private record JsonSchema(String name, Map<String, Object> schema) {
+    private record ResponseFormat(String type, String name, Map<String, Object> schema) {
     }
 
     private record ResponsesResponse(List<OutputItem> output, List<String> output_text) {

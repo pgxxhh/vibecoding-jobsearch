@@ -45,7 +45,10 @@ class JobContentEnrichmentPerformanceTest {
                 "gpt-4o-mini",
                 Duration.ofSeconds(5), // 较短的超时用于性能测试
                 0.2,
-                800
+                800,
+                "input_text",
+                "output_text",
+                "responses-2024-05-21"
         );
     }
 

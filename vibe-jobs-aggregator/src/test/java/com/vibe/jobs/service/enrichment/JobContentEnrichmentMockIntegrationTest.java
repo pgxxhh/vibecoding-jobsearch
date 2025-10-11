@@ -31,7 +31,10 @@ class JobContentEnrichmentMockIntegrationTest {
                 "gpt-4o-mini",
                 Duration.ofSeconds(10),
                 0.2,
-                800
+                800,
+                "input_text",
+                "output_text",
+                "responses-2024-05-21"
         );
         
         testJob = new Job();
@@ -70,7 +73,10 @@ class JobContentEnrichmentMockIntegrationTest {
                 "gpt-4o-mini",
                 Duration.ofSeconds(10),
                 0.2,
-                800
+                800,
+                "input_text",
+                "output_text",
+                "responses-2024-05-21"
         );
         
         assertThat(enabledProvider.isEnabled()).isTrue();

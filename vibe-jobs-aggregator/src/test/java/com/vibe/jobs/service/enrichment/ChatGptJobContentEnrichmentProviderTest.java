@@ -43,7 +43,10 @@ class ChatGptJobContentEnrichmentProviderTest {
                 "gpt-4o-mini",
                 Duration.ofSeconds(10),
                 0.2,
-                800
+                800,
+                "input_text",
+                "output_text",
+                "responses-2024-05-21"
         );
         
         testJob = new Job();
@@ -72,7 +75,8 @@ class ChatGptJobContentEnrichmentProviderTest {
     void testIsEnabledWithoutApiKey() {
         ChatGptJobContentEnrichmentProvider providerWithoutKey = new ChatGptJobContentEnrichmentProvider(
                 objectMapper, "", "https://api.openai.com", "/v1/responses", "gpt-4o-mini",
-                Duration.ofSeconds(10), 0.2, 800
+                Duration.ofSeconds(10), 0.2, 800,
+                "input_text", "output_text", "responses-2024-05-21"
         );
         assertThat(providerWithoutKey.isEnabled()).isFalse();
     }
@@ -107,6 +111,7 @@ class ChatGptJobContentEnrichmentProviderTest {
         assertThat(recordedRequest.getPath()).isEqualTo("/v1/responses");
         assertThat(recordedRequest.getHeader("Authorization")).isEqualTo("Bearer test-api-key");
         assertThat(recordedRequest.getHeader("Content-Type")).isEqualTo("application/json");
+        assertThat(recordedRequest.getHeader("OpenAI-Beta")).isEqualTo("responses-2024-05-21");
     }
 
     @Test
@@ -229,6 +234,11 @@ class ChatGptJobContentEnrichmentProviderTest {
         assertThat(requestBody).contains("\"format\"");
         assertThat(requestBody).contains("input_text");
         assertThat(requestBody).doesNotContain("\"type\":\"text\"");
+        assertThat(requestBody).contains("job_detail_enrichment");
+        assertThat(requestBody).contains("\"schema\"");
+        assertThat(requestBody).contains("\"structured\":");
+        assertThat(requestBody).doesNotContain("\"additionalProperties\":true");
+        assertThat(requestBody).contains("\"additionalProperties\":false");
     }
 
     @Test
