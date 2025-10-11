@@ -140,6 +140,8 @@ public class SourceRegistry {
 
         Map<String, String> overrideOptions = company == null ? Map.of() : company.overrideOptions();
         if (source.isRequireOverride() && overrideOptions.isEmpty()) {
+            log.debug("Source {} company {} filtered out: requireOverride=true but no override options", 
+                    source.getCode(), context.company());
             return Map.of();
         }
         overrideOptions.forEach((key, value) -> {
@@ -159,7 +161,21 @@ public class SourceRegistry {
             merged.put("__company", context.company());
         }
         merged.replaceAll((k, v) -> applyPlaceholders(v, context));
+        
+        int beforeFilter = merged.size();
         merged.values().removeIf(value -> value == null || value.isBlank());
+        int afterFilter = merged.size();
+        
+        if (log.isDebugEnabled() && "smartrecruiters".equals(source.getCode())) {
+            log.debug("SmartRecruiters company {} options: before filter={}, after filter={}, context={}, final options={}", 
+                    context.company(), beforeFilter, afterFilter, context, merged);
+        }
+        
+        if (merged.isEmpty()) {
+            log.debug("Source {} company {} filtered out: no valid options after processing", 
+                    source.getCode(), context.company());
+        }
+        
         return merged;
     }
 

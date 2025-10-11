@@ -105,7 +105,7 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
             if (log.isDebugEnabled()) {
                 try {
                     String payload = objectMapper.writeValueAsString(request);
-                    log.debug("ChatGPT request payload for job {}: {}", job.getId(), payload);
+                    log.debug("ChatGPT request payload for job {}: {}", job.id(), payload);
                 } catch (JsonProcessingException ignored) {
                     // ignore payload logging failures
                 }
@@ -146,15 +146,15 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         } catch (WebClientResponseException ex) {
             String responseBody = ex.getResponseBodyAsString();
             log.warn("ChatGPT enrichment failed for job {} with HTTP {}: {}{}",
-                    job.getId(), ex.getStatusCode(), ex.getMessage(),
+                    job.id(), ex.getStatusCode(), ex.getMessage(),
                     StringUtils.hasText(responseBody) ? "; body=" + responseBody : "");
             return JobContentEnrichmentResult.failure(providerName, fingerprint,
                     "HTTP_" + ex.getStatusCode().value(), ex.getMessage());
         } catch (JsonProcessingException ex) {
-            log.warn("ChatGPT enrichment returned invalid JSON for job {}: {}", job.getId(), ex.getMessage());
+            log.warn("ChatGPT enrichment returned invalid JSON for job {}: {}", job.id(), ex.getMessage());
             return JobContentEnrichmentResult.failure(providerName, fingerprint, "INVALID_JSON", ex.getMessage());
         } catch (Exception ex) {
-            log.warn("ChatGPT enrichment failed for job {}: {}", job.getId(), ex.getMessage());
+            log.warn("ChatGPT enrichment failed for job {}: {}", job.id(), ex.getMessage());
             return JobContentEnrichmentResult.failure(providerName, fingerprint, "UNKNOWN_ERROR", ex.getMessage());
         }
     }
