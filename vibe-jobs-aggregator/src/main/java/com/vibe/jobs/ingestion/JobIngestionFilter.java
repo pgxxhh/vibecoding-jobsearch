@@ -1,9 +1,11 @@
 package com.vibe.jobs.ingestion;
 
+import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.sources.FetchedJob;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -12,12 +14,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class JobIngestionFilter {
 
     private final IngestionProperties properties;
     private final DataSourceQueryService queryService;
+    private static final Duration ENABLED_COMPANIES_CACHE_TTL = Duration.ofMinutes(5);
+    private final AtomicReference<Set<String>> enabledCompaniesCache = new AtomicReference<>(Set.of());
+    private final AtomicReference<Instant> enabledCompaniesLastRefresh = new AtomicReference<>(null);
 
     public JobIngestionFilter(IngestionProperties properties, DataSourceQueryService queryService) {
         this.properties = properties;
@@ -30,11 +36,11 @@ public class JobIngestionFilter {
         }
 
         // 1. 首先按启用的公司过滤 (必须条件)
-        Set<String> enabledCompanies = new HashSet<>(queryService.getNormalizedCompanyNames());
-        
+        Set<String> enabledCompanies = new HashSet<>(getEnabledCompanies());
+
         // 2. 按时间范围过滤 (必须条件)
         Instant cutoff = Instant.now().minus(Duration.ofDays(Math.max(properties.getRecentDays(), 1)));
-        
+
         return jobs.stream()
                 .filter(job -> matchesEnabledCompany(job.job(), enabledCompanies))
                 .filter(job -> isRecent(job.job(), cutoff))
@@ -61,5 +67,46 @@ public class JobIngestionFilter {
             return true; // 如果时间戳未知，保留职位
         }
         return !postedAt.isBefore(cutoff);
+    }
+
+    private Set<String> getEnabledCompanies() {
+        Instant now = Instant.now();
+        Set<String> cached = enabledCompaniesCache.get();
+        Instant lastRefresh = enabledCompaniesLastRefresh.get();
+        if (isCacheValid(cached, lastRefresh, now)) {
+            return cached;
+        }
+
+        synchronized (this) {
+            now = Instant.now();
+            cached = enabledCompaniesCache.get();
+            lastRefresh = enabledCompaniesLastRefresh.get();
+            if (isCacheValid(cached, lastRefresh, now)) {
+                return cached;
+            }
+
+            Set<String> fetched = queryService.getNormalizedCompanyNames();
+            Set<String> normalized = fetched == null ? Set.of() : Set.copyOf(fetched);
+            enabledCompaniesCache.set(normalized);
+            enabledCompaniesLastRefresh.set(now);
+            return normalized;
+        }
+    }
+
+    private boolean isCacheValid(Set<String> cached, Instant lastRefresh, Instant now) {
+        if (lastRefresh == null || cached == null) {
+            return false;
+        }
+        return Duration.between(lastRefresh, now).compareTo(ENABLED_COMPANIES_CACHE_TTL) < 0;
+    }
+
+    @EventListener
+    public void onDataSourceConfigurationChanged(DataSourceConfigurationChangedEvent event) {
+        clearEnabledCompaniesCache();
+    }
+
+    private void clearEnabledCompaniesCache() {
+        enabledCompaniesCache.set(Set.of());
+        enabledCompaniesLastRefresh.set(null);
     }
 }
