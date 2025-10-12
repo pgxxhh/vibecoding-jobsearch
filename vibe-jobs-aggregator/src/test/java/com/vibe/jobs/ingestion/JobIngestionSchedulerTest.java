@@ -7,8 +7,6 @@ import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.ingestion.IngestionCursorService;
-import com.vibe.jobs.service.JobDetailService;
-import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.service.LocationEnhancementService;
 import com.vibe.jobs.service.RoleFilterService;
@@ -35,8 +33,7 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -46,10 +43,7 @@ import static org.mockito.Mockito.when;
 class JobIngestionSchedulerTest {
 
     @Mock
-    private JobService jobService;
-
-    @Mock
-    private JobDetailService jobDetailService;
+    private JobIngestionPersistenceService persistenceService;
 
     @Mock
     private LocationFilterService locationFilterService;
@@ -131,17 +125,24 @@ class JobIngestionSchedulerTest {
         SourceRegistry registry = mock(SourceRegistry.class);
         when(registry.getScheduledSources()).thenReturn(List.of(configuredSource));
 
-        when(jobService.upsert(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        doNothing().when(jobDetailService).saveContent(any(), anyString());
-        
         // Mock location filter service to return all jobs unchanged
         when(locationFilterService.filterJobs(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Mock location enhancement service to return all jobs unchanged
         when(locationEnhancementService.enhanceLocationFields(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Mock role filter service to return all jobs unchanged  
+        // Mock role filter service to return all jobs unchanged
         when(roleFilterService.filter(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(persistenceService.persistBatch(anyList())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            List<FetchedJob> batch = (List<FetchedJob>) invocation.getArgument(0);
+            if (batch == null || batch.isEmpty()) {
+                return JobIngestionPersistenceService.JobBatchPersistenceResult.empty();
+            }
+            Job last = batch.get(batch.size() - 1).job();
+            return new JobIngestionPersistenceService.JobBatchPersistenceResult(batch.size(), last, true);
+        });
 
         // Provide snapshot and cursor defaults for scheduler setup
         when(settingsService.initializeIfNeeded()).thenReturn(IngestionSettingsSnapshot.fromProperties(properties, Instant.now()));
@@ -150,11 +151,10 @@ class JobIngestionSchedulerTest {
         when(dataSourceQueryService.getNormalizedCompanyNames()).thenReturn(Set.of());
 
         JobIngestionScheduler scheduler = new JobIngestionScheduler(
-                jobService,
                 properties,
                 registry,
                 filter,
-                jobDetailService,
+                persistenceService,
                 locationFilterService,
                 roleFilterService,
                 locationEnhancementService,
@@ -168,12 +168,13 @@ class JobIngestionSchedulerTest {
 
         assertThat(client.requestedPages()).containsExactly(1, 2);
 
-        ArgumentCaptor<Job> captor = ArgumentCaptor.forClass(Job.class);
-        verify(jobService, times(3)).upsert(captor.capture());
-        List<String> externalIds = captor.getAllValues().stream().map(Job::getExternalId).toList();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<FetchedJob>> captor = ArgumentCaptor.forClass(List.class);
+        verify(persistenceService, times(3)).persistBatch(captor.capture());
+        List<String> externalIds = captor.getAllValues().stream()
+                .flatMap(list -> list.stream().map(fetched -> fetched.job().getExternalId()))
+                .toList();
         assertThat(externalIds).containsExactlyInAnyOrder("eng1", "fin1", "fin2");
-
-        verify(jobDetailService, times(3)).saveContent(any(), anyString());
     }
 
     @Test
