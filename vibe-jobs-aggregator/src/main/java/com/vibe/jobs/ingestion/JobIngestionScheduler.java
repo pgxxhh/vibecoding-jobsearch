@@ -220,7 +220,8 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, null, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
@@ -248,7 +249,8 @@ public class JobIngestionScheduler {
                 break;
             }
             List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
+            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
+            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, category, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
