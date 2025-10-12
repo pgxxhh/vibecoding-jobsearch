@@ -26,7 +26,8 @@ public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
     List<ContentTextView> findContentTextByJobIds(@Param("jobIds") Collection<Long> jobIds);
 
     @EntityGraph(attributePaths = "enrichments")
-    Optional<JobDetail> findByIdWithEnrichments(Long id);
+    @Query("SELECT jd FROM JobDetail jd WHERE jd.id = :id AND jd.deleted = false")
+    Optional<JobDetail> findByIdWithEnrichments(@Param("id") Long id);
 
     // 软删除方法 - 避免与JpaRepository的deleteById冲突
     @Modifying
