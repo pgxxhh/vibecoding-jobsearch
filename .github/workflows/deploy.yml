@@ -1,0 +1,93 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build backend
+        run: mvn -pl vibe-jobs-aggregator -B verify
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+          cache-dependency-path: vibe-jobs-view/pnpm-lock.yaml
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.10.0
+
+      - name: Install frontend dependencies
+        working-directory: vibe-jobs-view
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: vibe-jobs-view
+        env:
+          NEXT_PUBLIC_BACKEND_BASE: /api
+        run: pnpm build
+
+  deploy:
+    name: Deploy via SSH
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy on host
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+
+            if [ -z "${{ vars.SPRING_DATASOURCE_URL }}" ]; then
+              echo "Missing SPRING_DATASOURCE_URL repository variable" >&2
+              exit 1
+            fi
+
+            cd /opt/vibejobs
+            BRANCH='${{ github.ref_name }}'
+
+            cat <<'EOF' > .env.production
+            SPRING_PROFILES_ACTIVE=${{ vars.SPRING_PROFILES_ACTIVE || 'mysql,prod' }}
+            SPRING_DATASOURCE_URL=${{ vars.SPRING_DATASOURCE_URL }}
+            SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
+            SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+            SPRING_JPA_DATABASE_PLATFORM=${{ vars.SPRING_JPA_DATABASE_PLATFORM || 'org.hibernate.dialect.MySQLDialect' }}
+            SPRING_JPA_HIBERNATE_DDL_AUTO=${{ vars.SPRING_JPA_HIBERNATE_DDL_AUTO || 'validate' }}
+            SPRING_FLYWAY_SCHEMAS=${{ vars.SPRING_FLYWAY_SCHEMAS || 'vibejobs' }}
+            DOMAIN=${{ vars.DOMAIN || 'elainejobs.com' }}
+            EMAIL=${{ vars.EMAIL || 'ops@example.com' }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+            EOF
+
+            ./deploy.sh "$BRANCH"
+

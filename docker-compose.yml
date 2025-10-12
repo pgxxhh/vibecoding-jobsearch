@@ -42,9 +42,9 @@ services:
       - SPRING_JPA_DATABASE_PLATFORM=${SPRING_JPA_DATABASE_PLATFORM}
       - SPRING_FLYWAY_SCHEMAS=${SPRING_FLYWAY_SCHEMAS}
       - JAVA_OPTS=${JAVA_OPTS:-}
-#      - DB_AES_KEY_PATH=/app/secrets/db-aes.key
-#    volumes:
-#      - /opt/vibejobs/secrets:/app/secrets:ro
+      - DB_AES_KEY_PATH=/app/secrets/db-aes.key
+    volumes:
+     - /opt/vibejobs/secrets:/app/secrets:ro
     expose: ["8080"]
     depends_on:
       mysql:
