@@ -7,8 +7,6 @@ import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.ingestion.domain.IngestionCursor;
 import com.vibe.jobs.ingestion.domain.IngestionCursorKey;
-import com.vibe.jobs.service.JobDetailService;
-import com.vibe.jobs.service.JobService;
 import com.vibe.jobs.service.LocationEnhancementService;
 import com.vibe.jobs.service.LocationFilterService;
 import com.vibe.jobs.service.RoleFilterService;
@@ -34,11 +32,10 @@ import java.util.concurrent.ScheduledFuture;
 @Component
 public class JobIngestionScheduler {
 
-    private final JobService jobService;
     private final IngestionProperties ingestionProperties;
     private final SourceRegistry sourceRegistry;
     private final JobIngestionFilter jobFilter;
-    private final JobDetailService jobDetailService;
+    private final JobIngestionPersistenceService persistenceService;
     private final LocationFilterService locationFilterService;
     private final RoleFilterService roleFilterService;
     private final LocationEnhancementService locationEnhancementService;
@@ -48,11 +45,10 @@ public class JobIngestionScheduler {
     private final IngestionCursorService ingestionCursorService;
     private volatile ScheduledFuture<?> scheduledTask;
 
-    public JobIngestionScheduler(JobService jobService,
-                                 IngestionProperties ingestionProperties,
+    public JobIngestionScheduler(IngestionProperties ingestionProperties,
                                  SourceRegistry sourceRegistry,
                                  JobIngestionFilter jobFilter,
-                                 JobDetailService jobDetailService,
+                                 JobIngestionPersistenceService persistenceService,
                                  LocationFilterService locationFilterService,
                                  RoleFilterService roleFilterService,
                                  LocationEnhancementService locationEnhancementService,
@@ -60,11 +56,10 @@ public class JobIngestionScheduler {
                                  TaskScheduler taskScheduler,
                                  IngestionSettingsService settingsService,
                                  IngestionCursorService ingestionCursorService) {
-        this.jobService = jobService;
         this.ingestionProperties = ingestionProperties;
         this.sourceRegistry = sourceRegistry;
         this.jobFilter = jobFilter;
-        this.jobDetailService = jobDetailService;
+        this.persistenceService = persistenceService;
         this.locationFilterService = locationFilterService;
         this.roleFilterService = roleFilterService;
         this.locationEnhancementService = locationEnhancementService;
@@ -422,26 +417,8 @@ public class JobIngestionScheduler {
     }
 
     private JobIngestionResult storeJobs(List<FetchedJob> jobs) {
-        if (jobs == null || jobs.isEmpty()) {
-            return JobIngestionResult.empty();
-        }
-        int persisted = 0;
-        Job lastJob = null;
-        for (FetchedJob fetched : jobs) {
-            if (fetched == null) {
-                continue;
-            }
-            try {
-                Job persistedJob = jobService.upsert(fetched.job());
-                jobDetailService.saveContent(persistedJob, fetched.content());
-                persisted++;
-                lastJob = persistedJob;
-            } catch (Exception ex) {
-                log.warn("Failed to persist job {} from source {}: {}", fetched.job() == null ? "unknown" : fetched.job().getTitle(), fetched.job() == null ? "unknown" : fetched.job().getSource(), ex.getMessage());
-                log.debug("Job persistence error", ex);
-            }
-        }
-        return new JobIngestionResult(persisted, lastJob, persisted > 0);
+        JobIngestionPersistenceService.JobBatchPersistenceResult result = persistenceService.persistBatch(jobs);
+        return new JobIngestionResult(result.persisted(), result.lastJob(), result.advanced());
     }
 
     private static final class JobIngestionResult {

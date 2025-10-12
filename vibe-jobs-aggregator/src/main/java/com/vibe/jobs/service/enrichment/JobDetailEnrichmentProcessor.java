@@ -2,6 +2,7 @@ package com.vibe.jobs.service.enrichment;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -20,11 +21,13 @@ public class JobDetailEnrichmentProcessor {
         this.writer = writer;
     }
 
+    @Async("jobContentEnrichmentExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onJobDetailContentUpdated(JobDetailContentUpdatedEvent event) {
         if (event == null) {
             return;
         }
+        log.debug("Triggering enrichment for job {} asynchronously", event.jobId());
         JobContentEnrichmentResult result;
         try {
             result = enrichmentClient.enrich(event.job(), event.rawContent(), event.contentText(), event.contentFingerprint());
