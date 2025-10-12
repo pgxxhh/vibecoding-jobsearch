@@ -34,6 +34,8 @@ import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -213,8 +215,15 @@ class JobIngestionSchedulerTest {
         SourceRegistry registry = mock(SourceRegistry.class);
         when(registry.getScheduledSources()).thenReturn(List.of(configuredSource));
 
-        when(jobService.upsert(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        doNothing().when(jobDetailService).saveContent(any(), anyString());
+        when(persistenceService.persistBatch(anyList())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            List<FetchedJob> batch = (List<FetchedJob>) invocation.getArgument(0);
+            if (batch == null || batch.isEmpty()) {
+                return JobIngestionPersistenceService.JobBatchPersistenceResult.empty();
+            }
+            Job last = batch.get(batch.size() - 1).job();
+            return new JobIngestionPersistenceService.JobBatchPersistenceResult(batch.size(), last, true);
+        });
 
         when(locationEnhancementService.enhanceLocationFields(any())).thenAnswer(invocation -> {
             List<FetchedJob> jobs = invocation.getArgument(0);
@@ -261,11 +270,10 @@ class JobIngestionSchedulerTest {
         when(dataSourceQueryService.getNormalizedCompanyNames()).thenReturn(Set.of());
 
         JobIngestionScheduler scheduler = new JobIngestionScheduler(
-                jobService,
                 properties,
                 registry,
                 filter,
-                jobDetailService,
+                persistenceService,
                 locationFilterService,
                 roleFilterService,
                 locationEnhancementService,
@@ -277,13 +285,16 @@ class JobIngestionSchedulerTest {
 
         scheduler.runIngestion();
 
-        ArgumentCaptor<Job> captor = ArgumentCaptor.forClass(Job.class);
-        verify(jobService).upsert(captor.capture());
-        assertThat(captor.getValue().getLocation()).isEqualTo("Enhanced City");
+        // Verify that persistence service was called with the enhanced jobs
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<FetchedJob>> captor = ArgumentCaptor.forClass(List.class);
+        verify(persistenceService).persistBatch(captor.capture());
+        
+        FetchedJob persistedJob = captor.getValue().get(0);
+        assertThat(persistedJob.job().getLocation()).isEqualTo("Enhanced City");
 
         verify(locationEnhancementService, times(1)).enhanceLocationFields(any());
         verify(locationFilterService, times(1)).filterJobs(any());
-        verify(jobDetailService, times(1)).saveContent(any(), anyString());
     }
 
     private FetchedJob fetchedJob(String externalId, Set<String> tags) {
