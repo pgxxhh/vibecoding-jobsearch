@@ -26,7 +26,10 @@ jobs:
           cache: maven
 
       - name: Build backend
-        run: mvn -pl vibe-jobs-aggregator -B verify
+        working-directory: vibe-jobs-aggregator
+        env:
+          MAVEN_OPTS: ""
+        run: mvn -B verify
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
