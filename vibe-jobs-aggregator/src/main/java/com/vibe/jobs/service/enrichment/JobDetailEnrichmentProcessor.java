@@ -40,11 +40,15 @@ public class JobDetailEnrichmentProcessor {
     @Async("jobContentEnrichmentExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onJobDetailContentUpdated(JobDetailContentUpdatedEvent event) {
+        process(event);
+    }
+
+    public void process(JobDetailContentUpdatedEvent event) {
         if (event == null) {
             return;
         }
         log.info("Triggering enrichment for job {} asynchronously", event.jobId());
-        
+
         // Check if enrichment should be skipped
         if (shouldSkipEnrichment(event)) {
             return;

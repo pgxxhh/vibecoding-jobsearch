@@ -4,15 +4,13 @@ import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.domain.JobDetail;
 import com.vibe.jobs.repo.JobDetailRepository;
 import com.vibe.jobs.service.HtmlTextExtractor;
+import com.vibe.jobs.service.JobContentFingerprintCalculator;
 import com.vibe.jobs.service.enrichment.JobDetailContentUpdatedEvent;
 import com.vibe.jobs.service.enrichment.JobSnapshot;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +24,14 @@ public class JobDetailService {
 
     private final JobDetailRepository repository;
     private final ApplicationEventPublisher eventPublisher;
+    private final JobContentFingerprintCalculator fingerprintCalculator;
 
     public JobDetailService(JobDetailRepository repository,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            JobContentFingerprintCalculator fingerprintCalculator) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+        this.fingerprintCalculator = fingerprintCalculator;
     }
 
     @Transactional
@@ -77,8 +78,8 @@ public class JobDetailService {
 
         if (contentChanged) {
             long newVersion = detail.getContentVersion();
-            String fingerprint = computeFingerprint(jobId, contentText);
-            JobSnapshot snapshot = toSnapshot(job);
+            String fingerprint = fingerprintCalculator.compute(jobId, contentText);
+            JobSnapshot snapshot = JobSnapshot.from(job);
             eventPublisher.publishEvent(new JobDetailContentUpdatedEvent(
                     detail.getId(),
                     jobId,
@@ -132,31 +133,4 @@ public class JobDetailService {
                         JobDetailRepository.ContentTextView::getContentText));
     }
 
-    private JobSnapshot toSnapshot(Job job) {
-        List<String> tags = job.getTags() == null ? List.of() : List.copyOf(job.getTags());
-        return new JobSnapshot(
-                job.getId(),
-                job.getTitle(),
-                job.getCompany(),
-                job.getLocation(),
-                job.getLevel(),
-                job.getUrl(),
-                tags
-        );
-    }
-
-    private String computeFingerprint(Long jobId, String contentText) {
-        String source = (jobId != null ? jobId : 0L) + ":" + (contentText != null ? contentText : "");
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(source.getBytes(StandardCharsets.UTF_8));
-            StringBuilder builder = new StringBuilder(hash.length * 2);
-            for (byte b : hash) {
-                builder.append(String.format("%02x", b));
-            }
-            return builder.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not available", e);
-        }
-    }
 }
