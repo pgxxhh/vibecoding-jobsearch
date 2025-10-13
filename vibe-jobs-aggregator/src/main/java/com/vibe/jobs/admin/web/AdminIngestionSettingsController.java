@@ -36,9 +36,9 @@ public class AdminIngestionSettingsController {
     @GetMapping
     public ResponseEntity<IngestionSettingsResponse> getCurrent() {
         try {
-            log.debug("Getting current ingestion settings");
+            log.info("Getting current ingestion settings");
             IngestionSettingsSnapshot snapshot = ingestionSettingsService.current();
-            log.debug("Retrieved ingestion settings: recentDays={}, concurrency={}", snapshot.recentDays(), snapshot.concurrency());
+            log.info("Retrieved ingestion settings: recentDays={}, concurrency={}", snapshot.recentDays(), snapshot.concurrency());
             IngestionSettingsResponse response = IngestionSettingsResponse.fromSnapshot(snapshot);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -51,7 +51,7 @@ public class AdminIngestionSettingsController {
     public ResponseEntity<IngestionSettingsResponse> update(@RequestBody IngestionSettingsRequest request,
                                                            AdminPrincipal principal) {
         try {
-            log.debug("Updating ingestion settings with request: {}", request);
+            log.info("Updating ingestion settings with request: {}", request);
             IngestionSettingsSnapshot before = ingestionSettingsService.current();
             IngestionSettingsSnapshot updated = ingestionSettingsService.update(request.toSnapshot());
             
@@ -64,7 +64,7 @@ public class AdminIngestionSettingsController {
             );
             
             IngestionSettingsResponse response = IngestionSettingsResponse.fromSnapshot(updated);
-            log.debug("Successfully updated ingestion settings");
+            log.info("Successfully updated ingestion settings");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error updating ingestion settings", e);

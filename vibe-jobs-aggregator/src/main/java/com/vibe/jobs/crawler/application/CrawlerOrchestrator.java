@@ -65,7 +65,7 @@ public class CrawlerOrchestrator {
         } catch (Exception ex) {
             error = ex.getMessage() == null ? ex.toString() : ex.getMessage();
             log.warn("Crawler execution failed for blueprint {} page {}: {}", blueprint.code(), request.pagination().page(), error);
-            log.debug("Crawler execution error", ex);
+            log.info("Crawler execution error", ex);
         }
         Instant completed = clock.instant();
         long duration = Math.max(0, completed.toEpochMilli() - started.toEpochMilli());
@@ -96,7 +96,7 @@ public class CrawlerOrchestrator {
             );
             runRepository.save(run);
         } catch (Exception ex) {
-            log.debug("Failed to persist crawler run log: {}", ex.getMessage());
+            log.info("Failed to persist crawler run log: {}", ex.getMessage());
         }
     }
 }

@@ -67,7 +67,7 @@ public class IngestionExecutorManager {
                           currentCorePoolSize, newConcurrency, e.getMessage(), e);
             }
         } else {
-            log.debug("Concurrency unchanged at {}, no update needed", newConcurrency);
+            log.info("Concurrency unchanged at {}, no update needed", newConcurrency);
         }
     }
 

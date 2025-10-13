@@ -42,7 +42,7 @@ public class HttpCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 .defaultHeader(HttpHeaders.USER_AGENT, randomUserAgent())
                 .build();
 
-        log.debug("Fetching crawl page {} for blueprint {}", pagination.page(), blueprint.code());
+        log.info("Fetching crawl page {} for blueprint {}", pagination.page(), blueprint.code());
         String body = client.get()
                 .uri(url)
                 .retrieve()

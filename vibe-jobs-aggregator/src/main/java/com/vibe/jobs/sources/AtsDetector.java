@@ -102,7 +102,7 @@ public class AtsDetector {
             return new AtsDetectionResult("generic", careersUrl, null);
         }
         
-        log.debug("Detecting ATS type for URL: {}", careersUrl);
+        log.info("Detecting ATS type for URL: {}", careersUrl);
         
         // 1. 首先通过URL模式检测
         String atsType = detectByUrl(careersUrl);
@@ -120,7 +120,7 @@ public class AtsDetector {
                 }
             }
         } catch (Exception e) {
-            log.debug("Failed to fetch content for ATS detection: {}", e.getMessage());
+            log.info("Failed to fetch content for ATS detection: {}", e.getMessage());
         }
         
         return new AtsDetectionResult("generic", careersUrl, null);
@@ -130,7 +130,7 @@ public class AtsDetector {
         for (Map.Entry<String, Pattern[]> entry : ATS_PATTERNS.entrySet()) {
             for (Pattern pattern : entry.getValue()) {
                 if (pattern.matcher(url).find()) {
-                    log.debug("Detected ATS '{}' by URL pattern: {}", entry.getKey(), pattern.pattern());
+                    log.info("Detected ATS '{}' by URL pattern: {}", entry.getKey(), pattern.pattern());
                     return entry.getKey();
                 }
             }
@@ -162,7 +162,7 @@ public class AtsDetector {
         for (Map.Entry<String, Pattern[]> entry : ATS_PATTERNS.entrySet()) {
             for (Pattern pattern : entry.getValue()) {
                 if (pattern.matcher(htmlContent).find()) {
-                    log.debug("Detected ATS '{}' by content pattern: {}", entry.getKey(), pattern.pattern());
+                    log.info("Detected ATS '{}' by content pattern: {}", entry.getKey(), pattern.pattern());
                     return entry.getKey();
                 }
             }

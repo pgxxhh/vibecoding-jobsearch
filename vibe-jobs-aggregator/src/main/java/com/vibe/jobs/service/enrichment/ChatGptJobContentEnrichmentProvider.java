@@ -102,10 +102,10 @@ public class ChatGptJobContentEnrichmentProvider implements JobContentEnrichment
         long start = System.nanoTime();
         try {
             ResponsesRequest request = buildRequest(job, rawContent, contentText);
-            if (log.isDebugEnabled()) {
+            if (log.isInfoEnabled()) {
                 try {
                     String payload = objectMapper.writeValueAsString(request);
-                    log.debug("ChatGPT request payload for job {}: {}", job.id(), payload);
+                    log.info("ChatGPT request payload for job {}: {}", job.id(), payload);
                 } catch (JsonProcessingException ignored) {
                     // ignore payload logging failures
                 }

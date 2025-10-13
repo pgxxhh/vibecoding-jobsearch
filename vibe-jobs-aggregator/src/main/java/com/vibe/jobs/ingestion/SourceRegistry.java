@@ -91,7 +91,7 @@ public class SourceRegistry {
             result.add(new ConfiguredSource(source, source.getCode(), client, categories));
         } catch (Exception ex) {
             log.warn("Failed to initialize single-instance source {}: {}", source.getCode(), ex.getMessage());
-            log.debug("Source initialization error", ex);
+            log.info("Source initialization error", ex);
         }
         return result;
     }
@@ -115,7 +115,7 @@ public class SourceRegistry {
                 resolved.add(new ConfiguredSource(source, context.company(), client, categories));
             } catch (Exception ex) {
                 log.warn("Failed to initialize source {} for company {}: {}", source.getCode(), context.company(), ex.getMessage());
-                log.debug("Source initialization error", ex);
+                log.info("Source initialization error", ex);
             }
         }
         return resolved;
@@ -140,7 +140,7 @@ public class SourceRegistry {
 
         Map<String, String> overrideOptions = company == null ? Map.of() : company.overrideOptions();
         if (source.isRequireOverride() && overrideOptions.isEmpty()) {
-            log.debug("Source {} company {} filtered out: requireOverride=true but no override options", 
+            log.info("Source {} company {} filtered out: requireOverride=true but no override options", 
                     source.getCode(), context.company());
             return Map.of();
         }
@@ -166,13 +166,13 @@ public class SourceRegistry {
         merged.values().removeIf(value -> value == null || value.isBlank());
         int afterFilter = merged.size();
         
-        if (log.isDebugEnabled() && "smartrecruiters".equals(source.getCode())) {
-            log.debug("SmartRecruiters company {} options: before filter={}, after filter={}, context={}, final options={}", 
+        if (log.isInfoEnabled() && "smartrecruiters".equals(source.getCode())) {
+            log.info("SmartRecruiters company {} options: before filter={}, after filter={}, context={}, final options={}", 
                     context.company(), beforeFilter, afterFilter, context, merged);
         }
         
         if (merged.isEmpty()) {
-            log.debug("Source {} company {} filtered out: no valid options after processing", 
+            log.info("Source {} company {} filtered out: no valid options after processing", 
                     source.getCode(), context.company());
         }
         

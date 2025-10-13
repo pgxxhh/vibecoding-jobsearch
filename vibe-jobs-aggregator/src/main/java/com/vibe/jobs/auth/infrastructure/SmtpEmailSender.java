@@ -34,7 +34,7 @@ public class SmtpEmailSender implements EmailSender {
         String subject = "Elaine Jobs 登录验证码";
         String text = buildBody(code);
 
-        log.debug("Attempting to send email to {} from {} using SMTP", email.masked(), from);
+        log.info("Attempting to send email to {} from {} using SMTP", email.masked(), from);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -46,7 +46,7 @@ public class SmtpEmailSender implements EmailSender {
             helper.setSubject(subject);
             helper.setText(text, false);
             
-            log.debug("Sending email message via JavaMailSender...");
+            log.info("Sending email message via JavaMailSender...");
             mailSender.send(message);
             log.info("Successfully sent verification code email to {}", email.masked());
             return CompletableFuture.completedFuture(null);

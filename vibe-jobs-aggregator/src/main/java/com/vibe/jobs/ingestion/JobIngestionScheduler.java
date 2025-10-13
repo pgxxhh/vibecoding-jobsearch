@@ -137,10 +137,10 @@ public class JobIngestionScheduler {
             String message = e.getMessage();
             if (message != null && message.contains("403")) {
                 log.info("Skip source {} ({}) due to 403 response", sourceName, companyName);
-                log.debug("Expected failure details", e);
+                log.info("Expected failure details", e);
             } else {
                 log.warn("Ingestion failed for source {} ({}): {}", sourceName, companyName, message);
-                log.debug("Ingestion failure details", e);
+                log.info("Ingestion failure details", e);
             }
         }
     }
@@ -220,7 +220,7 @@ public class JobIngestionScheduler {
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, null, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
-                log.debug("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
+                log.info("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
             }
             if (!result.advanced()) {
                 break;
@@ -249,7 +249,7 @@ public class JobIngestionScheduler {
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, category, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
-                log.debug("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
+                log.info("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
             }
             if (allQuotasMet(remaining)) {
                 return;
@@ -341,7 +341,7 @@ public class JobIngestionScheduler {
             }
             advanced = advanced || result.advanced();
             if (result.persisted() < subset.size()) {
-                log.debug("Persisted {} of {} jobs for category {} from source {} on page {}", result.persisted(), subset.size(), category.name(), source.client().sourceName(), page);
+                log.info("Persisted {} of {} jobs for category {} from source {} on page {}", result.persisted(), subset.size(), category.name(), source.client().sourceName(), page);
             }
         }
         return new JobIngestionResult(totalPersisted, lastJob, advanced);

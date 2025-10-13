@@ -54,7 +54,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
     private CrawlPageSnapshot execute(CrawlSession session, CrawlPagination pagination, String url, Page page) throws Exception {
         NavigateOptions navigateOptions = new NavigateOptions();
         navigateOptions.setWaitUntil(WaitUntilState.DOMCONTENTLOADED);
-        log.debug("[{}] Navigating to {} with browser engine", session.blueprint().code(), url);
+        log.info("[{}] Navigating to {} with browser engine", session.blueprint().code(), url);
         page.navigate(url, navigateOptions);
         AutomationSettings automation = session.blueprint().automation();
         applyAutomation(page, automation, session);
@@ -77,7 +77,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 page.waitForTimeout(automation.waitForMilliseconds());
             }
         } catch (RuntimeException ex) {
-            log.debug("Automation pre-wait failed: {}", ex.getMessage());
+            log.info("Automation pre-wait failed: {}", ex.getMessage());
         }
         AutomationSettings.SearchSettings search = automation.search();
         if (search == null || !search.enabled()) {
@@ -92,7 +92,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 value = session.context().option(field.optionKey());
             }
             if ((value == null || value.isBlank()) && field.required()) {
-                log.debug("Skipping automation field {} due to missing value", field.selector());
+                log.info("Skipping automation field {} due to missing value", field.selector());
                 continue;
             }
             try {
@@ -114,14 +114,14 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                     }
                 }
             } catch (RuntimeException ex) {
-                log.debug("Failed to execute search field action on {}: {}", field.selector(), ex.getMessage());
+                log.info("Failed to execute search field action on {}: {}", field.selector(), ex.getMessage());
             }
         }
         if (!search.submitSelector().isBlank()) {
             try {
                 page.locator(search.submitSelector()).first().click();
             } catch (RuntimeException ex) {
-                log.debug("Failed to click submit selector {}: {}", search.submitSelector(), ex.getMessage());
+                log.info("Failed to click submit selector {}: {}", search.submitSelector(), ex.getMessage());
             }
         }
         try {
@@ -131,7 +131,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 page.waitForTimeout(search.waitAfterSubmitMs());
             }
         } catch (RuntimeException ex) {
-            log.debug("Automation post-wait failed: {}", ex.getMessage());
+            log.info("Automation post-wait failed: {}", ex.getMessage());
         }
     }
 
@@ -174,7 +174,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                     }
                 }
             } catch (RuntimeException ex) {
-                log.debug("Failed to execute crawl step {} for blueprint {}: {}", step.type(), session.blueprint().code(), ex.getMessage());
+                log.info("Failed to execute crawl step {} for blueprint {}: {}", step.type(), session.blueprint().code(), ex.getMessage());
             }
         }
         return new FlowExecutionResult(listHtml, detailHtml);
@@ -230,7 +230,7 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 detail.navigate(resolved, new NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
                 snapshots.add(detail.content());
             } catch (RuntimeException ex) {
-                log.debug("Failed to collect detail page {}: {}", resolved, ex.getMessage());
+                log.info("Failed to collect detail page {}: {}", resolved, ex.getMessage());
             }
         }
         return snapshots;

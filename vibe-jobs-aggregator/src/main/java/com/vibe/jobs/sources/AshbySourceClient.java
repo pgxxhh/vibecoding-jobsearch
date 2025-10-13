@@ -64,7 +64,7 @@ public class AshbySourceClient implements SourceClient {
         }
         
         String apiUrl = baseUrl + "/api/non-user-graphql?op=ApiJobBoardWithTeams";
-        log.debug("Fetching Ashby jobs from: {}", apiUrl);
+        log.info("Fetching Ashby jobs from: {}", apiUrl);
         
         // GraphQL query for Ashby jobs API
         String graphqlQuery = """
@@ -98,7 +98,7 @@ public class AshbySourceClient implements SourceClient {
     private List<FetchedJob> fetchJobsFromHtml() throws Exception {
         // Fallback: Parse HTML careers page
         String htmlUrl = baseUrl;
-        log.debug("Falling back to HTML parsing for: {}", htmlUrl);
+        log.info("Falling back to HTML parsing for: {}", htmlUrl);
         
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(htmlUrl))
@@ -167,7 +167,7 @@ public class AshbySourceClient implements SourceClient {
                         jobs.add(new FetchedJob(job, ""));
                     }
                 } catch (Exception e) {
-                    log.debug("Failed to parse HTML job line: {}", e.getMessage());
+                    log.info("Failed to parse HTML job line: {}", e.getMessage());
                 }
             }
         }
@@ -363,7 +363,7 @@ public class AshbySourceClient implements SourceClient {
             return LocalDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME)
                     .toInstant(ZoneOffset.UTC);
         } catch (Exception e) {
-            log.debug("Failed to parse Ashby date '{}', using current time", dateStr);
+            log.info("Failed to parse Ashby date '{}', using current time", dateStr);
             return Instant.now();
         }
     }

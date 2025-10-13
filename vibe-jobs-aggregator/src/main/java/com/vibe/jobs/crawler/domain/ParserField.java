@@ -123,7 +123,7 @@ public class ParserField {
                     if (textValue == null || !isValidLocationText(textValue)) {
                         String intelligentLocation = extractLocationIntelligently(element);
                         if (intelligentLocation != null) {
-                            log.debug("Location field enhanced: '{}' -> '{}'", textValue, intelligentLocation);
+                            log.info("Location field enhanced: '{}' -> '{}'", textValue, intelligentLocation);
                             textValue = intelligentLocation;
                         }
                     }
@@ -155,7 +155,7 @@ public class ParserField {
             }
             return elements.stream().toList();
         } catch (Exception e) {
-            log.debug("Selector parsing failed for '{}': {}", cleanSelector, e.getMessage());
+            log.info("Selector parsing failed for '{}': {}", cleanSelector, e.getMessage());
             if (cleanSelector.contains(",")) {
                 List<Element> aggregated = new java.util.ArrayList<>();
                 for (String part : cleanSelector.split(",")) {
@@ -168,7 +168,7 @@ public class ParserField {
                     if (isXPathSelector(trimmed)) {
                         String converted = convertXPathToCss(trimmed);
                         if (!converted.equals(trimmed) && !converted.trim().isEmpty()) {
-                            log.debug("Converting XPath selector '{}' to CSS '{}'", trimmed, converted);
+                            log.info("Converting XPath selector '{}' to CSS '{}'", trimmed, converted);
                             try {
                                 Elements partial = element.select(converted);
                                 if (partial != null && !partial.isEmpty()) {
@@ -176,7 +176,7 @@ public class ParserField {
                                 }
                                 continue;
                             } catch (Exception conversionException) {
-                                log.debug("CSS conversion '{}' failed, skipping", converted);
+                                log.info("CSS conversion '{}' failed, skipping", converted);
                             }
                         }
                         // 只记录一次XPath警告，避免日志噪音
@@ -196,7 +196,7 @@ public class ParserField {
                             aggregated.addAll(partial.stream().toList());
                         }
                     } catch (Exception ignored) {
-                        log.debug("Sub-selector parsing failed for '{}': {}", trimmed, ignored.getMessage());
+                        log.info("Sub-selector parsing failed for '{}': {}", trimmed, ignored.getMessage());
                     }
                 }
                 if (!aggregated.isEmpty()) {
@@ -294,7 +294,7 @@ public class ParserField {
         // 策略1: 从当前元素及其父元素的文本中提取location
         String locationFromText = extractLocationFromText(element);
         if (locationFromText != null) {
-            log.debug("Location extracted from element text: '{}'", locationFromText);
+            log.info("Location extracted from element text: '{}'", locationFromText);
             return locationFromText;
         }
         
@@ -322,7 +322,7 @@ public class ParserField {
                 for (Element elem : found) {
                     String text = elem.text().trim();
                     if (isValidLocationText(text)) {
-                        log.debug("Location extracted using selector '{}': '{}'", sel, text);
+                        log.info("Location extracted using selector '{}': '{}'", sel, text);
                         return text;
                     }
                 }
@@ -337,7 +337,7 @@ public class ParserField {
         if (parent != null) {
             String locationFromParent = extractLocationFromElementTree(parent, 2);
             if (locationFromParent != null) {
-                log.debug("Location extracted from parent element: '{}'", locationFromParent);
+                log.info("Location extracted from parent element: '{}'", locationFromParent);
                 return locationFromParent;
             }
         }
@@ -345,11 +345,11 @@ public class ParserField {
         // 策略4: URL参数推断（如?_offices=china）
         String locationFromUrl = extractLocationFromUrl(element);
         if (locationFromUrl != null) {
-            log.debug("Location extracted from URL context: '{}'", locationFromUrl);
+            log.info("Location extracted from URL context: '{}'", locationFromUrl);
             return locationFromUrl;
         }
         
-        log.debug("No location information found for element: {}", 
+        log.info("No location information found for element: {}", 
                  element.text().length() > 50 ? element.text().substring(0, 50) + "..." : element.text());
         return null;
     }
