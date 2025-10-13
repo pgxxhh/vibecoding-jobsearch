@@ -41,8 +41,19 @@ public abstract class AbstractJsonAttributeConverter<T> implements AttributeConv
         try {
             return OBJECT_MAPPER.readValue(dbData, typeReference);
         } catch (JsonProcessingException e) {
+            T fallback = convertNonJsonValue(dbData);
+            if (fallback != null) {
+                return fallback;
+            }
             log.warn("Failed to deserialize attribute {}", dbData, e);
             return null;
         }
+    }
+
+    /**
+     * Allows subclasses to translate legacy non-JSON payloads when present.
+     */
+    protected T convertNonJsonValue(String dbData) {
+        return null;
     }
 }
