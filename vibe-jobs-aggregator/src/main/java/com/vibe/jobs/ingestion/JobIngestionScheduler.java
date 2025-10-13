@@ -2,6 +2,7 @@ package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.admin.application.IngestionSettingsService;
 import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
+import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
 import com.vibe.jobs.admin.domain.event.IngestionSettingsUpdatedEvent;
 import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.domain.Job;
@@ -27,6 +28,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Component
@@ -44,6 +46,8 @@ public class JobIngestionScheduler {
     private final IngestionSettingsService settingsService;
     private final IngestionCursorService ingestionCursorService;
     private volatile ScheduledFuture<?> scheduledTask;
+    private final AtomicBoolean immediateRunScheduled = new AtomicBoolean(false);
+    private final AtomicBoolean ingestionInProgress = new AtomicBoolean(false);
 
     public JobIngestionScheduler(IngestionProperties ingestionProperties,
                                  SourceRegistry sourceRegistry,
@@ -83,11 +87,31 @@ public class JobIngestionScheduler {
     }
 
     private void runIngestionSafely() {
+        if (!ingestionInProgress.compareAndSet(false, true)) {
+            log.info("Ingestion already in progress; skipping additional trigger");
+            return;
+        }
         try {
             runIngestion();
         } catch (Exception ex) {
             log.error("Scheduled ingestion failed", ex);
+        } finally {
+            ingestionInProgress.set(false);
         }
+    }
+
+    private void triggerImmediateRun() {
+        if (!immediateRunScheduled.compareAndSet(false, true)) {
+            return;
+        }
+        taskScheduler.schedule(() -> {
+            try {
+                log.info("Triggering on-demand ingestion run due to configuration change");
+                runIngestionSafely();
+            } finally {
+                immediateRunScheduled.set(false);
+            }
+        }, Instant.now());
     }
 
     public void runIngestion() {
@@ -458,5 +482,14 @@ public class JobIngestionScheduler {
             return;
         }
         scheduleWith(event.snapshot());
+    }
+
+    @EventListener
+    public void handleDataSourceChanged(DataSourceConfigurationChangedEvent event) {
+        if (event == null) {
+            return;
+        }
+        log.info("Received data source change event for {} - scheduling immediate ingestion", event.sourceCode());
+        triggerImmediateRun();
     }
 }
