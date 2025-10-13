@@ -34,8 +34,6 @@ public class ProdDataSourceConfig {
     public DataSource dataSource() {
         var builder = dataSourceProperties.initializeDataSourceBuilder();
         builder.type(HikariDataSource.class);
-        //todo just for debuging
-        log.info("url: {}", dataSourceProperties.getUrl());
 
         if (encryptionProperties.isEnabled()) {
             if (!StringUtils.hasText(encryptionProperties.getKeyPath())) {

@@ -52,7 +52,7 @@ jobs:
     enabled: true
     provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:deepseek}
     chatgpt:
-      # api-key: ${OPENAI_API_KEY:}
+      api-key: ${OPENAI_API_KEY:}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       path: ${OPENAI_RESPONSES_PATH:${OPENAI_CHAT_COMPLETIONS_PATH:/v1/responses}}
       model: ${OPENAI_MODEL:gpt-4o-mini}
@@ -60,7 +60,7 @@ jobs:
       temperature: ${OPENAI_TEMPERATURE:0.2}
       max-output-tokens: ${OPENAI_MAX_OUTPUT_TOKENS:800}
     deepseek:
-      api-key: ${DEEPSEEK_API_KEY:sk-693b6bc856ee486c8686053f7be42185}
+      api-key: ${DEEPSEEK_API_KEY:}
       base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
       path: ${DEEPSEEK_CHAT_COMPLETIONS_PATH:/chat/completions}
       model: ${DEEPSEEK_MODEL:deepseek-chat}
