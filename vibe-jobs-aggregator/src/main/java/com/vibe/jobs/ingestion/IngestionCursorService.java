@@ -5,6 +5,7 @@ import com.vibe.jobs.ingestion.domain.IngestionCursorKey;
 import com.vibe.jobs.ingestion.infrastructure.jpa.IngestionCursorEntity;
 import com.vibe.jobs.ingestion.infrastructure.jpa.SpringDataIngestionCursorRepository;
 import com.vibe.jobs.domain.Job;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,27 +47,21 @@ public class IngestionCursorService {
                                           String lastExternalId,
                                           String nextPageToken) {
         IngestionCursorKey normalized = normalize(key);
-        IngestionCursorEntity entity = repository.findBySourceNameAndCompanyAndCategory(
-                normalized.sourceName(), normalized.company(), normalized.category())
-                .orElseGet(() -> {
-                    IngestionCursorEntity created = new IngestionCursorEntity();
-                    created.setSourceCode(normalized.sourceCode());
-                    created.setSourceName(normalized.sourceName());
-                    created.setCompany(normalized.company());
-                    created.setCategory(normalized.category());
-                    created.setLastIngestedAt(Instant.now());
-                    return created;
-                });
-        entity.setSourceCode(normalized.sourceCode());
-        entity.setSourceName(normalized.sourceName());
-        entity.setCompany(normalized.company());
-        entity.setCategory(normalized.category());
-        entity.setLastPostedAt(lastPostedAt);
-        entity.setLastExternalId(lastExternalId);
-        entity.setNextPageToken(nextPageToken);
-        entity.setLastIngestedAt(Instant.now());
-        IngestionCursorEntity saved = repository.save(entity);
-        return toDomain(saved);
+        try {
+            IngestionCursorEntity entity = repository
+                    .findWithLockBySourceNameAndCompanyAndCategory(normalized.sourceName(), normalized.company(), normalized.category())
+                    .orElseGet(() -> newEntity(normalized));
+            applyState(entity, normalized, lastPostedAt, lastExternalId, nextPageToken);
+            IngestionCursorEntity saved = repository.saveAndFlush(entity);
+            return toDomain(saved);
+        } catch (DataIntegrityViolationException ex) {
+            IngestionCursorEntity entity = repository
+                    .findWithLockBySourceNameAndCompanyAndCategory(normalized.sourceName(), normalized.company(), normalized.category())
+                    .orElseThrow(() -> new IllegalStateException("Failed to load ingestion cursor after concurrent creation", ex));
+            applyState(entity, normalized, lastPostedAt, lastExternalId, nextPageToken);
+            IngestionCursorEntity saved = repository.saveAndFlush(entity);
+            return toDomain(saved);
+        }
     }
 
     private IngestionCursor toDomain(IngestionCursorEntity entity) {
@@ -94,6 +89,31 @@ public class IngestionCursorService {
                 sanitize(key.company()),
                 sanitize(key.category())
         );
+    }
+
+    private IngestionCursorEntity newEntity(IngestionCursorKey normalized) {
+        IngestionCursorEntity created = new IngestionCursorEntity();
+        created.setSourceCode(normalized.sourceCode());
+        created.setSourceName(normalized.sourceName());
+        created.setCompany(normalized.company());
+        created.setCategory(normalized.category());
+        created.setLastIngestedAt(Instant.now());
+        return created;
+    }
+
+    private void applyState(IngestionCursorEntity entity,
+                            IngestionCursorKey normalized,
+                            Instant lastPostedAt,
+                            String lastExternalId,
+                            String nextPageToken) {
+        entity.setSourceCode(normalized.sourceCode());
+        entity.setSourceName(normalized.sourceName());
+        entity.setCompany(normalized.company());
+        entity.setCategory(normalized.category());
+        entity.setLastPostedAt(lastPostedAt);
+        entity.setLastExternalId(lastExternalId);
+        entity.setNextPageToken(nextPageToken);
+        entity.setLastIngestedAt(Instant.now());
     }
 
     private String sanitize(String value) {
