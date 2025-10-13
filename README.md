@@ -18,7 +18,7 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 ## 系统总览
 - **目标用户**：希望在国内快速获取外企职位信息的人群，无需梯子即可访问。
 - **核心价值**：聚合各类 ATS（Applicant Tracking System）与官方 Career Page 数据源，统一建模、清洗与打分后输出标准化的职位数据，并通过 LLM 提取摘要、亮点与技能标签。
-- **线上环境**：https://elainejobs.com/（部署于 AWS EC2，数据库使用 Amazon Aurora / RDS MySQL 8.0 兼容版）。
+- **线上环境**：https://elainejobs.com/  （部署于 AWS EC2，数据库使用 Amazon Aurora / RDS MySQL 8.0 兼容版）。
 
 ## 架构与核心组件
 | 分层 | 说明 | 关键目录 |
