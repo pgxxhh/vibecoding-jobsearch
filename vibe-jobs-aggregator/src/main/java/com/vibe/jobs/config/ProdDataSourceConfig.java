@@ -2,6 +2,7 @@ package com.vibe.jobs.config;
 
 import com.vibe.jobs.security.AesEncryptionService;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
 import javax.sql.DataSource;
 import java.nio.file.Path;
 
+@Slf4j
 @Configuration
 @Profile("prod")
 @EnableConfigurationProperties(DbCredentialEncryptionProperties.class)
@@ -41,6 +43,8 @@ public class ProdDataSourceConfig {
                     AesEncryptionService.loadKey(Path.of(encryptionProperties.getKeyPath())));
             String username = decryptIfNecessary(dataSourceProperties.getUsername(), aes);
             String password = decryptIfNecessary(dataSourceProperties.getPassword(), aes);
+            //todo remove, just for debug
+            log.info("username: {}, password: {}", username, password);
             builder.username(username);
             builder.password(password);
         }
