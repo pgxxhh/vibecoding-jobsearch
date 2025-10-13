@@ -52,6 +52,7 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
         this.providerName = "deepseek";
         this.enabled = StringUtils.hasText(apiKey);
         if (this.enabled) {
+            log.info("apiKey: {}", apiKey);
             this.webClient = WebClient.builder()
                     .baseUrl(baseUrl)
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
