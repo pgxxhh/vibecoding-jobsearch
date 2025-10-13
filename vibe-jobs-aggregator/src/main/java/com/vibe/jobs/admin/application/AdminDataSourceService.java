@@ -97,7 +97,7 @@ public class AdminDataSourceService {
                     .forEach(company -> {
                         company.setEnabled(false);
                         companyRepository.save(company);
-                        log.debug("Disabled company '{}' in data source '{}'", company.getReference(), saved.getCode());
+                        log.info("Disabled company '{}' in data source '{}'", company.getReference(), saved.getCode());
                     });
             }
             // 如果数据源从禁用变为启用，可以选择性地启用公司（这里暂时不自动启用，保持现有状态）
@@ -503,7 +503,7 @@ public class AdminDataSourceService {
                         duplicatesRemoved, dataSourceCode, dataSourceId);
                 publishChange(dataSourceCode);
             } else {
-                log.debug("No duplicate company records found for data source '{}' (ID: {})", dataSourceCode, dataSourceId);
+                log.info("No duplicate company records found for data source '{}' (ID: {})", dataSourceCode, dataSourceId);
             }
             
         } catch (Exception e) {

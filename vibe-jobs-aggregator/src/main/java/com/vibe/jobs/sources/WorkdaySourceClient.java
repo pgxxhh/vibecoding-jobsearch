@@ -392,7 +392,7 @@ public class WorkdaySourceClient implements SourceClient {
             }
 
             if (shouldFallback(failure.getStatusCode())) {
-                log.debug("POST failed ({}), fallback GET for {}", failure.getStatusCode(), fallbackPath);
+                log.info("POST failed ({}), fallback GET for {}", failure.getStatusCode(), fallbackPath);
                 return getJson(fallbackPath, limit, offset);
             }
 
@@ -529,7 +529,7 @@ public class WorkdaySourceClient implements SourceClient {
                     .retrieve()
                     .toBodilessEntity()
                     .onErrorResume(ex -> {
-                        log.debug("Main page warm-up ignored: {}", ex.getMessage());
+                        log.info("Main page warm-up ignored: {}", ex.getMessage());
                         return Mono.empty();
                     })
                     .block();
@@ -538,7 +538,7 @@ public class WorkdaySourceClient implements SourceClient {
             Thread.sleep(500 + (long)(Math.random() * 1000));
             
         } catch (Exception e) {
-            log.debug("Main page warm-up failed but continues: {}", e.toString());
+            log.info("Main page warm-up failed but continues: {}", e.toString());
         }
     }
     
@@ -552,13 +552,13 @@ public class WorkdaySourceClient implements SourceClient {
                     .retrieve()
                     .toBodilessEntity()
                     .onErrorResume(ex -> {
-                        log.debug("Session validation ignored: {}", ex.getMessage());
+                        log.info("Session validation ignored: {}", ex.getMessage());
                         return Mono.empty();
                     })
                     .block();
                     
         } catch (Exception e) {
-            log.debug("Session validation completed: {}", e.getMessage());
+            log.info("Session validation completed: {}", e.getMessage());
         }
     }
 
@@ -573,11 +573,11 @@ public class WorkdaySourceClient implements SourceClient {
                     .retrieve()
                     .bodyToMono(String.class)
                     .onErrorResume(WebClientResponseException.class, ex -> {
-                        log.debug("Landing warm-up ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
+                        log.info("Landing warm-up ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
                         return Mono.just("");
                     })
                     .onErrorResume(t -> {
-                        log.debug("Landing warm-up ignored: {}", t.toString());
+                        log.info("Landing warm-up ignored: {}", t.toString());
                         return Mono.just("");
                     })
                     .block();
@@ -591,7 +591,7 @@ public class WorkdaySourceClient implements SourceClient {
             Thread.sleep(1000 + (long)(Math.random() * 2000));
             
         } catch (Exception e) {
-            log.debug("Landing warm-up threw but continues: {}", e.toString());
+            log.info("Landing warm-up threw but continues: {}", e.toString());
         }
     }
     
@@ -617,7 +617,7 @@ public class WorkdaySourceClient implements SourceClient {
                 String token = m.group(1);
                 if (token != null && token.length() > 10) { // 最小长度验证
                     csrfToken.set(token);
-                    log.debug("Extracted enhanced CSRF token ({}chars): {}...", token.length(), token.substring(0, Math.min(8, token.length())));
+                    log.info("Extracted enhanced CSRF token ({}chars): {}...", token.length(), token.substring(0, Math.min(8, token.length())));
                     break;
                 }
             }
@@ -634,7 +634,7 @@ public class WorkdaySourceClient implements SourceClient {
                 String token = m.group(2);
                 if (token != null && token.length() > 10) {
                     csrfToken.set(token);
-                    log.debug("Extracted CSRF from input field: {}...", token.substring(0, Math.min(8, token.length())));
+                    log.info("Extracted CSRF from input field: {}...", token.substring(0, Math.min(8, token.length())));
                 }
             }
         }
@@ -653,16 +653,16 @@ public class WorkdaySourceClient implements SourceClient {
                     .retrieve()
                     .toBodilessEntity()
                     .onErrorResume(WebClientResponseException.class, ex -> {
-                        log.debug("Warm-up GET ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
+                        log.info("Warm-up GET ignored: {} body={}", ex.getStatusCode(), safeBody(ex));
                         return Mono.empty();
                     })
                     .onErrorResume(t -> {
-                        log.debug("Warm-up GET ignored: {}", t.toString());
+                        log.info("Warm-up GET ignored: {}", t.toString());
                         return Mono.empty();
                     })
                     .block();
         } catch (Exception e) {
-            log.debug("Warm-up GET threw but continues: {}", e.toString());
+            log.info("Warm-up GET threw but continues: {}", e.toString());
         }
     }
 
@@ -693,8 +693,8 @@ public class WorkdaySourceClient implements SourceClient {
             });
             
             String previous = lastAppliedReferer.getAndSet(referer);
-            if (!Objects.equals(previous, referer) && log.isDebugEnabled()) {
-                log.debug("Updated Workday referer header to '{}' for site '{}'", referer, site);
+            if (!Objects.equals(previous, referer) && log.isInfoEnabled()) {
+                log.info("Updated Workday referer header to '{}' for site '{}'", referer, site);
             }
             return next.exchange(builder.build())
                     .flatMap(response -> captureCookies(response).thenReturn(response));
@@ -722,7 +722,7 @@ public class WorkdaySourceClient implements SourceClient {
                     // 验证token有效性（长度、格式等）
                     if (value != null && value.length() >= 10 && !value.equals("deleted")) {
                         csrfToken.set(value);
-                        log.debug("Captured CSRF token from cookie '{}' ({}chars): {}...", 
+                        log.info("Captured CSRF token from cookie '{}' ({}chars): {}...", 
                                 name, value.length(), value.substring(0, Math.min(8, value.length())));
                     }
                 }
@@ -730,7 +730,7 @@ public class WorkdaySourceClient implements SourceClient {
                 // 记录重要的会话cookie
                 if (lowerName.contains("session") || lowerName.contains("jsessionid") || 
                     lowerName.contains("wday") || lowerName.startsWith("wd_")) {
-                    log.debug("Captured session cookie: {} = {}...", name, 
+                    log.info("Captured session cookie: {} = {}...", name, 
                             value.substring(0, Math.min(10, value.length())));
                 }
             }

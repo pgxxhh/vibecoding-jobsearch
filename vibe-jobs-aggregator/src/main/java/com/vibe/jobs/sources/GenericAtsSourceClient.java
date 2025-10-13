@@ -75,7 +75,7 @@ public class GenericAtsSourceClient implements SourceClient {
     @Override
     public List<FetchedJob> fetchPage(int page, int size) throws Exception {
         String apiUrl = buildApiUrl(page, size);
-        log.debug("Fetching {} jobs from: {}", atsType, apiUrl);
+        log.info("Fetching {} jobs from: {}", atsType, apiUrl);
         
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))

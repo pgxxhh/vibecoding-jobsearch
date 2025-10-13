@@ -27,7 +27,7 @@ public class LocationFilterService {
         IngestionProperties.LocationFilter filter = properties.getLocationFilter();
         
         if (!filter.isEnabled()) {
-            log.debug("Location filter is disabled, returning all {} jobs", jobs.size());
+            log.info("Location filter is disabled, returning all {} jobs", jobs.size());
             return jobs;
         }
         

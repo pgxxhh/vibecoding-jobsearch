@@ -41,7 +41,7 @@ public class JobDetailEnrichmentWriter {
                 return;
             }
             if (detail.getContentVersion() != event.contentVersion()) {
-                log.debug("Skip enrichment write for jobDetail {} due to version mismatch (expected {}, actual {})",
+                log.info("Skip enrichment write for jobDetail {} due to version mismatch (expected {}, actual {})",
                         detail.getId(), event.contentVersion(), detail.getContentVersion());
                 return;
             }

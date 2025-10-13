@@ -101,7 +101,7 @@ public class ParserProfile {
             if ("location".equals(entry.getKey()) && element.ownerDocument() != null) {
                 String docUrl = element.ownerDocument().location();
                 if (docUrl != null && docUrl.contains("airbnb")) {
-                    log.debug("Airbnb location extraction - Field: {}, Value: '{}', Element text: '{}'", 
+                    log.info("Airbnb location extraction - Field: {}, Value: '{}', Element text: '{}'", 
                              entry.getKey(), value, element.text().length() > 100 ? element.text().substring(0, 100) + "..." : element.text());
                 }
             }

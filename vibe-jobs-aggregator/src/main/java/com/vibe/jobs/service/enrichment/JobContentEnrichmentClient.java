@@ -51,7 +51,7 @@ public class JobContentEnrichmentClient {
 
     private JobContentEnrichmentProvider resolveProvider() {
         if (providersByName.isEmpty()) {
-            log.debug("No job content enrichment providers registered");
+            log.info("No job content enrichment providers registered");
             return null;
         }
         if (providerKey != null) {
@@ -69,7 +69,7 @@ public class JobContentEnrichmentClient {
                 .filter(JobContentEnrichmentProvider::isEnabled)
                 .findFirst()
                 .orElseGet(() -> {
-                    log.debug("All job content enrichment providers are disabled");
+                    log.info("All job content enrichment providers are disabled");
                     return null;
                 });
     }

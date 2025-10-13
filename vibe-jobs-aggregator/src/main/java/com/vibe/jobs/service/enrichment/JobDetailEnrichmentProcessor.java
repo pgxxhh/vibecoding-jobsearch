@@ -43,7 +43,7 @@ public class JobDetailEnrichmentProcessor {
         if (event == null) {
             return;
         }
-        log.debug("Triggering enrichment for job {} asynchronously", event.jobId());
+        log.info("Triggering enrichment for job {} asynchronously", event.jobId());
         
         // Check if enrichment should be skipped
         if (shouldSkipEnrichment(event)) {
@@ -98,7 +98,7 @@ public class JobDetailEnrichmentProcessor {
             JsonNode state = node.path("state");
             return state.isTextual() && SUCCESS_STATE.equalsIgnoreCase(state.asText().trim());
         } catch (JsonProcessingException ex) {
-            log.debug("Failed to parse enrichment state JSON: {}", ex.getMessage());
+            log.info("Failed to parse enrichment state JSON: {}", ex.getMessage());
             return false;
         }
     }

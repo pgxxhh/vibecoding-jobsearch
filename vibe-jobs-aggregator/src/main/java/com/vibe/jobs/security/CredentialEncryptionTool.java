@@ -2,7 +2,12 @@ package com.vibe.jobs.security;
 
 import java.nio.file.Path;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public final class CredentialEncryptionTool {
+
+    private static final Logger log = LoggerFactory.getLogger(CredentialEncryptionTool.class);
 
     private CredentialEncryptionTool() {
     }
@@ -19,13 +24,12 @@ public final class CredentialEncryptionTool {
                 case "encrypt" -> encrypt(args);
                 case "decrypt" -> decrypt(args);
                 default -> {
-                    System.err.println("Unknown command: " + args[0]);
+                    log.error("Unknown command: {}", args[0]);
                     printUsage();
                 }
             }
         } catch (Exception ex) {
-            System.err.println("Command failed: " + ex.getMessage());
-            ex.printStackTrace(System.err);
+            log.error("Command failed", ex);
         }
     }
 
@@ -34,7 +38,7 @@ public final class CredentialEncryptionTool {
         if (args.length > 1) {
             keySize = Integer.parseInt(args[1]);
         }
-        System.out.println(AesEncryptionService.generateKeyBase64(keySize));
+        log.info(AesEncryptionService.generateKeyBase64(keySize));
     }
 
     private static void encrypt(String[] args) {
@@ -44,7 +48,7 @@ public final class CredentialEncryptionTool {
         Path keyPath = Path.of(args[1]);
         String plaintext = args[2];
         AesEncryptionService aes = new AesEncryptionService(AesEncryptionService.loadKey(keyPath));
-        System.out.println(AesEncryptionService.wrapEncryptedValue(aes.encrypt(plaintext)));
+        log.info(AesEncryptionService.wrapEncryptedValue(aes.encrypt(plaintext)));
     }
 
     private static void decrypt(String[] args) {
@@ -57,11 +61,11 @@ public final class CredentialEncryptionTool {
             cipherText = AesEncryptionService.unwrapEncryptedValue(cipherText);
         }
         AesEncryptionService aes = new AesEncryptionService(AesEncryptionService.loadKey(keyPath));
-        System.out.println(aes.decrypt(cipherText));
+        log.info(aes.decrypt(cipherText));
     }
 
     private static void printUsage() {
-        System.out.println("Usage: <command> [args]\n" +
+        log.info("Usage: <command> [args]\n" +
                 "Commands:\n" +
                 "  generate-key [key-size]   Generates a new Base64 encoded AES key (default 256 bits).\n" +
                 "  encrypt <key-path> <plaintext>  Encrypts the provided plaintext using the key.\n" +

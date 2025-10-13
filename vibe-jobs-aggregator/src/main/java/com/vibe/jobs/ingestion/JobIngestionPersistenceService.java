@@ -67,7 +67,7 @@ public class JobIngestionPersistenceService {
                         fetched.job() == null ? "unknown" : fetched.job().getTitle(),
                         fetched.job() == null ? "unknown" : fetched.job().getSource(),
                         ex.getMessage());
-                log.debug("Job persistence error", ex);
+                log.info("Job persistence error", ex);
             }
         }
         return new JobBatchPersistenceResult(persisted, lastJob, persisted > 0);

@@ -229,7 +229,7 @@ public class SmartRecruitersSourceClient implements SourceClient {
             try {
                 return Instant.parse(trimmed);
             } catch (DateTimeParseException ignored2) {
-                log.debug("Unable to parse SmartRecruiters timestamp: {}", trimmed);
+                log.info("Unable to parse SmartRecruiters timestamp: {}", trimmed);
                 return null;
             }
         }

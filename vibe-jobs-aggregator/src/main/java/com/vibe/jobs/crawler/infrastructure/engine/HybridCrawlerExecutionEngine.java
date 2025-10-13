@@ -26,13 +26,13 @@ public class HybridCrawlerExecutionEngine implements CrawlerExecutionEngine {
         CrawlBlueprint blueprint = session.blueprint();
         if (browserEngine != null && browserEngine.supports(blueprint)) {
             try {
-                log.debug("Using browser engine for blueprint {}", blueprint.code());
+                log.info("Using browser engine for blueprint {}", blueprint.code());
                 return browserEngine.fetch(session, pagination);
             } catch (Exception ex) {
                 log.warn("Browser engine failed for blueprint {}, falling back to HTTP: {}", blueprint.code(), ex.getMessage());
             }
         }
-        log.debug("Using HTTP engine for blueprint {}", blueprint.code());
+        log.info("Using HTTP engine for blueprint {}", blueprint.code());
         return httpEngine.fetch(session, pagination);
     }
 }

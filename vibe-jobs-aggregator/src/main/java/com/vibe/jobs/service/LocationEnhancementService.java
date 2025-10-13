@@ -53,7 +53,7 @@ public class LocationEnhancementService {
                     enhanced.add(new FetchedJob(enhancedJob, fetchedJob.content()));
                     enhancedCount++;
                     
-                    log.debug("Enhanced location for job '{}': '{}' -> '{}'", 
+                    log.info("Enhanced location for job '{}': '{}' -> '{}'", 
                              job.getTitle(), originalLocation, enhancedLocation);
                 } else {
                     enhanced.add(fetchedJob);

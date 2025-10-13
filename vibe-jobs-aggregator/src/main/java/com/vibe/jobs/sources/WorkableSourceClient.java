@@ -211,7 +211,7 @@ public class WorkableSourceClient implements SourceClient {
             try {
                 return Instant.parse(value);
             } catch (DateTimeParseException ignored) {
-                log.debug("Unable to parse Workable timestamp: {}", value);
+                log.info("Unable to parse Workable timestamp: {}", value);
                 return null;
             }
         }

@@ -94,7 +94,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             // 构建详情URL
             String detailUrl = buildDetailUrl(job, detailConfig);
             if ((detailUrl == null || detailUrl.isBlank()) && inlineDetailPage == null) {
-                log.debug("Cannot build detail URL for job: {}", job.title());
+                log.info("Cannot build detail URL for job: {}", job.title());
                 return new EnhancedJobResult(job, job.description());
             }
 
@@ -104,7 +104,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 pageContent = fetchDetailPage(detailUrl);
             }
             if (pageContent == null || pageContent.isBlank()) {
-                log.debug("No content fetched from: {}", detailUrl != null ? detailUrl : "inline-detail");
+                log.info("No content fetched from: {}", detailUrl != null ? detailUrl : "inline-detail");
                 return new EnhancedJobResult(job, job.description());
             }
 
@@ -118,7 +118,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             // 创建增强后的职位信息
             ParsedJob enhancedJob = job;
             if (!betterJobId.equals(job.externalId())) {
-                log.debug("Updated external ID from '{}' to '{}' for job '{}'", 
+                log.info("Updated external ID from '{}' to '{}' for job '{}'", 
                          job.externalId(), betterJobId, job.title());
                 enhancedJob = new ParsedJob(
                     betterJobId,  // 使用更好的职位编号
@@ -137,7 +137,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 detailContent : job.description();
             
             if (detailContent != null && detailContent.length() > 100) {
-                log.debug("Enhanced job description for '{}' from: {}", job.title(), detailUrl);
+                log.info("Enhanced job description for '{}' from: {}", job.title(), detailUrl);
             }
             
             return new EnhancedJobResult(enhancedJob, finalDescription);
@@ -234,10 +234,10 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                     .block(Duration.ofSeconds(30));
 
         } catch (WebClientResponseException e) {
-            log.debug("HTTP error {} when fetching {}", e.getStatusCode(), url);
+            log.info("HTTP error {} when fetching {}", e.getStatusCode(), url);
             return null;
         } catch (Exception e) {
-            log.debug("Error fetching {}: {}", url, e.getMessage());
+            log.info("Error fetching {}: {}", url, e.getMessage());
             return null;
         }
     }
@@ -283,7 +283,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                         }
                     }
                 } catch (Exception e) {
-                    log.debug("Error with selector '{}' on {}: {}", selector, url, e.getMessage());
+                    log.info("Error with selector '{}' on {}: {}", selector, url, e.getMessage());
                 }
             }
             
@@ -296,7 +296,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             return content.length() > 0 ? content.toString() : null;
             
         } catch (Exception e) {
-            log.debug("Error parsing detail content from {}: {}", url, e.getMessage());
+            log.info("Error parsing detail content from {}: {}", url, e.getMessage());
             return null;
         }
     }
@@ -407,7 +407,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 cleaned = removeLeadingLines(detailContent, title, location);
             }
         } catch (Exception ex) {
-            log.debug("Failed to strip header from detail content: {}", ex.getMessage());
+            log.info("Failed to strip header from detail content: {}", ex.getMessage());
         }
         return cleaned.isBlank() ? detailContent : cleaned;
     }
@@ -483,7 +483,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                 if (matcher.find()) {
                     String jobId = matcher.group(1).trim();
                     if (!jobId.isBlank()) {
-                        log.debug("Extracted job ID '{}' using pattern '{}'", jobId, pattern);
+                        log.info("Extracted job ID '{}' using pattern '{}'", jobId, pattern);
                         return jobId;
                     }
                 }
@@ -503,7 +503,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                     if (urlMatcher.find()) {
                         String extractedId = urlMatcher.group(1);
                         if (!extractedId.isBlank() && extractedId.length() > 3) {
-                            log.debug("Extracted job ID '{}' from URL using pattern '{}'", extractedId, urlPattern);
+                            log.info("Extracted job ID '{}' from URL using pattern '{}'", extractedId, urlPattern);
                             return extractedId;
                         }
                     }
@@ -511,7 +511,7 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             }
             
         } catch (Exception e) {
-            log.debug("Failed to extract job ID: {}", e.getMessage());
+            log.info("Failed to extract job ID: {}", e.getMessage());
         }
         
         return fallbackExternalId; // 回退到原始值
@@ -563,12 +563,12 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
                     if (matcher.find()) {
                         String extractedId = matcher.group(1);
                         if (!extractedId.isBlank() && extractedId.length() >= 3) {
-                            log.debug("Extracted clean external ID '{}' from URL: {}", extractedId, jobUrl);
+                            log.info("Extracted clean external ID '{}' from URL: {}", extractedId, jobUrl);
                             return extractedId;
                         }
                     }
                 } catch (Exception e) {
-                    log.debug("Pattern matching error: {}", e.getMessage());
+                    log.info("Pattern matching error: {}", e.getMessage());
                 }
             }
         }

@@ -8,6 +8,8 @@ import com.vibe.jobs.service.RoleFilterService;
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.sources.SourceClient;
 import com.vibe.jobs.sources.FetchedJob;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,8 @@ import java.util.concurrent.ExecutorService;
 
 @Component
 public class CareersApiStartupRunner implements ApplicationRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(CareersApiStartupRunner.class);
 
     private final SourceRegistry sourceRegistry;
     private final IngestionProperties ingestionProperties;
@@ -50,12 +54,12 @@ public class CareersApiStartupRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // 打印location过滤器状态
-        System.out.println("[CareersApiStartupRunner] " + locationFilterService.getFilterStatus());
-        System.out.println("[CareersApiStartupRunner] " + roleFilterService.getFilterStatus());
+        log.info("Location filter status: {}", locationFilterService.getFilterStatus());
+        log.info("Role filter status: {}", roleFilterService.getFilterStatus());
         
         List<SourceRegistry.ConfiguredSource> startupSources = sourceRegistry.getStartupSources();
         if (startupSources.isEmpty()) {
-            System.out.println("[CareersApiStartupRunner] 未配置启动时拉取的数据源");
+            log.warn("No startup sources configured; skipping initial fetch");
             return;
         }
 
@@ -92,9 +96,9 @@ public class CareersApiStartupRunner implements ApplicationRunner {
             List<FetchedJob> filtered = jobFilter.apply(jobs);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(filtered);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            System.out.println("[CareersApiStartupRunner] " + client.sourceName()
-                    + "(" + (companyName == null ? "unknown" : companyName) + ") 首批职位数量: "
-                    + (roleFiltered == null ? 0 : roleFiltered.size()));
+            log.info("{}({}) first page job count after filters: {}", client.sourceName(),
+                    companyName == null ? "unknown" : companyName,
+                    roleFiltered == null ? 0 : roleFiltered.size());
             if (roleFiltered != null) {
                 roleFiltered.forEach(fetched -> {
                     Job persisted = jobService.upsert(fetched.job());
@@ -104,11 +108,11 @@ public class CareersApiStartupRunner implements ApplicationRunner {
         } catch (Exception e) {
             String message = e.getMessage();
             if (message != null && message.contains("403")) {
-                System.out.println("[CareersApiStartupRunner] 跳过 " + client.sourceName()
-                        + "(" + (companyName == null ? "unknown" : companyName) + ")，因为远端返回 403");
+                log.warn("Skipping {}({}) because remote returned 403", client.sourceName(),
+                        companyName == null ? "unknown" : companyName);
             } else {
-                System.err.println("[CareersApiStartupRunner] 拉取 " + client.sourceName()
-                        + "(" + (companyName == null ? "unknown" : companyName) + ") 失败: " + message + e);
+                log.error("Failed to fetch jobs for {}({}): {}", client.sourceName(),
+                        companyName == null ? "unknown" : companyName, message, e);
             }
         }
     }

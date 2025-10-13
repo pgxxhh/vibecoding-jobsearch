@@ -81,10 +81,10 @@ public class DeepSeekJobContentEnrichmentProvider implements JobContentEnrichmen
         long start = System.nanoTime();
         try {
             DeepSeekRequest request = buildRequest(job, rawContent, contentText);
-            if (log.isDebugEnabled()) {
+            if (log.isInfoEnabled()) {
                 try {
                     String payload = objectMapper.writeValueAsString(request);
-                    log.debug("DeepSeek request payload for job {}: {}", job.id(), payload);
+                    log.info("DeepSeek request payload for job {}: {}", job.id(), payload);
                 } catch (JsonProcessingException ignored) {
                     // ignore payload logging failures
                 }

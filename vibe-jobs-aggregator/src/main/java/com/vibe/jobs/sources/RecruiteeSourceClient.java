@@ -187,7 +187,7 @@ public class RecruiteeSourceClient implements SourceClient {
             try {
                 return Instant.parse(value);
             } catch (DateTimeParseException ignored) {
-                log.debug("Unable to parse Recruitee timestamp: {}", value);
+                log.info("Unable to parse Recruitee timestamp: {}", value);
                 return null;
             }
         }

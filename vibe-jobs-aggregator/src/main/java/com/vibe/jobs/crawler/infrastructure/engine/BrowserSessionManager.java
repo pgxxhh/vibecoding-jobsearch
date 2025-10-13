@@ -90,7 +90,7 @@ public class BrowserSessionManager implements Closeable {
                 try {
                     browser.close();
                 } catch (RuntimeException ex) {
-                    log.debug("Failed to close browser: {}", ex.getMessage());
+                    log.info("Failed to close browser: {}", ex.getMessage());
                 }
                 browser = null;
             }
@@ -98,7 +98,7 @@ public class BrowserSessionManager implements Closeable {
                 try {
                     playwright.close();
                 } catch (RuntimeException ex) {
-                    log.debug("Failed to close Playwright: {}", ex.getMessage());
+                    log.info("Failed to close Playwright: {}", ex.getMessage());
                 }
                 playwright = null;
             }

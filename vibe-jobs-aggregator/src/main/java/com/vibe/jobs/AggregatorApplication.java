@@ -3,6 +3,8 @@ package com.vibe.jobs;
 
 import com.vibe.jobs.auth.config.EmailAuthProperties;
 import com.vibe.jobs.config.IngestionProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -14,8 +16,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableConfigurationProperties({IngestionProperties.class, EmailAuthProperties.class})
 public class AggregatorApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(AggregatorApplication.class);
+
     public static void main(String[] args) {
-        System.out.println(System.getProperty("java.version"));
+        log.info("Running on Java {}", System.getProperty("java.version"));
         SpringApplication.run(AggregatorApplication.class, args);
     }
 }
