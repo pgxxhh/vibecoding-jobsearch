@@ -60,12 +60,73 @@ if (( ${#ENV_FILES[@]} > 0 )); then
     COMPOSE_ENV_FILE="${ENV_FILES[0]}"
   fi
 
-  set -a
-  for file in "${ENV_FILES[@]}"; do
-    # shellcheck disable=SC1090
-    source "$file"
-  done
-  set +a
+fi
+
+read_env_var() {
+  local key="$1"
+  if (( ${#ENV_FILES[@]} == 0 )); then
+    return 0
+  fi
+
+  python3 - "$key" "${ENV_FILES[@]}" <<'PY'
+import codecs
+import sys
+
+key = sys.argv[1]
+paths = sys.argv[2:]
+value = ""
+
+for path in paths:
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for raw in fh:
+                line = raw.rstrip("\n\r")
+                stripped = line.lstrip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+
+                name, val = line.split("=", 1)
+                name = name.strip()
+                if name.startswith("export "):
+                    name = name[len("export "):].strip()
+
+                if name != key:
+                    continue
+
+                val = val.strip()
+                if val and val[0] in ("'", '"') and val[-1] == val[0]:
+                    quote = val[0]
+                    val = val[1:-1]
+                    if quote == '"':
+                        try:
+                            val = codecs.decode(val, "unicode_escape")
+                        except Exception:
+                            pass
+                else:
+                    hash_pos = val.find("#")
+                    if hash_pos != -1:
+                        val = val[:hash_pos].rstrip()
+
+                value = val
+    except FileNotFoundError:
+        continue
+
+print(value, end="")
+PY
+}
+
+if [[ -z "${SPRING_DATASOURCE_URL:-}" ]]; then
+  SPRING_DATASOURCE_URL="$(read_env_var SPRING_DATASOURCE_URL)"
+fi
+
+if [[ -z "${SPRING_PROFILES_ACTIVE:-}" ]]; then
+  SPRING_PROFILES_ACTIVE="$(read_env_var SPRING_PROFILES_ACTIVE)"
+fi
+
+if [[ -z "${SPRING_JPA_HIBERNATE_DDL_AUTO:-}" ]]; then
+  SPRING_JPA_HIBERNATE_DDL_AUTO="$(read_env_var SPRING_JPA_HIBERNATE_DDL_AUTO)"
 fi
 
 if [[ -n "${SPRING_DATASOURCE_URL:-}" && "$SPRING_DATASOURCE_URL" =~ jdbc:mysql://mysql(:|/|$) ]]; then
