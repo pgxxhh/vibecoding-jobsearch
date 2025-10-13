@@ -44,6 +44,12 @@ public class JobDetailEnrichmentProcessor {
             return;
         }
         log.debug("Triggering enrichment for job {} asynchronously", event.jobId());
+        
+        // Check if enrichment should be skipped
+        if (shouldSkipEnrichment(event)) {
+            return;
+        }
+        
         JobContentEnrichmentResult result;
         try {
             result = enrichmentClient.enrich(event.job(), event.rawContent(), event.contentText(), event.contentFingerprint());

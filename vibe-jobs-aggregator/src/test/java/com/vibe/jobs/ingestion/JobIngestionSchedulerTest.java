@@ -187,7 +187,7 @@ class JobIngestionSchedulerTest {
         JobIngestionFilter filter = new JobIngestionFilter(properties, dataSourceQueryService);
 
         StubSourceClient client = new StubSourceClient();
-        client.addPage(List.of(fetchedJob("eng-enhanced", Set.of("Engineering"))));
+        client.addPage(List.of(fetchedJobWithTitle("eng-enhanced", "Engineering Manager", Set.of("Engineering"))));
 
         JobDataSource definition = new JobDataSource(
                 null,
@@ -297,11 +297,31 @@ class JobIngestionSchedulerTest {
         verify(locationFilterService, times(1)).filterJobs(any());
     }
 
-    private FetchedJob fetchedJob(String externalId, Set<String> tags) {
+    private FetchedJob fetchedJobWithTitle(String externalId, String title, Set<String> tags) {
         Job job = Job.builder()
                 .source("stub")
                 .externalId(externalId)
-                .title(externalId)
+                .title(title)
+                .company("Acme")
+                .postedAt(Instant.now())
+                .tags(new HashSet<>(tags))
+                .build();
+        return FetchedJob.of(job, externalId + "-content");
+    }
+
+    private FetchedJob fetchedJob(String externalId, Set<String> tags) {
+        // Create title that matches category tags for proper matching
+        String title = externalId;
+        if (tags.contains("Engineering")) {
+            title = "Software Engineering Position";
+        } else if (tags.contains("Finance")) {
+            title = "Finance Analyst Role";
+        }
+        
+        Job job = Job.builder()
+                .source("stub")
+                .externalId(externalId)
+                .title(title)
                 .company("Acme")
                 .postedAt(Instant.now())
                 .tags(new HashSet<>(tags))

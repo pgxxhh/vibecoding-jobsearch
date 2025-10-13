@@ -14,7 +14,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@ActiveProfiles("h2")
+@ActiveProfiles("test")
 class JobSearchTest {
 
     @Autowired

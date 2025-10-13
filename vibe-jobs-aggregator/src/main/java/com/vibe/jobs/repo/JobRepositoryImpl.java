@@ -42,7 +42,7 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
         Query query = entityManager.createNativeQuery(
                 buildSearchSql(false, detailEnabled, hasCursor), Job.class);
         Map<String, Object> params = new HashMap<>();
-        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter);
+        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter, detailEnabled);
         if (detailEnabled && supportsFullText) {
             params.put("fulltextQuery", buildFullTextQuery(normalizedQuery));
         }
@@ -71,7 +71,7 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
         boolean detailEnabled = searchDetail && normalizedQuery != null;
         Query query = entityManager.createNativeQuery(buildSearchSql(true, detailEnabled, false));
         Map<String, Object> params = new HashMap<>();
-        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter);
+        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter, detailEnabled);
         if (detailEnabled && supportsFullText) {
             params.put("fulltextQuery", buildFullTextQuery(normalizedQuery));
         }
@@ -85,13 +85,14 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
                                           String company,
                                           String location,
                                           String level,
-                                          Instant postedAfter) {
+                                          Instant postedAfter,
+                                          boolean detailEnabled) {
         params.put("q", normalizedQuery);
         params.put("company", normalize(company));
         params.put("location", normalize(location));
         params.put("level", normalize(level));
         params.put("postedAfter", postedAfter != null ? Timestamp.from(postedAfter) : null);
-        if (!supportsFullText) {
+        if (!supportsFullText && detailEnabled) {
             params.put("fallbackDetailQuery", normalizedQuery);
         }
     }

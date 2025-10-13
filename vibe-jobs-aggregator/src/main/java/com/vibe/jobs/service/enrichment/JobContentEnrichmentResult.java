@@ -20,7 +20,9 @@ public record JobContentEnrichmentResult(
         JobContentEnrichmentResultError error
 ) {
     public JobContentEnrichmentResult {
-        payload = payload == null ? Map.of() : Collections.unmodifiableMap(new EnumMap<>(payload));
+        payload = payload == null || payload.isEmpty() ? 
+            Map.of() : 
+            Collections.unmodifiableMap(new EnumMap<>(payload));
         warnings = warnings == null ? List.of() : List.copyOf(warnings);
     }
 
