@@ -51,8 +51,10 @@ public class JobDetailService {
         JobDetail detail = repository.findByJobId(jobId)
                 .orElseGet(() -> new JobDetail(job, content, contentText));
 
-        boolean changed = detail.getId() == null;
-        boolean contentChanged = false;
+        boolean isNew = detail.getId() == null;
+        boolean changed = isNew;
+        boolean contentChanged = isNew;
+
         if (!content.equals(detail.getContent())) {
             detail.setContent(content);
             changed = true;
