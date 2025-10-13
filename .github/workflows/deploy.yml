@@ -82,12 +82,12 @@ jobs:
               exit 1
             fi
 
-            # Ensure target directory exists
-            sudo mkdir -p /opt/vibejobs
-            cd /opt/vibejobs
+            # Ensure target directory exists (home path)
+            mkdir -p /home/ec2-user/app
+            cd /home/ec2-user/app
 
-            # Write .env.production with elevated permissions (avoid redirection issues)
-            sudo tee .env.production >/dev/null <<EOF
+            # Write .env.production without sudo under home directory
+            tee .env.production >/dev/null <<EOF
             SPRING_PROFILES_ACTIVE=${{ vars.SPRING_PROFILES_ACTIVE || 'mysql,prod' }}
             SPRING_DATASOURCE_URL=$DSN
             SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
@@ -101,6 +101,11 @@ jobs:
             DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
             EOF
 
-            sudo chmod 600 .env.production
+            chmod 600 .env.production
 
+            # Run deploy script in the new path
+            if [ ! -x ./deploy.sh ]; then
+              echo "deploy.sh not found in /home/ec2-user/app or not executable" >&2
+              exit 127
+            fi
             ./deploy.sh "$BRANCH"
