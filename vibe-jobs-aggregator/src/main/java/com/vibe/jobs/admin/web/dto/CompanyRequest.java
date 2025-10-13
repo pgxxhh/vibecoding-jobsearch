@@ -5,6 +5,7 @@ import com.vibe.jobs.datasource.domain.JobDataSource.DataSourceCompany;
 import java.util.Map;
 
 public record CompanyRequest(
+        Long id,
         String reference,
         String displayName,
         String slug,
@@ -14,7 +15,7 @@ public record CompanyRequest(
 ) {
     public DataSourceCompany toDomain() {
         return new DataSourceCompany(
-                null,
+                id,
                 reference != null ? reference : "",
                 displayName,
                 slug,
