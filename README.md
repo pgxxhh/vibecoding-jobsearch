@@ -1,7 +1,7 @@
 # Elaine Jobs · vibecoding-jobsearch
 
 Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统一的抓取管线和 LLM 加持的内容增强，提供近实时、可检索、可订阅的招聘信息聚合服务。
-本系统代码97%由codex + github copilot编写, 我负责设计, review, 测试, 部署。
+本系统代码97%由codex + github copilot编写, 我负责设计, 写prompt, review, 测试, 部署。
 
 ## 目录
 - [系统总览](#系统总览)
