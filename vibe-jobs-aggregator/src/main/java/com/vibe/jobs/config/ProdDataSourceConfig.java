@@ -43,8 +43,6 @@ public class ProdDataSourceConfig {
                     AesEncryptionService.loadKey(Path.of(encryptionProperties.getKeyPath())));
             String username = decryptIfNecessary(dataSourceProperties.getUsername(), aes);
             String password = decryptIfNecessary(dataSourceProperties.getPassword(), aes);
-            //todo remove, just for debug
-            log.info("username: {}, password: {}", username, password);
             builder.username(username);
             builder.password(password);
         }
