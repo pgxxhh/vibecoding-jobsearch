@@ -33,7 +33,7 @@ ingestion:
 db:
   credentials:
     encryption:
-      enabled: false
+      enabled: true
       key-path: ${DB_AES_KEY_PATH:/opt/vibejobs/secrets/db-aes.key}
 
 security:
