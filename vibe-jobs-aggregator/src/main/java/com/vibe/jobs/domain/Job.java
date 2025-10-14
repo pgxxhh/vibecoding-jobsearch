@@ -39,7 +39,7 @@ public class Job {
     @Column(columnDefinition = "timestamp") 
     private Instant postedAt;
     
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "job_tags", joinColumns = @JoinColumn(name = "job_id"))
     @Column(name = "tag")
     @Builder.Default
