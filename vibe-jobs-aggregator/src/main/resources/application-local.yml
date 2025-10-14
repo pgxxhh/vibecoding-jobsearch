@@ -35,7 +35,7 @@ logging:
 
 jobs:
   detail-enhancement:
-    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
+    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:deepseek}
     executor:
       core-size: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_CORE_SIZE:1}
       max-size: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_MAX_SIZE:1}

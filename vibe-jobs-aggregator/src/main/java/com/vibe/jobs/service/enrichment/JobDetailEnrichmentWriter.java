@@ -59,7 +59,7 @@ public class JobDetailEnrichmentWriter {
                 changed |= applyPayload(detail, result, event);
                 changed |= updateStatus(statusEnrichment, buildSuccessStatus(result, event, statusEnrichment));
             } else {
-                changed |= handleFailure(detail, statusEnrichment, result, event, now);
+                changed |= handleFailure(statusEnrichment, result, event, now);
             }
             if (changed) {
                 repository.save(detail);
