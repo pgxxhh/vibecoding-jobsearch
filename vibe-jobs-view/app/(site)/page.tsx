@@ -293,7 +293,6 @@ export default function Page() {
       skills: t('jobDetail.skills'),
       skillsPlaceholder: t('jobDetail.skillsPlaceholder'),
       highlights: t('jobDetail.highlights'),
-      highlightsPlaceholder: t('jobDetail.highlightsPlaceholder'),
       description: t('jobDetail.description'),
       noDescription: t('jobDetail.noDescription'),
       error: t('jobDetail.error'),
