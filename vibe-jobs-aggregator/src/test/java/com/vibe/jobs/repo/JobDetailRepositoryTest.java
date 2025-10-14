@@ -2,6 +2,12 @@ package com.vibe.jobs.repo;
 
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.domain.JobDetail;
+import com.vibe.jobs.domain.JobDetailEnrichment;
+import com.vibe.jobs.domain.JobEnrichmentKey;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
