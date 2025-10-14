@@ -332,17 +332,31 @@ public class ParserField {
             }
         }
         
-        // 策略3: 在父元素或祖父元素中寻找location信息
+        // 策略3: 从属性中提取位置信息（适用于 data-location / data-office 等）
+        String fromAttributes = extractLocationFromAttributes(element, 3);
+        if (fromAttributes != null) {
+            log.info("Location extracted from element attributes: '{}'", fromAttributes);
+            return fromAttributes;
+        }
+
+        // 策略4: 在父元素或祖父元素中寻找location信息
         Element parent = element.parent();
         if (parent != null) {
-            String locationFromParent = extractLocationFromElementTree(parent, 2);
+            String locationFromParent = extractLocationFromElementTree(parent, 3);
             if (locationFromParent != null) {
                 log.info("Location extracted from parent element: '{}'", locationFromParent);
                 return locationFromParent;
             }
         }
-        
-        // 策略4: URL参数推断（如?_offices=china）
+
+        // 策略5: 在兄弟节点中查找（适用于“标题 + 元信息”结构）
+        String fromSiblings = extractLocationFromSiblings(element, 3);
+        if (fromSiblings != null) {
+            log.info("Location extracted from sibling elements: '{}'", fromSiblings);
+            return fromSiblings;
+        }
+
+        // 策略6: URL参数推断（如?_offices=china）
         String locationFromUrl = extractLocationFromUrl(element);
         if (locationFromUrl != null) {
             log.info("Location extracted from URL context: '{}'", locationFromUrl);
@@ -461,7 +475,7 @@ public class ParserField {
                 return text;
             }
         }
-        
+
         // 递归检查兄弟元素
         Element nextSibling = element.nextElementSibling();
         if (nextSibling != null) {
@@ -470,7 +484,15 @@ public class ParserField {
                 return siblingLocation;
             }
         }
-        
+
+        Element previousSibling = element.previousElementSibling();
+        if (previousSibling != null) {
+            String siblingLocation = extractLocationFromElementTree(previousSibling, maxDepth - 1);
+            if (siblingLocation != null) {
+                return siblingLocation;
+            }
+        }
+
         return null;
     }
     
@@ -513,6 +535,68 @@ public class ParserField {
         }
         
         return false;
+    }
+
+    private String extractLocationFromAttributes(Element element, int depth) {
+        Element current = element;
+        int attempts = 0;
+        while (current != null && attempts < depth) {
+            for (org.jsoup.nodes.Attribute attribute : current.attributes()) {
+                String key = attribute.getKey();
+                if (key == null || key.isBlank()) {
+                    continue;
+                }
+                String lowerKey = key.toLowerCase(Locale.ROOT);
+                if (lowerKey.contains("location") || lowerKey.contains("office") || lowerKey.contains("city") || lowerKey.contains("region")) {
+                    String value = attribute.getValue();
+                    if (value != null) {
+                        value = value.trim();
+                        if (isValidLocationText(value)) {
+                            return value;
+                        }
+                        // 某些站点会使用 "Shanghai,China" 之类的格式
+                        if (value.contains("-")) {
+                            for (String part : value.split("-")) {
+                                String trimmed = part.trim();
+                                if (isValidLocationText(trimmed)) {
+                                    return trimmed;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            current = current.parent();
+            attempts++;
+        }
+        return null;
+    }
+
+    private String extractLocationFromSiblings(Element element, int maxDepth) {
+        Element current = element;
+        int depth = 0;
+        while (current != null && depth < maxDepth) {
+            Element parent = current.parent();
+            if (parent != null) {
+                Element sibling = parent.firstElementChild();
+                while (sibling != null) {
+                    if (sibling != element) {
+                        String text = sibling.text().trim();
+                        if (isValidLocationText(text)) {
+                            return text;
+                        }
+                        String nested = extractLocationFromElementTree(sibling, 1);
+                        if (nested != null) {
+                            return nested;
+                        }
+                    }
+                    sibling = sibling.nextElementSibling();
+                }
+            }
+            current = parent;
+            depth++;
+        }
+        return null;
     }
     
     private String extractBaseUrl(Element element) {
