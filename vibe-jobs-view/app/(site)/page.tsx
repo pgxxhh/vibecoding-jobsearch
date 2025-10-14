@@ -259,9 +259,9 @@ export default function Page() {
   const [location, setLocation] = useState('');
   const [filters, setFilters] = useState({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const hasPromptedSubscription = useRef(false);
-  const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | null>(null);
+  // const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  // const hasPromptedSubscription = useRef(false);
+  // const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
@@ -352,14 +352,14 @@ export default function Page() {
     [filters],
   );
 
-  const subscriptionParams = useMemo(
-    () => ({
-      q,
-      location,
-      ...filters,
-    }),
-    [q, location, filters],
-  );
+  // const subscriptionParams = useMemo(
+  //   () => ({
+  //     q,
+  //     location,
+  //     ...filters,
+  //   }),
+  //   [q, location, filters],
+  // );
 
   const selectedJobId = selectedJob?.id;
 
@@ -578,31 +578,32 @@ export default function Page() {
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!hasPromptedSubscription.current) {
-      setShowSubscriptionModal(true);
-      setSubscriptionTrigger('search');
-      hasPromptedSubscription.current = true;
-    } else {
-      loadJobs(undefined, true);
-    }
-  };
-
-  const handleConfirmSubscription = async () => {
-    setShowSubscriptionModal(false);
-    setSubscriptionTrigger(null);
-    await fetch(`${API_BASE}/subscription`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(subscriptionParams),
-    });
+    // if (!hasPromptedSubscription.current) {
+    //   setShowSubscriptionModal(true);
+    //   setSubscriptionTrigger('search');
+    //   hasPromptedSubscription.current = true;
+    // } else {
+    //   loadJobs(undefined, true);
+    // }
     loadJobs(undefined, true);
   };
 
-  const handleCancelSubscription = () => {
-    setShowSubscriptionModal(false);
-    setSubscriptionTrigger(null);
-    if (subscriptionTrigger === 'search') loadJobs(undefined, true);
-  };
+  // const handleConfirmSubscription = async () => {
+  //   setShowSubscriptionModal(false);
+  //   setSubscriptionTrigger(null);
+  //   await fetch(`${API_BASE}/subscription`, {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(subscriptionParams),
+  //   });
+  //   loadJobs(undefined, true);
+  // };
+
+  // const handleCancelSubscription = () => {
+  //   setShowSubscriptionModal(false);
+  //   setSubscriptionTrigger(null);
+  //   if (subscriptionTrigger === 'search') loadJobs(undefined, true);
+  // };
 
   const handleApplyFilters = () => {
     setShowFilterDrawer(false);
@@ -756,12 +757,14 @@ export default function Page() {
         </div>
       )}
 
+      {/*
       <SubscriptionModal
         visible={showSubscriptionModal}
         onConfirm={handleConfirmSubscription}
         onCancel={handleCancelSubscription}
         params={subscriptionParams}
       />
+      */}
 
       <FilterDrawer
         visible={showFilterDrawer}
