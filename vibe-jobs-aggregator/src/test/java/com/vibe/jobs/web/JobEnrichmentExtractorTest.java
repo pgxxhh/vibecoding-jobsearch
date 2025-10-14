@@ -102,7 +102,7 @@ class JobEnrichmentExtractorTest {
         assertThat(emptyView.skills()).isEmpty();
         assertThat(emptyView.enrichments()).isEmpty();
 
-        assertThat(JobEnrichmentExtractor.extract(null)).isSameAs(JobEnrichmentExtractor.EnrichmentView.empty());
+        assertThat(JobEnrichmentExtractor.extract((JobDetail) null)).isSameAs(JobEnrichmentExtractor.EnrichmentView.empty());
     }
 
     private static JobDetail newDetail() {
