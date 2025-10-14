@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import JobDetail from '@/components/JobDetail';
 import JobCardNew from '@/components/JobCardNew';
-import { Badge, Button, Card, Input, Skeleton } from '@/components/ui';
+import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
 import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/lib/jobs-normalization';
 import { useI18n } from '@/lib/i18n';
 import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types';
@@ -151,6 +151,19 @@ function FilterDrawer({
               onChange={(event) => setFilters({ ...filters, company: event.target.value })}
               placeholder={t('filters.company')}
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-600">{t('filters.datePosted')}</label>
+            <Select
+              value={filters.datePosted}
+              onChange={(event) => setFilters({ ...filters, datePosted: event.target.value })}
+            >
+              <option value="">{t('forms.any')}</option>
+              <option value="1">{t('filters.dateOptions.1')}</option>
+              <option value="3">{t('filters.dateOptions.3')}</option>
+              <option value="7">{t('filters.dateOptions.7')}</option>
+              <option value="30">{t('filters.dateOptions.30')}</option>
+            </Select>
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-3">
