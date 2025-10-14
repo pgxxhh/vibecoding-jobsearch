@@ -7,6 +7,7 @@ import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,12 +45,20 @@ public class JobDetailRepositoryImpl implements JobDetailRepositoryCustom {
             return Set.of();
         }
 
-        Query nativeQuery = entityManager.createNativeQuery(buildSql());
+        List<String> fallbackTokens = supportsFullText ? List.of() : buildFallbackTokens(normalizedQuery);
+
+        Query nativeQuery = entityManager.createNativeQuery(buildSql(fallbackTokens));
         nativeQuery.setParameter("jobIds", distinctIds);
         if (supportsFullText) {
             nativeQuery.setParameter("fulltextQuery", buildFullTextQuery(normalizedQuery));
         } else {
-            nativeQuery.setParameter("fallbackDetailQuery", normalizedQuery);
+            if (fallbackTokens.isEmpty()) {
+                nativeQuery.setParameter("fallbackDetailQuery", normalizedQuery.toLowerCase(Locale.ROOT));
+            } else {
+                for (int i = 0; i < fallbackTokens.size(); i++) {
+                    nativeQuery.setParameter("fallbackToken" + i, fallbackTokens.get(i));
+                }
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -60,7 +69,7 @@ public class JobDetailRepositoryImpl implements JobDetailRepositoryCustom {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private String buildSql() {
+    private String buildSql(List<String> fallbackTokens) {
         StringBuilder sql = new StringBuilder();
         sql.append("select distinct jd.job_id from job_details jd ");
         sql.append("where jd.deleted = false ");
@@ -69,7 +78,19 @@ public class JobDetailRepositoryImpl implements JobDetailRepositoryCustom {
         if (supportsFullText) {
             sql.append("and MATCH(jd.content_text) AGAINST (:fulltextQuery IN BOOLEAN MODE)");
         } else {
-            sql.append("and lower(jd.content_text) like lower(concat('%', :fallbackDetailQuery, '%'))");
+            if (fallbackTokens.isEmpty()) {
+                sql.append("and lower(jd.content_text) like concat('%', :fallbackDetailQuery, '%')");
+            } else {
+                sql.append("and ");
+                for (int i = 0; i < fallbackTokens.size(); i++) {
+                    if (i > 0) {
+                        sql.append(" and ");
+                    }
+                    sql.append("lower(jd.content_text) like concat('%', :fallbackToken")
+                            .append(i)
+                            .append(", '%')");
+                }
+            }
         }
         return sql.toString();
     }
@@ -98,6 +119,21 @@ public class JobDetailRepositoryImpl implements JobDetailRepositoryCustom {
             builder.append('+').append(cleaned).append('*');
         }
         return builder.length() == 0 ? value : builder.toString();
+    }
+
+    private List<String> buildFallbackTokens(String value) {
+        List<String> tokens = new ArrayList<>();
+        if (!StringUtils.hasText(value)) {
+            return tokens;
+        }
+        for (String token : value.trim().split("\\s+")) {
+            String cleaned = token.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]", "");
+            if (!StringUtils.hasText(cleaned)) {
+                continue;
+            }
+            tokens.add(cleaned.toLowerCase(Locale.ROOT));
+        }
+        return tokens;
     }
 
     private boolean detectFullTextSupport(EntityManager entityManager) {
