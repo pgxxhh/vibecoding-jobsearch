@@ -20,6 +20,19 @@ public final class HtmlTextExtractor {
             return null;
         }
 
+        String decoded = trimmed;
+        for (int i = 0; i < 3; i++) {
+            String candidate = Entities.unescape(decoded);
+            if (candidate.equals(decoded)) {
+                break;
+            }
+            decoded = candidate;
+        }
+
+        if (!decoded.equals(trimmed)) {
+            trimmed = decoded;
+        }
+
         Document document = Jsoup.parse(trimmed);
         preserveLineBreaks(document);
 
