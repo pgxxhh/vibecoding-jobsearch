@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = useState<Date | null>(null);
-  const [debugCode, setDebugCode] = useState<string | null>(null);
   const router = useRouter();
   const { login } = useAuth();
 
@@ -22,13 +21,12 @@ export default function LoginPage() {
     nextChallengeId: string,
     submittedEmail: string,
     nextResendAvailableAt?: string | null,
-    devCode?: string | null,
+    _devCode?: string | null,
   ) => {
     setChallengeId(nextChallengeId);
     setEmail(submittedEmail);
     setStep('verify');
     setError(null);
-    setDebugCode(devCode ?? null);
     if (nextResendAvailableAt) {
       const date = new Date(nextResendAvailableAt);
       setResendAvailableAt(Number.isNaN(date.getTime()) ? null : date);
@@ -39,7 +37,6 @@ export default function LoginPage() {
 
   const handleVerificationSuccess = () => {
     setError(null);
-    setDebugCode(null);
     // Refresh the auth state to get the user info
     login(''); // The session token is already stored in cookies
     router.push('/');
@@ -70,7 +67,6 @@ export default function LoginPage() {
           onChallengeUpdate={handleChallengeUpdate}
         />
       )}
-      {debugCode && <p className="mt-4 text-center text-xs text-slate-400">DEV code: {debugCode}</p>}
       {error && <p className="mt-2 text-center text-sm text-red-500">{error}</p>}
     </div>
   );
