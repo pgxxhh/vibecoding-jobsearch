@@ -22,12 +22,15 @@ public class JobMapper {
 
     public static JobDto toDto(Job j, boolean detailMatch, JobDetailEnrichmentsDto enrichmentsDto) {
         List<String> tags = new ArrayList<>(j.getTags());
+        
+        JobEnrichmentExtractor.EnrichmentView enrichmentView = detail != null
+                ? JobEnrichmentExtractor.extract(detail)
+                : JobEnrichmentExtractor.EnrichmentView.empty();
 
-        // 使用JobEnrichmentExtractor来提取enrichment数据
-        String summary = enrichmentsDto != null ? JobEnrichmentExtractor.summary(enrichmentsDto).orElse(null) : null;
-        List<String> skills = enrichmentsDto != null ? sanitizeList(JobEnrichmentExtractor.skills(enrichmentsDto)) : List.of();
-        List<String> highlights = enrichmentsDto != null ? sanitizeList(JobEnrichmentExtractor.highlights(enrichmentsDto)) : List.of();
-        Map<String, Object> enrichments = enrichmentsDto != null ? JobEnrichmentExtractor.enrichments(enrichmentsDto) : Map.of();
+        String summary = enrichmentView.summary().orElse(null);
+        List<String> skills = sanitizeList(enrichmentView.skills());
+        List<String> highlights = sanitizeList(enrichmentView.highlights());
+        Map<String, Object> enrichments = enrichmentView.enrichments();
 
         return new JobDto(
                 String.valueOf(j.getId()),
