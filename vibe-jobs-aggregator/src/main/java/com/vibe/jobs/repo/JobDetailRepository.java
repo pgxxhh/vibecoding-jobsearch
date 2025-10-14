@@ -1,6 +1,7 @@
 package com.vibe.jobs.repo;
 
 import com.vibe.jobs.domain.JobDetail;
+import com.vibe.jobs.domain.JobEnrichmentKey;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -18,12 +19,13 @@ public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id = :jobId AND jd.deleted = false")
     Optional<JobDetail> findByJobId(@Param("jobId") Long jobId);
 
-    @EntityGraph(attributePaths = "enrichments")
-    @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
-    List<JobDetail> findAllByJobIds(@Param("jobIds") Collection<Long> jobIds);
-
     @Query("SELECT jd.job.id AS jobId, jd.contentText AS contentText FROM JobDetail jd WHERE jd.job.id IN :jobIds AND jd.deleted = false")
     List<ContentTextView> findContentTextByJobIds(@Param("jobIds") Collection<Long> jobIds);
+
+    @Query("SELECT jd.job.id AS jobId, je.enrichmentKey AS enrichmentKey, je.valueJson AS valueJson " +
+            "FROM JobDetail jd LEFT JOIN jd.enrichments je " +
+            "WHERE jd.job.id IN :jobIds AND jd.deleted = false")
+    List<EnrichmentView> findEnrichmentsByJobIds(@Param("jobIds") Collection<Long> jobIds);
 
     @EntityGraph(attributePaths = "enrichments")
     @Query("SELECT jd FROM JobDetail jd WHERE jd.id = :id AND jd.deleted = false")
@@ -47,5 +49,13 @@ public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
         Long getJobId();
 
         String getContentText();
+    }
+
+    interface EnrichmentView {
+        Long getJobId();
+
+        JobEnrichmentKey getEnrichmentKey();
+
+        String getValueJson();
     }
 }
