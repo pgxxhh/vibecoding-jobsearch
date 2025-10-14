@@ -16,7 +16,7 @@ public record JobDetailEnrichmentsDto(Long jobId,
         } else {
             value = new EnumMap<>(enrichmentJsonByKey);
         }
-        this.enrichmentJsonByKey = Map.copyOf(value);
+        enrichmentJsonByKey = Map.copyOf(value);
     }
 
     public Optional<String> findValue(JobEnrichmentKey key) {
