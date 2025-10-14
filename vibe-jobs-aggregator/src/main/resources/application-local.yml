@@ -35,7 +35,23 @@ logging:
 
 jobs:
   detail-enhancement:
-    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:chatgpt}
+    provider: ${JOBS_DETAIL_ENHANCEMENT_PROVIDER:deepseek}
+    executor:
+      core-size: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_CORE_SIZE:1}
+      max-size: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_MAX_SIZE:1}
+      queue-capacity: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_QUEUE_CAPACITY:20}
+      thread-name-prefix: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_THREAD_NAME_PREFIX:job-enrich-}
+      wait-for-tasks-to-complete-on-shutdown: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_WAIT_ON_SHUTDOWN:true}
+      await-termination-seconds: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_AWAIT_TERMINATION_SECONDS:60}
+    retry:
+      enabled: ${JOBS_DETAIL_ENHANCEMENT_RETRY_ENABLED:true}
+      max-attempts: ${JOBS_DETAIL_ENHANCEMENT_RETRY_MAX_ATTEMPTS:5}
+      initial-delay: ${JOBS_DETAIL_ENHANCEMENT_RETRY_INITIAL_DELAY:PT1M}
+      backoff-multiplier: ${JOBS_DETAIL_ENHANCEMENT_RETRY_BACKOFF:2.0}
+      max-delay: ${JOBS_DETAIL_ENHANCEMENT_RETRY_MAX_DELAY:PT30M}
+      scheduler-interval: ${JOBS_DETAIL_ENHANCEMENT_RETRY_SCHEDULER_INTERVAL:PT1M}
+      batch-size: ${JOBS_DETAIL_ENHANCEMENT_RETRY_BATCH_SIZE:20}
+      in-flight-guard: ${JOBS_DETAIL_ENHANCEMENT_RETRY_IN_FLIGHT_GUARD:PT5M}
     chatgpt:
       base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       path: ${OPENAI_RESPONSES_PATH:${OPENAI_CHAT_COMPLETIONS_PATH:/v1/responses}}

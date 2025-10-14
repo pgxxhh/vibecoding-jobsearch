@@ -43,6 +43,21 @@ public class JobDetailEnrichment {
     @Column(name = "metadata_json", columnDefinition = "longtext")
     private String metadataJson;
 
+    @Column(name = "status_state", length = 32)
+    private String statusState;
+
+    @Column(name = "retry_count", nullable = false)
+    private int retryCount;
+
+    @Column(name = "next_retry_at", columnDefinition = "timestamp")
+    private Instant nextRetryAt;
+
+    @Column(name = "last_attempt_at", columnDefinition = "timestamp")
+    private Instant lastAttemptAt;
+
+    @Column(name = "max_attempts")
+    private Integer maxAttempts;
+
     @Column(name = "created_at", nullable = false, columnDefinition = "timestamp")
     private Instant createdAt;
 
@@ -112,6 +127,26 @@ public class JobDetailEnrichment {
         return updatedAt;
     }
 
+    public String getStatusState() {
+        return statusState;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public Instant getNextRetryAt() {
+        return nextRetryAt;
+    }
+
+    public Instant getLastAttemptAt() {
+        return lastAttemptAt;
+    }
+
+    public Integer getMaxAttempts() {
+        return maxAttempts;
+    }
+
     public boolean isDeleted() {
         return deleted;
     }
@@ -145,5 +180,43 @@ public class JobDetailEnrichment {
         if (changed) {
             this.updatedAt = Instant.now();
         }
+    }
+
+    public void markSucceeded(int configuredMaxAttempts, Instant attemptTime) {
+        Instant effectiveTime = attemptTime != null ? attemptTime : Instant.now();
+        this.statusState = JobDetailEnrichmentStatus.SUCCESS;
+        this.retryCount = 0;
+        this.nextRetryAt = null;
+        this.lastAttemptAt = effectiveTime;
+        this.maxAttempts = configuredMaxAttempts;
+        this.updatedAt = effectiveTime;
+    }
+
+    public void markRetryScheduled(int newRetryCount, Instant nextAttempt, int configuredMaxAttempts, Instant attemptTime) {
+        Instant effectiveTime = attemptTime != null ? attemptTime : Instant.now();
+        this.statusState = JobDetailEnrichmentStatus.RETRY_SCHEDULED;
+        this.retryCount = newRetryCount;
+        this.nextRetryAt = nextAttempt;
+        this.lastAttemptAt = effectiveTime;
+        this.maxAttempts = configuredMaxAttempts;
+        this.updatedAt = effectiveTime;
+    }
+
+    public void markRetrying(Instant attemptTime) {
+        Instant effectiveTime = attemptTime != null ? attemptTime : Instant.now();
+        this.statusState = JobDetailEnrichmentStatus.RETRYING;
+        this.lastAttemptAt = effectiveTime;
+        this.nextRetryAt = null;
+        this.updatedAt = effectiveTime;
+    }
+
+    public void markFailedTerminal(int configuredMaxAttempts, int retryCount, Instant attemptTime) {
+        Instant effectiveTime = attemptTime != null ? attemptTime : Instant.now();
+        this.statusState = JobDetailEnrichmentStatus.FAILED;
+        this.nextRetryAt = null;
+        this.retryCount = retryCount;
+        this.maxAttempts = configuredMaxAttempts;
+        this.lastAttemptAt = effectiveTime;
+        this.updatedAt = effectiveTime;
     }
 }

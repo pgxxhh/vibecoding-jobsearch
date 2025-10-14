@@ -12,18 +12,22 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class AsyncConfig {
 
-    private static final int ENRICHMENT_CORE_POOL_SIZE = 2;
-    private static final int ENRICHMENT_MAX_POOL_SIZE = 4;
-    private static final int ENRICHMENT_QUEUE_CAPACITY = 20;
+    private final JobContentEnrichmentExecutorProperties executorProperties;
+
+    public AsyncConfig(JobContentEnrichmentExecutorProperties executorProperties) {
+        this.executorProperties = executorProperties;
+    }
 
     @Bean(name = "jobContentEnrichmentExecutor")
     public Executor jobContentEnrichmentExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(ENRICHMENT_CORE_POOL_SIZE);
-        executor.setMaxPoolSize(ENRICHMENT_MAX_POOL_SIZE);
-        executor.setQueueCapacity(ENRICHMENT_QUEUE_CAPACITY);
-        executor.setThreadNamePrefix("job-enrich-");
+        executor.setCorePoolSize(Math.max(1, executorProperties.getCoreSize()));
+        executor.setMaxPoolSize(Math.max(executorProperties.getCoreSize(), executorProperties.getMaxSize()));
+        executor.setQueueCapacity(Math.max(1, executorProperties.getQueueCapacity()));
+        executor.setThreadNamePrefix(executorProperties.getThreadNamePrefix());
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(executorProperties.isWaitForTasksToCompleteOnShutdown());
+        executor.setAwaitTerminationSeconds(Math.max(0, executorProperties.getAwaitTerminationSeconds()));
         executor.initialize();
         return executor;
     }
