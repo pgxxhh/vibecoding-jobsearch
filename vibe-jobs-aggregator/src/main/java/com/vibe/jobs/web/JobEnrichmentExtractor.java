@@ -32,29 +32,77 @@ final class JobEnrichmentExtractor {
         if (detail == null) {
             return EnrichmentView.empty();
         }
-
-        Map<JobEnrichmentKey, JsonNode> nodes = new EnumMap<>(JobEnrichmentKey.class);
-        Map<String, Object> values = new LinkedHashMap<>();
-
+        Map<JobEnrichmentKey, String> jsonByKey = new EnumMap<>(JobEnrichmentKey.class);
         if (detail.getEnrichments() != null) {
             for (JobDetailEnrichment enrichment : detail.getEnrichments()) {
                 if (enrichment == null || enrichment.getEnrichmentKey() == null) {
                     continue;
                 }
                 String json = enrichment.getValueJson();
-                if (!StringUtils.hasText(json)) {
-                    continue;
+                if (StringUtils.hasText(json)) {
+                    jsonByKey.put(enrichment.getEnrichmentKey(), json);
                 }
-                Optional<JsonNode> parsed = parseJson(json);
-                if (parsed.isEmpty()) {
-                    continue;
-                }
-                JsonNode node = parsed.get();
-                nodes.put(enrichment.getEnrichmentKey(), node);
-                Object value = treeToObject(node);
-                values.put(enrichment.getEnrichmentKey().storageKey(), value);
             }
         }
+        return buildView(jsonByKey);
+    }
+
+    static EnrichmentView extract(JobDetailEnrichmentsDto dto) {
+        if (dto == null || dto.enrichmentJsonByKey() == null) {
+            return EnrichmentView.empty();
+        }
+        return buildView(dto.enrichmentJsonByKey());
+    }
+
+    static Optional<String> summary(JobDetail detail) {
+        return extract(detail).summary();
+    }
+
+    static List<String> skills(JobDetail detail) {
+        EnrichmentView view = extract(detail);
+        return view.skills().isEmpty() ? List.of() : new ArrayList<>(view.skills());
+    }
+
+    static List<String> highlights(JobDetail detail) {
+        EnrichmentView view = extract(detail);
+        return view.highlights().isEmpty() ? List.of() : new ArrayList<>(view.highlights());
+    }
+
+    static Optional<String> structured(JobDetail detail) {
+        return extract(detail).structured();
+    }
+
+    static Map<String, Object> enrichments(JobDetail detail) {
+        Map<String, Object> source = extract(detail).enrichments();
+        return source.isEmpty() ? Map.of() : new LinkedHashMap<>(source);
+    }
+
+    static Optional<Map<String, Object>> status(JobDetail detail) {
+        return extract(detail).status()
+                .map(map -> map.isEmpty() ? Map.<String, Object>of() : new LinkedHashMap<>(map));
+    }
+
+    private static EnrichmentView buildView(Map<JobEnrichmentKey, String> jsonByKey) {
+        if (jsonByKey == null || jsonByKey.isEmpty()) {
+            return EnrichmentView.empty();
+        }
+
+        Map<JobEnrichmentKey, JsonNode> nodes = new EnumMap<>(JobEnrichmentKey.class);
+        Map<String, Object> values = new LinkedHashMap<>();
+
+        jsonByKey.forEach((key, json) -> {
+            if (key == null || !StringUtils.hasText(json)) {
+                return;
+            }
+            Optional<JsonNode> parsed = parseJson(json);
+            if (parsed.isEmpty()) {
+                return;
+            }
+            JsonNode node = parsed.get();
+            nodes.put(key, node);
+            Object value = treeToObject(node);
+            values.put(key.storageKey(), value);
+        });
 
         Optional<Map<String, Object>> status = Optional.ofNullable(nodes.get(JobEnrichmentKey.STATUS))
                 .map(JobEnrichmentExtractor::treeToObject)
@@ -94,34 +142,6 @@ final class JobEnrichmentExtractor {
                 structured,
                 status,
                 enrichments);
-    }
-
-    static Optional<String> summary(JobDetail detail) {
-        return extract(detail).summary();
-    }
-
-    static List<String> skills(JobDetail detail) {
-        EnrichmentView view = extract(detail);
-        return view.skills().isEmpty() ? List.of() : new ArrayList<>(view.skills());
-    }
-
-    static List<String> highlights(JobDetail detail) {
-        EnrichmentView view = extract(detail);
-        return view.highlights().isEmpty() ? List.of() : new ArrayList<>(view.highlights());
-    }
-
-    static Optional<String> structured(JobDetail detail) {
-        return extract(detail).structured();
-    }
-
-    static Map<String, Object> enrichments(JobDetail detail) {
-        Map<String, Object> source = extract(detail).enrichments();
-        return source.isEmpty() ? Map.of() : new LinkedHashMap<>(source);
-    }
-
-    static Optional<Map<String, Object>> status(JobDetail detail) {
-        return extract(detail).status()
-                .map(map -> map.isEmpty() ? Map.<String, Object>of() : new LinkedHashMap<>(map));
     }
 
     private static boolean isSuccessState(Map<String, Object> status) {

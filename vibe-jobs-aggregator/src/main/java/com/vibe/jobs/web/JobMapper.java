@@ -23,8 +23,8 @@ public class JobMapper {
     public static JobDto toDto(Job j, boolean detailMatch, JobDetailEnrichmentsDto enrichmentsDto) {
         List<String> tags = new ArrayList<>(j.getTags());
         
-        JobEnrichmentExtractor.EnrichmentView enrichmentView = detail != null
-                ? JobEnrichmentExtractor.extract(detail)
+        JobEnrichmentExtractor.EnrichmentView enrichmentView = enrichmentsDto != null
+                ? JobEnrichmentExtractor.extract(enrichmentsDto)
                 : JobEnrichmentExtractor.EnrichmentView.empty();
 
         String summary = enrichmentView.summary().orElse(null);
