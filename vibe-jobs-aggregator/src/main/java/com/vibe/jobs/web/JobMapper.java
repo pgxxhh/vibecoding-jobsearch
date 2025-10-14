@@ -2,7 +2,7 @@
 package com.vibe.jobs.web;
 
 import com.vibe.jobs.domain.Job;
-import com.vibe.jobs.domain.JobDetail;
+import com.vibe.jobs.service.dto.JobDetailEnrichmentsDto;
 import com.vibe.jobs.web.dto.JobDto;
 
 import java.util.ArrayList;
@@ -20,14 +20,14 @@ public class JobMapper {
         return toDto(j, detailMatch, null);
     }
 
-    public static JobDto toDto(Job j, boolean detailMatch, JobDetail detail) {
+    public static JobDto toDto(Job j, boolean detailMatch, JobDetailEnrichmentsDto enrichmentsDto) {
         List<String> tags = new ArrayList<>(j.getTags());
-        
+
         // 使用JobEnrichmentExtractor来提取enrichment数据
-        String summary = detail != null ? JobEnrichmentExtractor.summary(detail).orElse(null) : null;
-        List<String> skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : List.of();
-        List<String> highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : List.of();
-        Map<String, Object> enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : Map.of();
+        String summary = enrichmentsDto != null ? JobEnrichmentExtractor.summary(enrichmentsDto).orElse(null) : null;
+        List<String> skills = enrichmentsDto != null ? sanitizeList(JobEnrichmentExtractor.skills(enrichmentsDto)) : List.of();
+        List<String> highlights = enrichmentsDto != null ? sanitizeList(JobEnrichmentExtractor.highlights(enrichmentsDto)) : List.of();
+        Map<String, Object> enrichments = enrichmentsDto != null ? JobEnrichmentExtractor.enrichments(enrichmentsDto) : Map.of();
 
         return new JobDto(
                 String.valueOf(j.getId()),
