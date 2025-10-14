@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface JobDetailRepository extends JpaRepository<JobDetail, Long> {
+public interface JobDetailRepository extends JpaRepository<JobDetail, Long>, JobDetailRepositoryCustom {
 
     @EntityGraph(attributePaths = "enrichments")
     @Query("SELECT jd FROM JobDetail jd WHERE jd.job.id = :jobId AND jd.deleted = false")

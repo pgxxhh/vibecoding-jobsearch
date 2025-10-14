@@ -133,4 +133,19 @@ public class JobDetailService {
                         JobDetailRepository.ContentTextView::getContentText));
     }
 
+    @Transactional(readOnly = true)
+    public Set<Long> findMatchingJobIds(Collection<Long> jobIds, String query) {
+        if (jobIds == null || jobIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> distinctIds = jobIds.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .collect(Collectors.toSet());
+        if (distinctIds.isEmpty()) {
+            return Set.of();
+        }
+        return repository.findMatchingJobIds(distinctIds, query);
+    }
+
 }
