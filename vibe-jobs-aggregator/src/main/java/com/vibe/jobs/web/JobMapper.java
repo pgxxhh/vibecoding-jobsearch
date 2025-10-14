@@ -2,7 +2,7 @@
 package com.vibe.jobs.web;
 
 import com.vibe.jobs.domain.Job;
-import com.vibe.jobs.domain.JobDetail;
+import com.vibe.jobs.service.dto.JobDetailEnrichmentsDto;
 import com.vibe.jobs.web.dto.JobDto;
 
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ public class JobMapper {
         return toDto(j, detailMatch, null);
     }
 
-    public static JobDto toDto(Job j, boolean detailMatch, JobDetail detail) {
+    public static JobDto toDto(Job j, boolean detailMatch, JobDetailEnrichmentsDto enrichmentsDto) {
         List<String> tags = new ArrayList<>(j.getTags());
         
         JobEnrichmentExtractor.EnrichmentView enrichmentView = detail != null

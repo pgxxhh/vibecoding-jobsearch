@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.vibe.jobs.domain.JobDetail;
 import com.vibe.jobs.domain.JobDetailEnrichment;
 import com.vibe.jobs.domain.JobEnrichmentKey;
+import com.vibe.jobs.service.dto.JobDetailEnrichmentsDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
