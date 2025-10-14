@@ -9,7 +9,6 @@ type Labels = {
   skills: string;
   skillsPlaceholder: string;
   highlights: string;
-  highlightsPlaceholder: string;
   description: string;
   noDescription: string;
   error: string;
@@ -139,6 +138,8 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
     return '';
   })();
 
+  const shouldShowHighlightsSection = isLoading || (shouldShowEnrichment && highlights.length > 0);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -195,7 +196,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           )}
         </div>
       )}
-      {(shouldShowEnrichment || isLoading) && (
+      {shouldShowHighlightsSection && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-700">{labels.highlights}</h3>
           {isLoading ? (
@@ -204,7 +205,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
               <Skeleton className="h-3 w-2/3" />
               <Skeleton className="h-3 w-4/5" />
             </div>
-          ) : highlights.length > 0 ? (
+          ) : (
             <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
               {highlights.map((highlight) => (
                 <li key={highlight} className="flex items-start gap-2">
@@ -213,8 +214,6 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-xs italic text-gray-400">{labels.highlightsPlaceholder}</p>
           )}
         </div>
       )}
