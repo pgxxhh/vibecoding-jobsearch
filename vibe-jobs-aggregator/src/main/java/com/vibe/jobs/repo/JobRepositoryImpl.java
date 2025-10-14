@@ -37,15 +37,14 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
                                  boolean searchDetail,
                                  Pageable pageable) {
         String normalizedQuery = normalize(q);
-        boolean detailEnabled = searchDetail && normalizedQuery != null;
+        boolean hasQuery = normalizedQuery != null;
+        boolean detailEnabled = searchDetail && hasQuery;
         boolean hasCursor = cursorPostedAt != null && cursorId != null;
         Query query = entityManager.createNativeQuery(
-                buildSearchSql(false, detailEnabled, hasCursor), Job.class);
+                buildSearchSql(false, detailEnabled, hasCursor, hasQuery), Job.class);
         Map<String, Object> params = new HashMap<>();
-        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter, detailEnabled);
-        if (detailEnabled && supportsFullText) {
-            params.put("fulltextQuery", buildFullTextQuery(normalizedQuery));
-        }
+        String fullTextQuery = supportsFullText && hasQuery ? buildFullTextQuery(normalizedQuery) : null;
+        populateCommonParameters(params, normalizedQuery, fullTextQuery, company, location, level, postedAfter, detailEnabled);
         if (hasCursor) {
             params.put("cursorPostedAt", Timestamp.from(cursorPostedAt));
             params.put("cursorId", cursorId);
@@ -68,13 +67,12 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
                             Instant postedAfter,
                             boolean searchDetail) {
         String normalizedQuery = normalize(q);
-        boolean detailEnabled = searchDetail && normalizedQuery != null;
-        Query query = entityManager.createNativeQuery(buildSearchSql(true, detailEnabled, false));
+        boolean hasQuery = normalizedQuery != null;
+        boolean detailEnabled = searchDetail && hasQuery;
+        Query query = entityManager.createNativeQuery(buildSearchSql(true, detailEnabled, false, hasQuery));
         Map<String, Object> params = new HashMap<>();
-        populateCommonParameters(params, normalizedQuery, company, location, level, postedAfter, detailEnabled);
-        if (detailEnabled && supportsFullText) {
-            params.put("fulltextQuery", buildFullTextQuery(normalizedQuery));
-        }
+        String fullTextQuery = supportsFullText && hasQuery ? buildFullTextQuery(normalizedQuery) : null;
+        populateCommonParameters(params, normalizedQuery, fullTextQuery, company, location, level, postedAfter, detailEnabled);
         applyParameters(query, params);
         Number result = (Number) query.getSingleResult();
         return result.longValue();
@@ -82,17 +80,26 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
 
     private void populateCommonParameters(Map<String, Object> params,
                                           String normalizedQuery,
+                                          String fullTextQuery,
                                           String company,
                                           String location,
                                           String level,
                                           Instant postedAfter,
                                           boolean detailEnabled) {
-        params.put("q", normalizedQuery);
+        if (normalizedQuery != null) {
+            params.put("q", normalizedQuery);
+        }
+        if (fullTextQuery != null) {
+            params.put("mainFullTextQuery", fullTextQuery);
+            if (detailEnabled) {
+                params.put("detailFullTextQuery", fullTextQuery);
+            }
+        }
         params.put("company", normalize(company));
         params.put("location", normalize(location));
         params.put("level", normalize(level));
         params.put("postedAfter", postedAfter != null ? Timestamp.from(postedAfter) : null);
-        if (!supportsFullText && detailEnabled) {
+        if (!supportsFullText && detailEnabled && normalizedQuery != null) {
             params.put("fallbackDetailQuery", normalizedQuery);
         }
     }
@@ -103,27 +110,43 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
         }
     }
 
-    private String buildSearchSql(boolean count, boolean detailEnabled, boolean includeCursor) {
+    private String buildSearchSql(boolean count, boolean detailEnabled, boolean includeCursor, boolean hasQuery) {
         StringBuilder sql = new StringBuilder();
         if (count) {
             sql.append("select count(*) from (");
         }
         sql.append("select j.* from jobs j ");
-        sql.append("left join job_details jd on jd.job_id = j.id and jd.deleted = false ");
-        sql.append("where j.deleted = false ");
-        sql.append("and (:q is null or ");
-        sql.append("lower(j.title) like lower(concat('%', :q, '%')) ");
-        sql.append("or lower(j.company) like lower(concat('%', :q, '%')) ");
-        sql.append("or lower(j.location) like lower(concat('%', :q, '%')) ");
-        sql.append("or exists (select 1 from job_tags jt where jt.job_id = j.id and lower(jt.tag) like lower(concat('%', :q, '%')))");
         if (detailEnabled) {
-            if (supportsFullText) {
-                sql.append(" or (jd.content_text is not null and MATCH(jd.content_text) AGAINST (:fulltextQuery IN BOOLEAN MODE))");
-            } else {
-                sql.append(" or (jd.content_text is not null and lower(jd.content_text) like lower(concat('%', :fallbackDetailQuery, '%')))");
-            }
+            sql.append("left join job_details jd on jd.job_id = j.id and jd.deleted = false ");
         }
-        sql.append(") ");
+        sql.append("where j.deleted = false ");
+        if (hasQuery) {
+            sql.append("and (");
+            boolean hasPreviousClause = false;
+            if (supportsFullText) {
+                hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                        "MATCH(j.title, j.company, j.location) AGAINST (:mainFullTextQuery IN BOOLEAN MODE)");
+            } else {
+                hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                        "lower(j.title) like lower(concat('%', :q, '%'))");
+                hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                        "lower(j.company) like lower(concat('%', :q, '%'))");
+                hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                        "lower(j.location) like lower(concat('%', :q, '%'))");
+            }
+            hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                    "exists (select 1 from job_tags jt where jt.job_id = j.id and lower(jt.tag) like lower(concat('%', :q, '%')))");
+            if (detailEnabled) {
+                if (supportsFullText) {
+                    hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                            "(jd.content_text is not null and MATCH(jd.content_text) AGAINST (:detailFullTextQuery IN BOOLEAN MODE))");
+                } else {
+                    hasPreviousClause = appendOrClause(sql, hasPreviousClause,
+                            "(jd.content_text is not null and lower(jd.content_text) like lower(concat('%', :fallbackDetailQuery, '%')))");
+                }
+            }
+            sql.append(") ");
+        }
         sql.append("and (:company is null or lower(j.company) like lower(concat('%', :company, '%'))) ");
         sql.append("and (:location is null or lower(j.location) like lower(concat('%', :location, '%'))) ");
         sql.append("and (:level is null or lower(j.level) = lower(:level)) ");
@@ -163,6 +186,14 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
             builder.append('+').append(cleaned).append('*');
         }
         return builder.length() == 0 ? value : builder.toString();
+    }
+
+    private boolean appendOrClause(StringBuilder sql, boolean hasPreviousClause, String clause) {
+        if (hasPreviousClause) {
+            sql.append(" or ");
+        }
+        sql.append(clause);
+        return true;
     }
 
     private boolean detectFullTextSupport(EntityManager entityManager) {
