@@ -41,7 +41,7 @@ export type JobsQuery = {
 };
 export type JobsResponse = {
   items: Job[];
-  total: number;
+  total: number | null;
   nextCursor: string | null;
   hasMore: boolean;
   size: number;
