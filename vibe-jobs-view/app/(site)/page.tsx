@@ -21,9 +21,19 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   if (!res.ok) throw new Error('Failed to fetch jobs');
   const data = await res.json();
   const items = Array.isArray(data?.items) ? data.items.map(normalizeJobFromApi) : [];
+  const rawTotal = data?.total;
+  let total: number | null = null;
+  if (typeof rawTotal === 'number') {
+    total = Number.isFinite(rawTotal) && rawTotal >= 0 ? rawTotal : null;
+  } else if (typeof rawTotal === 'string' && rawTotal.trim() !== '') {
+    const parsed = Number(rawTotal);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      total = parsed;
+    }
+  }
   return {
     items,
-    total: Number.isFinite(Number(data?.total)) ? Number(data.total) : items.length,
+    total,
     nextCursor: typeof data?.nextCursor === 'string' ? data.nextCursor : null,
     hasMore: Boolean(data?.hasMore),
     size: Number.isFinite(Number(data?.size)) ? Number(data.size) : items.length,
@@ -38,7 +48,7 @@ async function fetchJobDetail(id: string): Promise<JobDetailData> {
 }
 
 const PAGE_SIZE = 10;
-const MAX_FILTER_PAGINATION_FETCHES = 5;
+const DATE_FILTER_SIZE_MULTIPLIER = 5;
 
 function computeDateCutoff(daysValue: string): number | null {
   const days = Number(daysValue);
@@ -396,70 +406,37 @@ export default function Page() {
   const loadJobs = async (cursor?: string, reset = false) => {
     setLoading(true);
     try {
-      const baseParams: Record<string, any> = { q, location, size: PAGE_SIZE, ...filters };
+      const baseParams: Record<string, any> = { q, location, ...filters };
       if (q.trim()) {
         baseParams.searchDetail = true;
       }
       const cutoff = computeDateCutoff(filters.datePosted);
       const isDateFilterActive = cutoff !== null;
-      const maxFetches = isDateFilterActive ? MAX_FILTER_PAGINATION_FETCHES : 1;
+      const requestedSize = PAGE_SIZE * (isDateFilterActive ? DATE_FILTER_SIZE_MULTIPLIER : 1);
+      const paramsForFetch: Record<string, any> = {
+        ...baseParams,
+        size: requestedSize,
+      };
+      if (cursor) paramsForFetch.cursor = cursor;
 
-      let currentCursor = cursor ?? null;
-      let fetchCount = 0;
-      let lastResponse: JobsResponse | null = null;
-      const aggregated: Job[] = [];
+      const response = await fetchJobs(paramsForFetch);
 
-      while (fetchCount < maxFetches) {
-        const paramsForFetch: Record<string, any> = { ...baseParams };
-        if (currentCursor) paramsForFetch.cursor = currentCursor;
+      const rawItems = (response.items ?? []).filter((item): item is Job => Boolean(item));
+      const filteredItems = isDateFilterActive ? filterJobsByDate(rawItems, cutoff) : rawItems;
+      const pageItems = filteredItems.slice(0, PAGE_SIZE);
 
-        const response = await fetchJobs(paramsForFetch);
-        lastResponse = response;
-        fetchCount += 1;
-
-        const rawItems = response.items ?? [];
-        const filteredItems = isDateFilterActive ? filterJobsByDate(rawItems, cutoff) : rawItems;
-        aggregated.push(...filteredItems);
-
-        currentCursor = response.nextCursor ?? null;
-
-        const shouldContinue =
-          isDateFilterActive &&
-          aggregated.length < PAGE_SIZE &&
-          Boolean(currentCursor) &&
-          fetchCount < maxFetches;
-
-        if (!shouldContinue) {
-          break;
-        }
-      }
-
-      const pageItems = aggregated.slice(0, PAGE_SIZE);
       let nextCursorValue: string | null = null;
-      let hasMore = false;
 
-      if (isDateFilterActive) {
-        const moreFilteredAvailable = aggregated.length > PAGE_SIZE || Boolean(currentCursor);
-        if (moreFilteredAvailable) {
-          if (pageItems.length > 0) {
-            const lastItem = pageItems[pageItems.length - 1];
-            const encoded = encodeCursorValue(lastItem.postedAt, lastItem.id);
-            if (encoded) {
-              nextCursorValue = encoded;
-              hasMore = true;
-            } else if (currentCursor) {
-              nextCursorValue = currentCursor;
-              hasMore = true;
-            }
-          } else if (currentCursor) {
-            nextCursorValue = currentCursor;
-            hasMore = true;
-          }
-        }
-      } else {
-        nextCursorValue = lastResponse?.nextCursor ?? null;
-        hasMore = Boolean(lastResponse?.nextCursor);
+      const remainingFiltered = filteredItems.length - pageItems.length;
+      if (remainingFiltered > 0 && pageItems.length > 0) {
+        const lastItem = pageItems[pageItems.length - 1];
+        const encoded = encodeCursorValue(lastItem.postedAt, lastItem.id);
+        nextCursorValue = encoded ?? response.nextCursor ?? null;
+      } else if (response.nextCursor) {
+        nextCursorValue = response.nextCursor;
       }
+
+      const hasMore = Boolean(nextCursorValue);
 
       setJobs(prev => (reset ? pageItems : [...prev, ...pageItems]));
       setNextCursor(nextCursorValue);

@@ -42,7 +42,8 @@ public class JobController {
                              @RequestParam(value = "datePosted", required = false) Integer datePosted,
                              @RequestParam(value = "searchDetail", defaultValue = "false") boolean searchDetail,
                              @RequestParam(value = "cursor", required = false) String cursor,
-                             @RequestParam(value = "size", defaultValue = "10") int size) {
+                             @RequestParam(value = "size", defaultValue = "10") int size,
+                             @RequestParam(value = "includeTotal", defaultValue = "false") boolean includeTotal) {
         if (size < 1) size = DEFAULT_SIZE;
         size = Math.min(size, MAX_SIZE);
 
@@ -100,7 +101,15 @@ public class JobController {
                         detailMatches.contains(job.getId()),
                         detailByJobId.get(job.getId())))
                 .collect(Collectors.toList());
-        long total = repo.countSearch(normalizedQuery, emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter, detailEnabled);
+        Long total = null;
+        if (includeTotal) {
+            total = repo.countSearch(normalizedQuery,
+                    emptyToNull(company),
+                    emptyToNull(location),
+                    emptyToNull(level),
+                    postedAfter,
+                    detailEnabled);
+        }
         return new JobsResponse(items, total, nextCursor, hasMore, size);
     }
 
