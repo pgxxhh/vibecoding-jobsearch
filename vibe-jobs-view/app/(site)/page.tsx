@@ -153,40 +153,6 @@ function FilterDrawer({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-600">{t('filters.level')}</label>
-            <Select
-              value={filters.level}
-              onChange={(event) => setFilters({ ...filters, level: event.target.value })}
-            >
-              <option value="">{t('forms.any')}</option>
-              <option value="Junior">{t('jobLevels.junior')}</option>
-              <option value="Mid">{t('jobLevels.mid')}</option>
-              <option value="Senior">{t('jobLevels.senior')}</option>
-              <option value="Staff">{t('jobLevels.staff')}</option>
-              <option value="Principal">{t('jobLevels.principal')}</option>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-600">{t('filters.remote')}</label>
-            <Select
-              value={filters.remote}
-              onChange={(event) => setFilters({ ...filters, remote: event.target.value })}
-            >
-              <option value="">{t('forms.any')}</option>
-              <option value="true">{t('filters.remote.true')}</option>
-              <option value="false">{t('filters.remote.false')}</option>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-600">{t('filters.salaryMin')}</label>
-            <Input
-              type="number"
-              value={filters.salaryMin}
-              onChange={(event) => setFilters({ ...filters, salaryMin: event.target.value })}
-              placeholder={t('filters.salaryPlaceholder')}
-            />
-          </div>
-          <div className="space-y-2">
             <label className="text-sm font-medium text-gray-600">{t('filters.datePosted')}</label>
             <Select
               value={filters.datePosted}
@@ -219,7 +185,6 @@ function HeroSection({
   onSearch,
   onReset,
   onShowFilter,
-  onShowSubscription,
   activeFilterCount,
   isSearching,
 }: {
@@ -230,7 +195,6 @@ function HeroSection({
   onSearch: (event: FormEvent<HTMLFormElement>) => void;
   onReset: () => void;
   onShowFilter: () => void;
-  onShowSubscription: () => void;
   activeFilterCount: number;
   isSearching: boolean;
 }) {
@@ -281,9 +245,6 @@ function HeroSection({
                   </span>
                 )}
               </Button>
-              <Button variant="ghost" type="button" onClick={onShowSubscription}>
-                {t('actions.createSubscription')}
-              </Button>
             </div>
           </form>
         </Card>
@@ -300,7 +261,7 @@ export default function Page() {
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const hasPromptedSubscription = useRef(false);
-  const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | 'manual' | null>(null);
+  const [subscriptionTrigger, setSubscriptionTrigger] = useState<'search' | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
@@ -626,11 +587,6 @@ export default function Page() {
     }
   };
 
-  const handleManualSubscription = () => {
-    setShowSubscriptionModal(true);
-    setSubscriptionTrigger('manual');
-  };
-
   const handleConfirmSubscription = async () => {
     setShowSubscriptionModal(false);
     setSubscriptionTrigger(null);
@@ -658,15 +614,14 @@ export default function Page() {
       <HeroSection
         q={q}
         setQ={setQ}
-        location={location}
-        setLocation={setLocation}
-        onSearch={handleSearch}
-        onReset={handleReset}
-        onShowFilter={() => setShowFilterDrawer(true)}
-        onShowSubscription={handleManualSubscription}
-        activeFilterCount={activeFilterCount}
-        isSearching={loading}
-      />
+      location={location}
+      setLocation={setLocation}
+      onSearch={handleSearch}
+      onReset={handleReset}
+      onShowFilter={() => setShowFilterDrawer(true)}
+      activeFilterCount={activeFilterCount}
+      isSearching={loading}
+    />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">

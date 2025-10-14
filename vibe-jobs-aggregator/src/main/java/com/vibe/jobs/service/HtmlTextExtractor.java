@@ -3,6 +3,8 @@ package com.vibe.jobs.service;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Entities;
+import org.jsoup.safety.Safelist;
 
 public final class HtmlTextExtractor {
 
@@ -20,13 +22,25 @@ public final class HtmlTextExtractor {
 
         Document document = Jsoup.parse(trimmed);
         preserveLineBreaks(document);
-        String text = document.text()
-                .replace('\u00A0', ' ')
-                .trim();
-        if (text.isEmpty()) {
+
+        Element body = document.body();
+        if (body == null) {
             return null;
         }
-        return normalizeWhitespace(text);
+
+        Document.OutputSettings outputSettings = new Document.OutputSettings()
+                .prettyPrint(false)
+                .escapeMode(Entities.EscapeMode.xhtml);
+        String stripped = Jsoup.clean(body.html(), "", Safelist.none(), outputSettings);
+        if (stripped == null) {
+            return null;
+        }
+
+        String normalized = normalizeWhitespace(stripped.replace('\u00A0', ' '));
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return normalized;
     }
 
     private static void preserveLineBreaks(Document document) {
