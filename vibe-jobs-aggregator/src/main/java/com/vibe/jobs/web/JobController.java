@@ -173,34 +173,7 @@ public class JobController {
         if (jobIds.isEmpty()) {
             return java.util.Collections.emptySet();
         }
-        var contentByJobId = jobDetailService.findContentTextByJobIds(jobIds);
-        if (contentByJobId.isEmpty()) {
-            return java.util.Collections.emptySet();
-        }
-
-        var tokens = java.util.Arrays.stream(query.split("\\s+"))
-                .map(token -> token.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]", ""))
-                .map(token -> token.toLowerCase(java.util.Locale.ROOT))
-                .filter(token -> !token.isBlank())
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
-        if (tokens.isEmpty()) {
-            tokens.add(query.toLowerCase(java.util.Locale.ROOT));
-        }
-
-        java.util.Set<Long> matched = new java.util.HashSet<>();
-        for (var entry : contentByJobId.entrySet()) {
-            Long jobId = entry.getKey();
-            String content = entry.getValue();
-            if (jobId == null || content == null || content.isBlank()) {
-                continue;
-            }
-            String normalizedContent = content.toLowerCase(java.util.Locale.ROOT);
-            boolean matches = tokens.stream().allMatch(normalizedContent::contains);
-            if (matches) {
-                matched.add(jobId);
-            }
-        }
-        return matched;
+        return jobDetailService.findMatchingJobIds(jobIds, query);
     }
 
     private record CursorPosition(Instant postedAt, long id) {}

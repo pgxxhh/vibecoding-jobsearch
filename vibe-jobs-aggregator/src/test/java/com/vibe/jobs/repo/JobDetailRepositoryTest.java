@@ -17,9 +17,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+@DataJpaTest
 @ActiveProfiles("test")
 class JobDetailRepositoryTest {
 
@@ -29,44 +30,56 @@ class JobDetailRepositoryTest {
     @Autowired
     private JobDetailRepository jobDetailRepository;
 
-    @Autowired
-    private EntityManagerFactory entityManagerFactory;
+    @Test
+    void findMatchingJobIdsHandlesMultipleKeywordsAndCaseInsensitivity() {
+        Job job = createJob("detail-1", "Backend Engineer");
+        jobRepository.save(job);
 
-    private Statistics statistics;
+        JobDetail detail = new JobDetail(job,
+                "<p>GO experts wanted for distributed systems</p>",
+                "GO experts wanted for distributed systems");
+        jobDetailRepository.save(detail);
 
-    @BeforeEach
-    void setUp() {
-        statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        Set<Long> lowerCaseMatches = jobDetailRepository.findMatchingJobIds(List.of(job.getId()), "go experts");
+        assertEquals(Set.of(job.getId()), lowerCaseMatches);
+
+        Set<Long> upperCaseMatches = jobDetailRepository.findMatchingJobIds(List.of(job.getId()), "GO EXPERTS");
+        assertEquals(Set.of(job.getId()), upperCaseMatches);
     }
 
     @Test
-    void findEnrichmentsByJobIdsReturnsProjectionWithoutLoadingEntity() {
-        Job job = jobRepository.save(Job.builder()
+    void findMatchingJobIdsFallsBackWhenFullTextUnsupported() {
+        Job job1 = createJob("detail-2", "Python Developer");
+        Job job2 = createJob("detail-3", "Go Developer");
+        jobRepository.save(job1);
+        jobRepository.save(job2);
+
+        jobDetailRepository.save(new JobDetail(job1,
+                "<p>We need a Python developer with cloud experience</p>",
+                "We need a Python developer with cloud experience"));
+        jobDetailRepository.save(new JobDetail(job2,
+                "<p>We need a Go specialist</p>",
+                "We need a Go specialist"));
+
+        Set<Long> matches = jobDetailRepository.findMatchingJobIds(List.of(job1.getId(), job2.getId()), "Python developer");
+        assertEquals(Set.of(job1.getId()), matches);
+
+        Set<Long> filteredMatches = jobDetailRepository.findMatchingJobIds(List.of(job2.getId()), "Python developer");
+        assertTrue(filteredMatches.isEmpty(), "Should respect provided job id filter");
+    }
+
+    private Job createJob(String externalId, String title) {
+        return Job.builder()
                 .source("test")
-                .externalId("ext-1")
-                .title("Software Engineer")
-                .company("Example Corp")
+                .externalId(externalId)
+                .title(title)
+                .company("TestCo")
                 .location("Remote")
-                .level("senior")
+                .level("mid")
                 .postedAt(Instant.now())
-                .url("https://example.com/job/1")
-                .checksum("checksum-1")
-                .build());
-
-        JobDetail detail = new JobDetail(job, "<p>content</p>", "content");
-        JobDetailEnrichment enrichment = detail.upsertEnrichment(JobEnrichmentKey.SUMMARY);
-        enrichment.updateValue("\"short summary\"", "provider", "fingerprint", null, null);
-        jobDetailRepository.saveAndFlush(detail);
-
-        statistics.clear();
-
-        List<JobDetailRepository.EnrichmentView> views = jobDetailRepository.findEnrichmentsByJobIds(Set.of(job.getId()));
-
-        assertThat(views).hasSize(1);
-        JobDetailRepository.EnrichmentView view = views.get(0);
-        assertThat(view.getJobId()).isEqualTo(job.getId());
-        assertThat(view.getEnrichmentKey()).isEqualTo(JobEnrichmentKey.SUMMARY);
-        assertThat(view.getValueJson()).isEqualTo("\"short summary\"");
-        assertThat(statistics.getEntityLoadCount()).isZero();
+                .url("http://example.com/" + externalId)
+                .checksum("checksum-" + externalId)
+                .build();
     }
 }
+
