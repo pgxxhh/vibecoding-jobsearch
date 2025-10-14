@@ -21,9 +21,19 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   if (!res.ok) throw new Error('Failed to fetch jobs');
   const data = await res.json();
   const items = Array.isArray(data?.items) ? data.items.map(normalizeJobFromApi) : [];
+  const rawTotal = data?.total;
+  let total: number | null = null;
+  if (typeof rawTotal === 'number') {
+    total = Number.isFinite(rawTotal) && rawTotal >= 0 ? rawTotal : null;
+  } else if (typeof rawTotal === 'string' && rawTotal.trim() !== '') {
+    const parsed = Number(rawTotal);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      total = parsed;
+    }
+  }
   return {
     items,
-    total: Number.isFinite(Number(data?.total)) ? Number(data.total) : items.length,
+    total,
     nextCursor: typeof data?.nextCursor === 'string' ? data.nextCursor : null,
     hasMore: Boolean(data?.hasMore),
     size: Number.isFinite(Number(data?.size)) ? Number(data.size) : items.length,

@@ -1,9 +1,14 @@
 
 package com.vibe.jobs.web.dto;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.util.List;
+
 public record JobsResponse(
         List<JobDto> items,
-        long total,
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        Long total,
         String nextCursor,
         boolean hasMore,
         int size
