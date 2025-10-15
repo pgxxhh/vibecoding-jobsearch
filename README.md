@@ -154,6 +154,7 @@ sequenceDiagram
 - **辅助工具**：Maven Wrapper · PNPM · GitHub Actions（可选 CI/CD）。
 
 ## 部署与运维
+- **CI/CD 自动化**：前后端均采用 GitHub Actions 实现持续集成与持续部署。每次提交或合并 PR 后，自动触发构建、测试及部署流程。相关配置文件见 [.github/workflows/](./.github/workflows/) 目录。
 - **容器化**：通过 [`docker-compose.yml`](./docker-compose.yml) 编排前端、后端与 Caddy；`docker/` 目录存放各组件的 Dockerfile。
 - **反向代理**：Caddy 将 `/backend-api/*` 转发至后端 8080 端口，将 `/api/*` 转发至前端 3000 端口，并暴露 Swagger / Actuator 接口。
 - **数据库迁移**：后端启动时自动执行 Flyway，确保 schema 与代码保持一致。
