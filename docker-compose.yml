@@ -60,6 +60,11 @@ services:
    #   - DB_AES_KEY_PATH=/app/secrets/db-aes.key
    # volumes:
     # - /opt/vibejobs/secrets:/app/secrets:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"     # 单个日志文件最大 100MB
+        max-file: "10"       # 最多保留 10 个轮转日志文件
     expose: ["8080"]
     depends_on:
       mysql:
@@ -74,6 +79,11 @@ services:
       - BACKEND_BASE_URL=http://backend:8080
       - NEXT_PUBLIC_BACKEND_BASE=/api
       - PORT=3000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"     # 单个日志文件最大 100MB
+        max-file: "10"       # 最多保留 10 个轮转日志文件
     expose: ["3000"]
     depends_on: [ backend ]
 
