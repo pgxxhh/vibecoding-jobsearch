@@ -24,13 +24,15 @@ async function forward(req: NextRequest, method: 'GET' | 'POST' | 'PUT' | 'DELET
   // Check if this is a company operation
   const companyId = req.nextUrl.searchParams.get('companyId');
   const dataSourceCode = req.nextUrl.searchParams.get('dataSourceCode');
-  
-  if (companyId && dataSourceCode) {
-    // Company operations
-    if (method === 'PUT' || method === 'DELETE') {
-      apiPath = `/admin/data-sources/${dataSourceCode}/companies/${companyId}`;
-    } else if (method === 'POST') {
+
+  if (dataSourceCode) {
+    if (method === 'POST') {
       apiPath = `/admin/data-sources/${dataSourceCode}/companies`;
+    } else if (method === 'PUT' || method === 'DELETE') {
+      if (!companyId) {
+        return NextResponse.json({ code: 'MISSING_COMPANY_ID', message: 'companyId parameter required' }, { status: 400 });
+      }
+      apiPath = `/admin/data-sources/${dataSourceCode}/companies/${companyId}`;
     }
   } else {
     // Data source operations
