@@ -1,0 +1,22 @@
+-- generated at 2025-10-16 03:00:43 UTC
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','phonepe','PhonePe');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','tekion','Tekion');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','twilio','Twilio');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','karat','Karat');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','yipitdata','YipitData');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','postman','Postman');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','paypay','PayPay');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','payoneer','Payoneer');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','zscaler','Zscaler');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','okta','Okta');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','asana','Asana');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('greenhouse','gitlab','GitLab');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','jumpcloud','JumpCloud');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','drivetrain','Drivetrain');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','welocalize','Welocalize');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','findem','Findem');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','paytm','Paytm');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','jiostar','JioStar');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','plivo','Plivo');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('lever','finix','Finix');
+INSERT IGNORE INTO job_data_source_company (data_source_code, reference, display_name) VALUES ('smartrecruiters','sandisk','SanDisk');
