@@ -44,7 +44,7 @@ jobs:
       wait-for-tasks-to-complete-on-shutdown: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_WAIT_ON_SHUTDOWN:true}
       await-termination-seconds: ${JOBS_DETAIL_ENHANCEMENT_EXECUTOR_AWAIT_TERMINATION_SECONDS:60}
     retry:
-      enabled: ${JOBS_DETAIL_ENHANCEMENT_RETRY_ENABLED:true}
+      enabled: ${JOBS_DETAIL_ENHANCEMENT_RETRY_ENABLED:false}
       max-attempts: ${JOBS_DETAIL_ENHANCEMENT_RETRY_MAX_ATTEMPTS:5}
       initial-delay: ${JOBS_DETAIL_ENHANCEMENT_RETRY_INITIAL_DELAY:PT1M}
       backoff-multiplier: ${JOBS_DETAIL_ENHANCEMENT_RETRY_BACKOFF:2.0}
