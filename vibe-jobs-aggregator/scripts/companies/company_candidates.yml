@@ -1,0 +1,235 @@
+greenhouse:
+  - reference: phonepe
+    display_name: PhonePe
+  - reference: razorpay
+    display_name: Razorpay
+  - reference: tekion
+    display_name: Tekion
+  - reference: twilio
+    display_name: Twilio
+  - reference: glean
+    display_name: Glean
+  - reference: karat
+    display_name: Karat
+  - reference: yipitdata
+    display_name: YipitData
+  - reference: postman
+    display_name: Postman
+  - reference: paypay
+    display_name: PayPay
+  - reference: payoneer
+    display_name: Payoneer
+  - reference: sentry
+    display_name: Sentry
+  - reference: chargebee
+    display_name: Chargebee
+  - reference: paysend
+    display_name: PaySend
+  - reference: rapyd
+    display_name: Rapyd
+  - reference: zscaler
+    display_name: Zscaler
+  - reference: okta
+    display_name: Okta
+  - reference: segment
+    display_name: Segment
+  - reference: freshworks
+    display_name: Freshworks
+  - reference: zendesk
+    display_name: Zendesk
+  - reference: zoho
+    display_name: Zoho
+  - reference: hubspot
+    display_name: HubSpot
+  - reference: asana
+    display_name: Asana
+  - reference: gitlab
+    display_name: GitLab
+
+lever:
+  - reference: jumpcloud
+    display_name: JumpCloud
+  - reference: drivetrain
+    display_name: Drivetrain
+  - reference: welocalize
+    display_name: Welocalize
+  - reference: zeotap
+    display_name: Zeotap
+  - reference: highlevel
+    display_name: HighLevel
+  - reference: findem
+    display_name: Findem
+  - reference: paytm
+    display_name: Paytm
+  - reference: jiostar
+    display_name: JioStar
+  - reference: plivo
+    display_name: Plivo
+  - reference: finix
+    display_name: Finix
+  - reference: mangopay
+    display_name: Mangopay
+  - reference: sprout
+    display_name: Sprout
+  - reference: nearform
+    display_name: Nearform
+  - reference: navan
+    display_name: Navan
+  - reference: klaviyo
+    display_name: Klaviyo
+  - reference: circleci
+    display_name: CircleCI
+  - reference: sendbird
+    display_name: Sendbird
+  - reference: mux
+    display_name: Mux
+  - reference: fivetran
+    display_name: Fivetran
+  - reference: hashicorp
+    display_name: HashiCorp
+  - reference: pitch
+    display_name: Pitch
+  - reference: typeform
+    display_name: Typeform
+
+ashby:
+  - reference: cartesia
+    display_name: Cartesia
+  - reference: atlan
+    display_name: Atlan
+  - reference: mercor
+    display_name: Mercor
+  - reference: furtherai
+    display_name: FurtherAI
+  - reference: junipersquare
+    display_name: Juniper Square
+  - reference: aizen
+    display_name: Aizen
+  - reference: planesoftware
+    display_name: Plane Software
+  - reference: ema
+    display_name: Ema
+  - reference: thena
+    display_name: Thena
+  - reference: eudia
+    display_name: Eudia
+  - reference: exitfive
+    display_name: ExitFive
+  - reference: alignable
+    display_name: Alignable
+  - reference: readme
+    display_name: ReadMe
+  - reference: ifttt
+    display_name: IFTTT
+  - reference: birdeye
+    display_name: Birdeye
+  - reference: gosquared
+    display_name: GoSquared
+  - reference: turing
+    display_name: Turing
+  - reference: copyai
+    display_name: CopyAI
+  - reference: hypercontext
+    display_name: Hypercontext
+  - reference: craft
+    display_name: Craft
+
+smartrecruiters:
+  - reference: medmix
+    display_name: medmix
+  - reference: abbvie
+    display_name: AbbVie
+  - reference: adidas
+    display_name: Adidas
+  - reference: nike
+    display_name: Nike
+  - reference: shell
+    display_name: Shell
+  - reference: bp
+    display_name: BP
+  - reference: hsbc
+    display_name: HSBC
+  - reference: standardchartered
+    display_name: Standard Chartered
+  - reference: barclays
+    display_name: Barclays
+  - reference: deutschebank
+    display_name: Deutsche Bank
+  - reference: societegenerale
+    display_name: Société Générale
+  - reference: nestle
+    display_name: Nestlé (Purina)
+  - reference: sandisk
+    display_name: SanDisk
+  - reference: jondavidson
+    display_name: JonDavidson Pte Ltd
+  - reference: nagarro
+    display_name: Nagarro
+  - reference: lenovo
+    display_name: Lenovo
+  - reference: honeywell
+    display_name: Honeywell
+  - reference: alstom
+    display_name: Alstom
+  - reference: siemens
+    display_name: Siemens
+  - reference: bosch
+    display_name: Bosch
+  - reference: infineon
+    display_name: Infineon
+  - reference: philips
+    display_name: Philips
+  - reference: schneider
+    display_name: Schneider Electric
+  - reference: volvo
+    display_name: Volvo
+  - reference: lvmh
+    display_name: LVMH
+  - reference: michelin
+    display_name: Michelin
+
+recruitee:
+  - reference: brainsquare
+    display_name: Brainsquare
+  - reference: compelson
+    display_name: Compelson
+  - reference: aizen
+    display_name: Aizen
+  - reference: plane
+    display_name: Plane
+  - reference: ema
+    display_name: Ema
+  - reference: goremote
+    display_name: GoRemote
+  - reference: bankera
+    display_name: Bankera
+  - reference: paysera
+    display_name: Paysera
+  - reference: stakefish
+    display_name: Stakefish
+  - reference: reed
+    display_name: Reed
+  - reference: tether
+    display_name: Tether
+  - reference: oaky
+    display_name: Oaky
+  - reference: bynder
+    display_name: Bynder
+  - reference: funnel
+    display_name: Funnel
+  - reference: storytel
+    display_name: Storytel
+  - reference: lightsource
+    display_name: Lightsource
+  - reference: godel
+    display_name: Godel
+  - reference: sellics
+    display_name: Sellics
+  - reference: voucherify
+    display_name: Voucherify
+  - reference: tide
+    display_name: Tide
+  - reference: sennder
+    display_name: Sennder
+  - reference: wevat
+    display_name: WeVat

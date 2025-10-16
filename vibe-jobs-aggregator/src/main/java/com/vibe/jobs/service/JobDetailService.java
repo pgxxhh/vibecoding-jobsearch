@@ -2,16 +2,20 @@ package com.vibe.jobs.service;
 
 import com.vibe.jobs.domain.Job;
 import com.vibe.jobs.domain.JobDetail;
+import com.vibe.jobs.domain.JobEnrichmentKey;
 import com.vibe.jobs.repo.JobDetailRepository;
 import com.vibe.jobs.service.HtmlTextExtractor;
 import com.vibe.jobs.service.JobContentFingerprintCalculator;
 import com.vibe.jobs.service.enrichment.JobDetailContentUpdatedEvent;
 import com.vibe.jobs.service.enrichment.JobSnapshot;
+import com.vibe.jobs.service.dto.JobDetailEnrichmentsDto;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -101,7 +105,7 @@ public class JobDetailService {
     }
 
     @Transactional(readOnly = true)
-    public Map<Long, JobDetail> findByJobIds(Collection<Long> jobIds) {
+    public Map<Long, JobDetailEnrichmentsDto> findByJobIds(Collection<Long> jobIds) {
         if (jobIds == null || jobIds.isEmpty()) {
             return Map.of();
         }
@@ -111,10 +115,24 @@ public class JobDetailService {
         if (distinctIds.isEmpty()) {
             return Map.of();
         }
-        return repository.findAllByJobIds(distinctIds).stream()
-                .filter(detail -> detail.getJob() != null && detail.getJob().getId() != null)
-                .collect(Collectors.toMap(detail -> detail.getJob().getId(), detail -> detail,
-                        (existing, replacement) -> existing));
+        Map<Long, EnumMap<JobEnrichmentKey, String>> aggregated = new HashMap<>();
+        repository.findEnrichmentsByJobIds(distinctIds)
+                .forEach(view -> {
+                    Long jobId = view.getJobId();
+                    if (jobId == null) {
+                        return;
+                    }
+                    EnumMap<JobEnrichmentKey, String> values = aggregated.computeIfAbsent(jobId,
+                            id -> new EnumMap<>(JobEnrichmentKey.class));
+                    JobEnrichmentKey key = view.getEnrichmentKey();
+                    if (key != null) {
+                        values.put(key, view.getValueJson());
+                    }
+                });
+
+        return aggregated.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> new JobDetailEnrichmentsDto(entry.getKey(), entry.getValue())));
     }
 
     @Transactional(readOnly = true)
@@ -131,6 +149,21 @@ public class JobDetailService {
         return repository.findContentTextByJobIds(distinctIds).stream()
                 .collect(Collectors.toMap(JobDetailRepository.ContentTextView::getJobId,
                         JobDetailRepository.ContentTextView::getContentText));
+    }
+
+    @Transactional(readOnly = true)
+    public Set<Long> findMatchingJobIds(Collection<Long> jobIds, String query) {
+        if (jobIds == null || jobIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> distinctIds = jobIds.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> id > 0)
+                .collect(Collectors.toSet());
+        if (distinctIds.isEmpty()) {
+            return Set.of();
+        }
+        return repository.findMatchingJobIds(distinctIds, query);
     }
 
 }

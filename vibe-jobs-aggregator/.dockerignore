@@ -1,6 +1,7 @@
 .git
 .idea
-.docs
+.designdocs
+.scripts
 target/surefire*
 target/test-classes
 *.log

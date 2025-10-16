@@ -42,7 +42,8 @@ public class JobController {
                              @RequestParam(value = "datePosted", required = false) Integer datePosted,
                              @RequestParam(value = "searchDetail", defaultValue = "false") boolean searchDetail,
                              @RequestParam(value = "cursor", required = false) String cursor,
-                             @RequestParam(value = "size", defaultValue = "10") int size) {
+                             @RequestParam(value = "size", defaultValue = "10") int size,
+                             @RequestParam(value = "includeTotal", defaultValue = "false") boolean includeTotal) {
         if (size < 1) size = DEFAULT_SIZE;
         size = Math.min(size, MAX_SIZE);
 
@@ -100,7 +101,15 @@ public class JobController {
                         detailMatches.contains(job.getId()),
                         detailByJobId.get(job.getId())))
                 .collect(Collectors.toList());
-        long total = repo.countSearch(normalizedQuery, emptyToNull(company), emptyToNull(location), emptyToNull(level), postedAfter, detailEnabled);
+        Long total = null;
+        if (includeTotal) {
+            total = repo.countSearch(normalizedQuery,
+                    emptyToNull(company),
+                    emptyToNull(location),
+                    emptyToNull(level),
+                    postedAfter,
+                    detailEnabled);
+        }
         return new JobsResponse(items, total, nextCursor, hasMore, size);
     }
 
@@ -111,13 +120,16 @@ public class JobController {
         var detail = jobDetailService.findByJob(job).orElse(null);
         String content = detail != null ? detail.getContent() : "";
         
-        // 使用JobEnrichmentExtractor来提取enrichment数据
-        String summary = detail != null ? JobEnrichmentExtractor.summary(detail).orElse(null) : null;
-        var skills = detail != null ? sanitizeList(JobEnrichmentExtractor.skills(detail)) : java.util.List.<String>of();
-        var highlights = detail != null ? sanitizeList(JobEnrichmentExtractor.highlights(detail)) : java.util.List.<String>of();
-        String structuredData = detail != null ? JobEnrichmentExtractor.structured(detail).orElse(null) : null;
-        var enrichments = detail != null ? JobEnrichmentExtractor.enrichments(detail) : java.util.Map.<String, Object>of();
-        var status = detail != null ? JobEnrichmentExtractor.status(detail).orElse(java.util.Map.of()) : java.util.Map.<String, Object>of();
+        JobEnrichmentExtractor.EnrichmentView enrichmentView = detail != null
+                ? JobEnrichmentExtractor.extract(detail)
+                : JobEnrichmentExtractor.EnrichmentView.empty();
+
+        String summary = enrichmentView.summary().orElse(null);
+        var skills = sanitizeList(enrichmentView.skills());
+        var highlights = sanitizeList(enrichmentView.highlights());
+        String structuredData = enrichmentView.structured().orElse(null);
+        var enrichments = enrichmentView.enrichments();
+        var status = enrichmentView.status().orElse(java.util.Map.of());
         
         return new JobDetailResponse(
                 job.getId(),
@@ -170,34 +182,7 @@ public class JobController {
         if (jobIds.isEmpty()) {
             return java.util.Collections.emptySet();
         }
-        var contentByJobId = jobDetailService.findContentTextByJobIds(jobIds);
-        if (contentByJobId.isEmpty()) {
-            return java.util.Collections.emptySet();
-        }
-
-        var tokens = java.util.Arrays.stream(query.split("\\s+"))
-                .map(token -> token.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}]", ""))
-                .map(token -> token.toLowerCase(java.util.Locale.ROOT))
-                .filter(token -> !token.isBlank())
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
-        if (tokens.isEmpty()) {
-            tokens.add(query.toLowerCase(java.util.Locale.ROOT));
-        }
-
-        java.util.Set<Long> matched = new java.util.HashSet<>();
-        for (var entry : contentByJobId.entrySet()) {
-            Long jobId = entry.getKey();
-            String content = entry.getValue();
-            if (jobId == null || content == null || content.isBlank()) {
-                continue;
-            }
-            String normalizedContent = content.toLowerCase(java.util.Locale.ROOT);
-            boolean matches = tokens.stream().allMatch(normalizedContent::contains);
-            if (matches) {
-                matched.add(jobId);
-            }
-        }
-        return matched;
+        return jobDetailService.findMatchingJobIds(jobIds, query);
     }
 
     private record CursorPosition(Instant postedAt, long id) {}

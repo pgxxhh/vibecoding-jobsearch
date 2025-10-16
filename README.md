@@ -1,5 +1,4 @@
 # Elaine Jobs · vibecoding-jobsearch
-
 Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统一的抓取管线和 LLM 加持的内容增强，提供近实时、可检索、可订阅的招聘信息聚合服务。
 本系统代码97%由codex + github copilot编写, 我负责设计, 写prompt, review, 测试, 部署。
 
@@ -18,7 +17,7 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 ## 系统总览
 - **目标用户**：希望在国内快速获取外企职位信息的人群，无需梯子即可访问。
 - **核心价值**：聚合各类 ATS（Applicant Tracking System）与官方 Career Page 数据源，统一建模、清洗与打分后输出标准化的职位数据，并通过 LLM 提取摘要、亮点与技能标签。
-- **线上环境**：https://elainejobs.com/  （部署于 AWS EC2，数据库使用 Amazon Aurora / RDS MySQL 8.0 兼容版）。
+- **线上环境**：https://elainejobs.com/  （部署于 AWS EC2，数据库使用 Amazon RDS MySQL 8.0 兼容版）。
 
 ## 架构与核心组件
 | 分层 | 说明 | 关键目录 |
@@ -46,6 +45,94 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 6. **持久化与索引**
    - 利用 Spring Data JPA 将职位数据写入 MySQL，Flyway 负责 schema 迁移。
    - 对关键字段（公司、地点、标签）建索引，提升查询性能。
+  
+### 核心流程
+
+#### 1. 数据源调度与抓取
+
+- 调度器在应用启动时读取最新采集配置，按照固定延迟启动抓取，并在配置变化时重新调度或即时运行。
+- SourceRegistry 根据数据源类型构建单实例或多公司客户端，自动填充占位符、类别配额与 Workday Facets，用于分页拉取。
+- 每一页数据按启用公司、近 7 天、地点/角色白名单与地点推断过滤，随后持久化并维护增量游标。
+
+```mermaid
+sequenceDiagram
+    participant TaskScheduler
+    participant Scheduler as JobIngestionScheduler
+    participant Registry as SourceRegistry
+    participant Client as SourceClient
+    participant Filters as 过滤&增强
+    participant Persist as JobIngestionPersistenceService
+    participant Repo as JobService/JobDetailService
+    participant EventBus as EventPublisher
+
+    TaskScheduler->>Scheduler: 固定延迟触发
+    Scheduler->>Registry: getScheduledSources()
+    Registry-->>Scheduler: 已配置源列表
+    loop 每页
+        Scheduler->>Client: fetchPage(page, size)
+        Client-->>Scheduler: FetchedJob[]
+        Scheduler->>Filters: 公司/时间/地点/角色过滤 + location 补全
+        Filters-->>Scheduler: 过滤后的集合
+        Scheduler->>Persist: persistBatch()
+        Persist->>Repo: upsert & 保存正文
+        Repo->>EventBus: JobDetailContentUpdatedEvent
+    end
+```
+
+---
+
+#### 2. 职位入库与去重
+
+- JobIngestionPersistenceService 将批次拆分成可配置大小的 chunk 逐条入库，异常时记日志继续后续数据。
+- JobService.upsert 先按 source+externalId 查找，再用 company+title 做软匹配，通过 SHA-256 校验字段变更。
+- JobDetailService.saveContent 保存 HTML 与纯文本，递增内容版本并发布事件，同时支持批量查询富文本匹配或增强结果聚合。
+
+---
+
+#### 3. LLM 增强与重试
+
+- JobDetailEnrichmentProcessor 在事务提交后异步执行，先检查同一指纹是否已有成功记录，随后调用 JobContentEnrichmentClient 调度指定或可用的提供方。
+- JobDetailEnrichmentWriter 在新事务中落库增强内容与状态，记录延迟/警告并更新重试计划；失败时根据策略写入下一次执行时间。
+- JobDetailEnrichmentRetryScheduler 以配置频率轮询状态为 RETRY_SCHEDULED 的记录，利用乐观更新触发新的内容事件，形成闭环补偿。
+
+```mermaid
+sequenceDiagram
+    participant Event as JobDetailContentUpdatedEvent
+    participant Processor as EnrichmentProcessor
+    participant Provider as EnrichmentClient
+    participant Writer
+    participant Repository as JobDetailEnrichments
+    participant Retry as RetryScheduler
+
+    Event->>Processor: AFTER_COMMIT 事件
+    Processor->>Repository: findByIdWithEnrichments()
+    Processor->>Provider: enrich(job, content, fingerprint)
+    Provider-->>Processor: JobContentEnrichmentResult
+    Processor->>Writer: write(event, result)
+    Writer->>Repository: 保存增强/状态/重试信息
+    alt result 需重试
+        Writer-->>Retry: 状态=RETRY_SCHEDULED
+        Retry->>Repository: 查询可执行记录
+        Retry->>Event: 重新发布 JobDetailContentUpdatedEvent
+    end
+```
+
+---
+
+#### 4. 混合爬虫与蓝图
+
+- 对 crawler 类型的数据源，CrawlerOrchestrator 按蓝图拉取页面，自动限流、记录运行日志，并根据蓝图选择 HTTP 或浏览器引擎（失败时回落到 HTTP）。
+
+---
+
+#### 5. 搜索 API 与前端渲染
+
+- `/jobs` API 支持关键词、公司、地点、级别与发布时间过滤，默认按 posted_at + id 降序分页，并返回下一页游标。
+- `/jobs/{id}/detail` 暴露正文和最新增强结果。
+- 查询实现使用动态原生 SQL：MySQL 方启用 FULLTEXT，其他方 fallback 为 LIKE 搜索并拼接标签/正文；支持计数与游标过滤。
+- 前端列表调用 fetchJobs，在客户端根据日期筛选倍增请求规模，使用 IntersectionObserver/滚动触底加载；详情区通过 React Query 获取、合并增强字段并对 HTML 展示。
+
+
 
 ## LLM 增强链路
 1. **触发时机**：职位详情更新后，通过领域事件发布 `JobDetailContentUpdatedEvent`。
@@ -67,6 +154,7 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 - **辅助工具**：Maven Wrapper · PNPM · GitHub Actions（可选 CI/CD）。
 
 ## 部署与运维
+- **CI/CD 自动化**：前后端均采用 GitHub Actions 实现持续集成与持续部署。每次提交或合并 PR 后，自动触发构建、测试及部署流程。相关配置文件见 [.github/workflows/](./.github/workflows/) 目录。
 - **容器化**：通过 [`docker-compose.yml`](./docker-compose.yml) 编排前端、后端与 Caddy；`docker/` 目录存放各组件的 Dockerfile。
 - **反向代理**：Caddy 将 `/backend-api/*` 转发至后端 8080 端口，将 `/api/*` 转发至前端 3000 端口，并暴露 Swagger / Actuator 接口。
 - **数据库迁移**：后端启动时自动执行 Flyway，确保 schema 与代码保持一致。
