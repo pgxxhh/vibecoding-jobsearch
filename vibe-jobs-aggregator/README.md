@@ -236,7 +236,111 @@ flowchart TD
 
 ---
 
-## 5. Enrichment & Retry Logic
+## 5. Crawler Subsystem
+
+### 5.1 Execution Pipeline
+
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant Registry
+    participant Orchestrator
+    participant Engine
+    participant Parser
+    participant Persistence
+
+    Scheduler->>Registry: resolve sources (type=crawler)
+    Registry-->>Scheduler: List<ConfiguredSource>
+    Scheduler->>Orchestrator: fetchJobs(blueprintCode, context, page, size)
+    Orchestrator->>Engine: fetch(session, pagination)
+    Engine->>Engine: choose browser? (automation.requiresBrowser)
+    Engine->>Parser: provide CrawlPageSnapshot (list HTML + optional detail snapshots)
+    Parser->>Persistence: return List<CrawlResult>
+    Persistence-->Scheduler: JobIngestionResult
+```
+
+The orchestrator loads the `crawler_blueprint` record, resolves a parser profile, and dispatches to either the browser engine (Playwright) or the lightweight HTTP engine. Browser runs are preferred whenever automation requires JavaScript, scroll, or click operations; only if the browser fails will the orchestrator fall back to HTTP.
+
+### 5.2 `crawler_blueprint.config_json`
+
+Each blueprint is stored as JSON. The top-level structure contains the following sections:
+
+| Key | Description |
+| --- | ----------- |
+| `entryUrl` | Base URL used to load the listing page. Placeholders (e.g. `_locations=china`) can be embedded here. |
+| `paging` | Mode (`NONE`, `QUERY`, `OFFSET`, `PATH_SUFFIX`) plus optional parameters (`parameter`, `start`, `step`, `sizeParameter`). Determines how additional pages are fetched. |
+| `rateLimit` | Requests-per-minute and burst limits enforced per blueprint. |
+| `automation` | Browser automation metadata; `jsEnabled=true` forces Playwright, `waitForMilliseconds` injects delays, `search.fields` can populate form elements. |
+| `flow` | Ordered list of crawl steps (WAIT, SCROLL, CLICK, EXTRACT_LIST, EXTRACT_DETAIL, REQUEST). Steps operate on the Playwright page and can capture inline detail HTML. |
+| `parser` | Core extraction config (see below). |
+
+Parser configuration contains:
+
+| Field | Purpose |
+| ----- | ------- |
+| `baseUrl` | Prepended when relative URLs are encountered. |
+| `listSelector` | CSS selector that returns all job nodes on the listing page. |
+| `fields` | Mapping from logical field (`title`, `url`, `externalId`, `company`, `location`, …) to extraction instructions (`type`, `selector`, `attribute`, `constant`, etc.). |
+| `tagFields` | Optional set of fields copied into `jobs.tags`. |
+| `descriptionField` | Listing-level description; typically left blank when detail fetch is enabled. |
+| `detailFetch` | Controls detail-page scraping: `enabled`, `baseUrl`, `urlField` (usually `url` or `externalId`), optional `delayMs`, and `contentSelectors` that extract the HTML payload. |
+
+Example (Apple China):
+
+```json
+{
+  "entryUrl": "https://jobs.apple.com/zh-cn/search?team=ENGINEERING&team=FINANCE&_locations=china&_language=zh_CN",
+  "paging": {"mode": "QUERY", "parameter": "page", "start": 1, "step": 1},
+  "automation": {"enabled": true, "jsEnabled": true, "waitForMilliseconds": 8000},
+  "flow": [
+    {"type": "WAIT", "options": {"durationMs": 10000}},
+    {"type": "SCROLL", "options": {"to": "bottom", "times": 3}},
+    {"type": "WAIT", "options": {"durationMs": 5000}},
+    {"type": "EXTRACT_DETAIL", "options": {"selector": "a[href*='/zh-cn/details/']", "limit": 40}},
+    {"type": "EXTRACT_LIST"}
+  ],
+  "parser": {
+    "baseUrl": "https://jobs.apple.com",
+    "listSelector": "li[data-automation-id='jobPosting']",
+    "fields": {
+      "title": {"type": "TEXT", "selector": "[data-automation-id='jobTitle']"},
+      "url": {"type": "ATTRIBUTE", "selector": "a[href*='/details/']", "attribute": "href", "baseUrl": "https://jobs.apple.com"},
+      "externalId": {"type": "ATTRIBUTE", "selector": "a[href*='/details/']", "attribute": "href"},
+      "company": {"type": "CONSTANT", "constant": "Apple"},
+      "location": {"type": "TEXT", "selector": "[data-automation-id='jobLocation']"}
+    },
+    "detailFetch": {
+      "enabled": true,
+      "baseUrl": "https://jobs.apple.com",
+      "urlField": "url",
+      "delayMs": 2000,
+      "contentSelectors": ["article", "main section", "div[class*='job-description']"]
+    }
+  }
+}
+```
+
+### 5.3 Flow & Detail Parsing
+
+- **EXTRACT_LIST** captures the post-flow HTML for the listing page; selectors defined in `fields` run against this snapshot.
+- **EXTRACT_DETAIL** opens each matching anchor in a new Playwright page, waits for `domcontentloaded`, captures the HTML, and passes it to the parser. The parser then:
+  1. Builds a detail URL (`baseUrl` + `href`).
+  2. Parses structured data (title/location) from detail metadata if present.
+  3. Merges detail HTML with listing metadata to produce the final description.
+- The parser also normalises URLs, trims whitespace, and guards against non-target locations before attempting detail fetches (e.g. non-China Apple postings are skipped to avoid 404/timeout loops).
+
+### 5.4 Adding a New Crawler Source
+
+1. **Create the blueprint:** insert or update a `crawler_blueprint` row with the desired JSON (entry URL, paging mode, flow, parser, etc.). The admin UI and `crawler_init.sql` provide templates.
+2. **Register the source:** add a `job_data_source` entry with `type = 'crawler'`, `base_options.blueprintCode`, and optional company overrides.
+3. **(Optional) Company overrides:** if the same blueprint serves multiple brands, populate `job_data_source_company` with their slugs and override options (e.g. substitute placeholders in entry URL).
+4. **Validate:** run a manual ingestion (admin portal or `JobIngestionScheduler`), inspect `crawler_run_log` and database output.
+
+Blueprints can be hot-swapped: updating `config_json` takes effect on the next scheduler run without redeploying the service.
+
+---
+
+## 6. Enrichment & Retry Logic
 
 - `JobDetailEnrichmentWriter` updates the `STATUS` enrichment and persists payload enrichments.
 - `JobDetailEnrichmentRetryStrategy` computes exponential backoff; `JobDetailEnrichmentRetryScheduler` dispatches retries when `next_retry_at` is due.
@@ -244,9 +348,9 @@ flowchart TD
 
 ---
 
-## 6. Admin & Automation
+## 7. Admin & Automation
 
-### 6.1 Admin Endpoints (excerpt)
+### 7.1 Admin Endpoints (excerpt)
 
 | Method | Endpoint | Description |
 | ------ | -------- | ----------- |
@@ -259,15 +363,15 @@ flowchart TD
 
 The Next.js frontend forwards requests through `/api/admin/...`, handling session cookies and error propagation.
 
-### 6.2 Daily company enrichment script
+### 7.2 Daily company enrichment script
 
 `scripts/collect_new_companies.py` checks vendor APIs (Greenhouse, Lever, SmartRecruiters) for engineering & finance roles and outputs a SQL patch under `scripts/job_data_source_company_patch.sql`. Scheduling guidance and configuration details live in [designdocs/daily_company_enrichment.md](designdocs/daily_company_enrichment.md).
 
 ---
 
-## 7. Running Locally
+## 8. Running Locally
 
-### 7.1 Prerequisites
+### 8.1 Prerequisites
 
 - Java 17
 - Maven 3.9+
@@ -275,7 +379,7 @@ The Next.js frontend forwards requests through `/api/admin/...`, handling sessio
 - Node.js 18+ (for the Next.js admin portal)
 - Optional Playwright dependencies (`docker/frontend.Dockerfile` installs them)
 
-### 7.2 Commands
+### 8.2 Commands
 
 ```bash
 # Bring up dependencies (MySQL, etc.)
@@ -292,7 +396,7 @@ To use the embedded H2 profile: `SPRING_PROFILES_ACTIVE=h2 mvn spring-boot:run`.
 
 ---
 
-## 8. Monitoring & Troubleshooting
+## 9. Monitoring & Troubleshooting
 
 - Scheduler logs use the `job-enrich-` thread prefix; enable `logging.level.com.vibe.jobs=DEBUG` for verbose output.
 - `crawler_run_log` stores each blueprint execution (duration, success flag, error message).
@@ -304,7 +408,7 @@ To use the embedded H2 profile: `SPRING_PROFILES_ACTIVE=h2 mvn spring-boot:run`.
 
 ---
 
-## 9. References
+## 10. References
 
 - [DATA-SOURCES.md](DATA-SOURCES.md) — provider-specific configuration
 - `designdocs/` — design notes (crawler architecture, daily enrichment automation, etc.)

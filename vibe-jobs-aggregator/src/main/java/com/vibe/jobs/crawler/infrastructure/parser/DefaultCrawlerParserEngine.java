@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -90,6 +91,11 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             return new EnhancedJobResult(job, job.description());
         }
 
+        if (!isTargetLocation(job.location())) {
+            log.info("Skipping detail fetch for non-target location '{}'", job.location());
+            return new EnhancedJobResult(job, job.description());
+        }
+
         try {
             // 构建详情URL
             String detailUrl = buildDetailUrl(job, detailConfig);
@@ -112,19 +118,23 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             String detailContent = parseDetailContent(pageContent, detailConfig, detailUrl != null ? detailUrl : job.url());
             detailContent = stripRedundantHeader(job, detailContent);
 
-            // 尝试提取更好的职位编号
+            // 尝试提取更好的职位编号/标题/地点
             String betterJobId = extractJobId(pageContent, job.externalId(), detailConfig);
-            
-            // 创建增强后的职位信息
+            String detailedTitle = extractDetailTitle(pageContent);
+            String detailedLocation = extractDetailLocation(pageContent);
+
+            String finalExternalId = betterJobId;
+            String finalTitle = isMeaningfulText(detailedTitle) ? detailedTitle : job.title();
+            String finalLocation = isMeaningfulText(detailedLocation) ? detailedLocation : job.location();
+
             ParsedJob enhancedJob = job;
-            if (!betterJobId.equals(job.externalId())) {
-                log.info("Updated external ID from '{}' to '{}' for job '{}'", 
-                         job.externalId(), betterJobId, job.title());
+            if (!finalExternalId.equals(job.externalId()) || !finalTitle.equals(job.title()) || !finalLocation.equals(job.location())) {
+                log.info("Updated fields for job '{}': id='{}', title='{}', location='{}'", job.title(), finalExternalId, finalTitle, finalLocation);
                 enhancedJob = new ParsedJob(
-                    betterJobId,  // 使用更好的职位编号
-                    job.title(),
-                    job.company(), 
-                    job.location(),
+                    finalExternalId,
+                    finalTitle,
+                    job.company(),
+                    finalLocation,
                     job.url(),
                     job.level(),
                     job.postedAt(),
@@ -152,6 +162,51 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
      * 增强职位结果的包装类
      */
     private record EnhancedJobResult(ParsedJob job, String description) {
+    }
+
+    private String normalizeText(String text) {
+        return text == null ? null : text.replaceAll("[\\s\\u00A0]+", " ").trim();
+    }
+
+    private boolean isMeaningfulText(String text) {
+        if (text == null) {
+            return false;
+        }
+        String normalized = text.replaceAll("[\\s\\u00A0]+", " ").trim();
+        if (normalized.length() < 3) {
+            return false;
+        }
+        boolean hasLetterOrDigit = normalized.codePoints()
+                .anyMatch(ch -> Character.isLetterOrDigit(ch));
+        return hasLetterOrDigit;
+    }
+
+    private boolean isTargetLocation(String location) {
+        if (location == null) {
+            return false;
+        }
+        String normalized = location.toLowerCase();
+        String[] keywords = {
+                "china",
+                "中国",
+                "beijing",
+                "北京",
+                "shanghai",
+                "上海",
+                "shenzhen",
+                "深圳",
+                "hangzhou",
+                "杭州",
+                "hong kong",
+                "香港",
+                "singapore"
+        };
+        for (String keyword : keywords) {
+            if (normalized.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String resolveSourceName(CrawlContext context) {
@@ -209,11 +264,18 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
             return urlPart;
         }
         
-        // 拼接baseUrl和urlPart
-        String cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        String cleanUrlPart = urlPart.startsWith("/") ? urlPart : "/" + urlPart;
-        
-        return cleanBaseUrl + cleanUrlPart;
+        try {
+            java.net.URI baseUri = new java.net.URI(baseUrl);
+            if (urlPart.startsWith("/")) {
+                return baseUri.resolve(urlPart).toString();
+            }
+            if (!urlPart.startsWith("http://") && !urlPart.startsWith("https://")) {
+                return baseUri.resolve("/" + urlPart).toString();
+            }
+            return urlPart;
+        } catch (Exception ex) {
+            return baseUrl + (urlPart.startsWith("/") ? urlPart : "/" + urlPart);
+        }
     }
 
     /**
@@ -515,6 +577,67 @@ public class DefaultCrawlerParserEngine implements CrawlerParserEngine {
         }
         
         return fallbackExternalId; // 回退到原始值
+    }
+
+    private String extractDetailTitle(String pageContent) {
+        try {
+            Document doc = Jsoup.parse(pageContent);
+            Element metaOg = doc.selectFirst("meta[property=og:title]");
+            if (metaOg != null) {
+                String content = normalizeText(metaOg.attr("content"));
+                if (isMeaningfulText(content)) {
+                    return content;
+                }
+            }
+            Element twitter = doc.selectFirst("meta[name=twitter:title]");
+            if (twitter != null) {
+                String content = normalizeText(twitter.attr("content"));
+                if (isMeaningfulText(content)) {
+                    return content;
+                }
+            }
+            Element h1 = doc.selectFirst("h1, h1 span");
+            if (h1 != null) {
+                String text = normalizeText(h1.text());
+                if (isMeaningfulText(text)) {
+                    return text;
+                }
+            }
+            Element automation = doc.selectFirst("[data-automation-id=jobTitle]");
+            if (automation != null) {
+                String text = normalizeText(automation.text());
+                if (isMeaningfulText(text)) {
+                    return text;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private String extractDetailLocation(String pageContent) {
+        try {
+            Document doc = Jsoup.parse(pageContent);
+            String[] selectors = {
+                    "[data-automation-id=jobLocation]",
+                    "[data-test=jobLocation]",
+                    ".job-location",
+                    "[class*='job-location']",
+                    "[data-automation-id=job-location]",
+                    "[data-automation-id=job-hero-location]"
+            };
+            for (String selector : selectors) {
+                Element element = doc.selectFirst(selector);
+                if (element != null) {
+                    String text = normalizeText(element.text());
+                    if (isMeaningfulText(text)) {
+                        return text;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     /**
