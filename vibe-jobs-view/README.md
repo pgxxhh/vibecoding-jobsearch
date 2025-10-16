@@ -43,13 +43,13 @@ The front-end relies on the Vibe Jobs Java backend for search, enrichment, and a
 ```mermaid
 flowchart LR
   Admin[Operations team] --> AdminUI["Admin UI\napp/(admin)"]
-  AdminUI --> AdminAPI[/api/admin/*]
+  AdminUI --> AdminAPI["API route: /api/admin"]
   AdminAPI --> Backend[Java backend]
   Backend --> Scheduler[Ingestion scheduler]
   Scheduler --> Store[(Job store/Search index)]
   Store --> Backend
-  Backend --> JobsAPI[/api/jobs]
-  Backend --> DetailAPI[/api/jobs/:id/detail]
+  Backend --> JobsAPI["API route: /api/jobs"]
+  Backend --> DetailAPI["API route: /api/jobs/:id/detail"]
   JobsAPI --> SiteUI["Job seeker UI\napp/(site)/page.tsx"]
   DetailAPI --> SiteUI
   SiteUI --> Candidate[Job seeker]
