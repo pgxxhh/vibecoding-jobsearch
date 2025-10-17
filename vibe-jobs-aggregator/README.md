@@ -1,5 +1,7 @@
 # Vibe Jobs Aggregator
 
+[阅读中文文档 🇨🇳](README.zh-CN.md)
+
 Backend service (Spring Boot 3 / Java 17) that centralises job postings from multiple external platforms, enriches them, and exposes the data to downstream consumers and the admin portal. This document provides a high-level technical overview of the codebase, focusing on the domain model, ingestion pipeline, and operational tooling.
 
 ---
