@@ -1,4 +1,4 @@
-package com.vibe.jobs.security;
+package com.vibe.jobs.shared.infrastructure.security;
 
 import org.junit.jupiter.api.Test;
 

@@ -2,8 +2,8 @@ package com.vibe.jobs.admin.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vibe.jobs.admin.infrastructure.jpa.AdminChangeLogEntity;
-import com.vibe.jobs.admin.infrastructure.jpa.SpringDataAdminChangeLogRepository;
+import com.vibe.jobs.admin.domain.AdminChangeLogEntry;
+import com.vibe.jobs.admin.domain.AdminChangeLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,10 +15,10 @@ public class AdminChangeLogService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminChangeLogService.class);
 
-    private final SpringDataAdminChangeLogRepository repository;
+    private final AdminChangeLogRepository repository;
     private final ObjectMapper objectMapper;
 
-    public AdminChangeLogService(SpringDataAdminChangeLogRepository repository, ObjectMapper objectMapper) {
+    public AdminChangeLogService(AdminChangeLogRepository repository, ObjectMapper objectMapper) {
         this.repository = repository;
         this.objectMapper = objectMapper;
     }
@@ -31,13 +31,14 @@ public class AdminChangeLogService {
         if (actorEmail == null || actorEmail.isBlank()) {
             return;
         }
-        AdminChangeLogEntity entity = new AdminChangeLogEntity();
-        entity.setActorEmail(actorEmail);
-        entity.setAction(action == null ? "UNKNOWN" : action);
-        entity.setResourceType(resourceType == null ? "UNKNOWN" : resourceType);
-        entity.setResourceId(resourceId);
-        entity.setDiffJson(serialize(diff));
-        repository.save(entity);
+        AdminChangeLogEntry entry = new AdminChangeLogEntry(
+                actorEmail,
+                action == null ? "UNKNOWN" : action,
+                resourceType == null ? "UNKNOWN" : resourceType,
+                resourceId,
+                serialize(diff)
+        );
+        repository.save(entry);
     }
 
     private String serialize(Object diff) {

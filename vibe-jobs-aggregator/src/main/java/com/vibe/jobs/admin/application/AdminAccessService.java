@@ -1,14 +1,14 @@
 package com.vibe.jobs.admin.application;
 
-import com.vibe.jobs.admin.infrastructure.jpa.SpringDataAdminAllowedEmailRepository;
+import com.vibe.jobs.admin.domain.AdminAllowedEmailRepository;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AdminAccessService {
 
-    private final SpringDataAdminAllowedEmailRepository repository;
+    private final AdminAllowedEmailRepository repository;
 
-    public AdminAccessService(SpringDataAdminAllowedEmailRepository repository) {
+    public AdminAccessService(AdminAllowedEmailRepository repository) {
         this.repository = repository;
     }
 
@@ -16,6 +16,6 @@ public class AdminAccessService {
         if (email == null || email.isBlank()) {
             return false;
         }
-        return repository.existsById(email.trim().toLowerCase());
+        return repository.exists(email.trim().toLowerCase());
     }
 }
