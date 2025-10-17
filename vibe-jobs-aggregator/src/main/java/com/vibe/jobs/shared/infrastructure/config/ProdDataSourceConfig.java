@@ -1,6 +1,6 @@
 package com.vibe.jobs.shared.infrastructure.config;
 
-import com.vibe.jobs.security.AesEncryptionService;
+import com.vibe.jobs.shared.infrastructure.security.AesEncryptionService;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -61,4 +61,3 @@ public class ProdDataSourceConfig {
         return value;
     }
 }
-
