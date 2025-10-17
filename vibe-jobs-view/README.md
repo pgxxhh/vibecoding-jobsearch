@@ -1,5 +1,7 @@
 # Vibe Jobs View
 
+[阅读中文文档 🇨🇳](README.zh-CN.md)
+
 Vibe Jobs View is the Next.js front-end for the Vibe Jobs talent intelligence platform. It focuses on job discovery, AI-enriched job detail rendering, and an operations console for controlling data ingestion pipelines.
 
 ## Table of contents
