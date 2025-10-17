@@ -2,7 +2,7 @@ package com.vibe.jobs.admin.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 
 import java.time.Instant;
 import java.util.ArrayList;

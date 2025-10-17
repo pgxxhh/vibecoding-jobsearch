@@ -1,10 +1,10 @@
 package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
-import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
-import com.vibe.jobs.domain.Job;
-import com.vibe.jobs.sources.FetchedJob;
+import com.vibe.jobs.jobposting.domain.Job;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

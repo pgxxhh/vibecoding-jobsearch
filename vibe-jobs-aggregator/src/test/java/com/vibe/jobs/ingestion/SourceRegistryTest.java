@@ -4,9 +4,9 @@ import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.domain.JobDataSource.CategoryQuotaDefinition;
 import com.vibe.jobs.datasource.domain.JobDataSource.DataSourceCompany;
-import com.vibe.jobs.sources.FetchedJob;
-import com.vibe.jobs.sources.SourceClient;
-import com.vibe.jobs.sources.SourceClientFactory;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClient;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClientFactory;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

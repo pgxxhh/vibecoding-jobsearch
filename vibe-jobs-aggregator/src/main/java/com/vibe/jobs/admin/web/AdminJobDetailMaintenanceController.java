@@ -1,6 +1,6 @@
 package com.vibe.jobs.admin.web;
 
-import com.vibe.jobs.service.JobDetailMaintenanceService;
+import com.vibe.jobs.jobposting.application.JobDetailMaintenanceService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

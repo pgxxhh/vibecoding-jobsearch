@@ -6,7 +6,7 @@ import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.admin.domain.event.IngestionSettingsUpdatedEvent;
 import com.vibe.jobs.admin.infrastructure.jpa.IngestionSettingsEntity;
 import com.vibe.jobs.admin.infrastructure.jpa.SpringDataIngestionSettingsRepository;
-import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;

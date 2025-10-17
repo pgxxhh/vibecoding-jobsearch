@@ -35,5 +35,5 @@ jobs:
 # 日志配置
 logging:
   level:
-    com.vibe.jobs.service.enrichment: DEBUG
+    com.vibe.jobs.jobposting.application.enrichment: DEBUG
     root: WARN
