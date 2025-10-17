@@ -4,8 +4,8 @@
 
 ### 后端实施 ✅
 - [x] **TimeZoneConfig配置类**：确保JVM使用UTC时区，配置Jackson序列化
-- [x] **测试端点**：`/api/debug/timezone` 验证后端时区配置
 - [x] **API响应格式**：返回标准ISO 8601格式UTC时间
+- ~~**测试端点**：`/api/debug/timezone`~~ （部署验证后已移除，避免暴露调试接口）
 
 ### 前端实施 ✅  
 - [x] **时区配置**：`lib/timezone-config.ts` 统一管理时区设置
@@ -65,10 +65,9 @@ const searchParams = {
 ## 🧪 验证测试
 
 ### 1. 后端验证
-```bash
-curl http://localhost:8080/api/debug/timezone
-# 预期：返回UTC格式时间和systemTimezone: "UTC"
-```
+`TimeZoneConfig` 在启动时强制 JVM 默认时区为 UTC。可通过以下方式验证：
+- 启动后在调试控制台执行 `TimeZone.getDefault()`，应返回 `UTC`
+- 观察 API 返回的时间是否为 `...Z` 结尾的 ISO 8601 字符串
 
 ### 2. 前端验证
 访问：http://localhost:3001/test-timezone
@@ -87,7 +86,6 @@ cd vibe-jobs-view && npm test time-utils.test.ts
 ```
 vibe-jobs-aggregator/
 ├── src/main/java/com/vibe/jobs/config/TimeZoneConfig.java
-├── src/main/java/com/vibe/jobs/jobposting/interfaces/rest/TimeZoneTestController.java
 └── docs/
     ├── timezone-handling-solution-v2.md
     ├── timezone-implementation-guide-v2.md
