@@ -1,53 +1,93 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+
 import DataSourceBulkUpload from '@/modules/admin/components/DataSourceBulkUpload';
+import { useDataSources } from '@/modules/admin/hooks/useDataSources';
+import type { DataSourcePayload, DataSourceResponse } from '@/modules/admin/types';
 
-interface CategoryQuotaDefinition {
-  name: string;
-  limit: number;
-  tags: string[];
-  facets: Record<string, string[]>;
-}
-
-interface DataSourceCompany {
-  id: number | null;
-  reference: string;
-  displayName: string;
-  slug: string;
-  enabled: boolean;
-  placeholderOverrides: Record<string, string>;
-  overrideOptions: Record<string, string>;
-}
-
-interface DataSourceResponse {
-  id: number;
+export interface DataSourceFormState {
   code: string;
   type: string;
   enabled: boolean;
   runOnStartup: boolean;
   requireOverride: boolean;
   flow: 'LIMITED' | 'UNLIMITED';
-  baseOptions: Record<string, string>;
-  categories: CategoryQuotaDefinition[];
-  companies: DataSourceCompany[];
+  baseOptionsJson: string;
+  categoriesJson: string;
+  companiesJson: string;
 }
 
-async function fetchDataSources(): Promise<DataSourceResponse[]> {
-  const res = await fetch('/api/admin/data-sources', { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('无法获取数据源列表');
+export function buildDataSourcePayload(form: DataSourceFormState): DataSourcePayload {
+  const baseOptions = form.baseOptionsJson.trim()
+    ? (JSON.parse(form.baseOptionsJson) as DataSourcePayload['baseOptions'])
+    : {};
+  const categories = form.categoriesJson.trim()
+    ? (JSON.parse(form.categoriesJson) as DataSourcePayload['categories'])
+    : [];
+  const companies = form.companiesJson.trim()
+    ? (JSON.parse(form.companiesJson) as DataSourcePayload['companies'])
+    : [];
+
+  if (!form.code) {
+    throw new Error('Code 不能为空');
   }
-  return res.json();
+  if (!form.type) {
+    throw new Error('Type 不能为空');
+  }
+
+  return {
+    code: form.code,
+    type: form.type,
+    enabled: form.enabled,
+    runOnStartup: form.runOnStartup,
+    requireOverride: form.requireOverride,
+    flow: form.flow,
+    baseOptions,
+    categories,
+    companies,
+  };
+}
+
+export function submitDataSourceForm(
+  form: DataSourceFormState,
+  options: {
+    id: number | 'new' | null;
+    mutate: ReturnType<typeof useDataSources>['save']['mutate'];
+    onSuccess: () => void;
+    onError: (err: unknown) => void;
+  },
+) {
+  const payload = buildDataSourcePayload(form);
+  options.mutate(
+    { payload, id: options.id },
+    {
+      onSuccess: options.onSuccess,
+      onError: options.onError,
+    },
+  );
+}
+
+export function removeDataSourceById(
+  id: number,
+  options: {
+    mutate: ReturnType<typeof useDataSources>['remove']['mutate'];
+    onSuccess: () => void;
+    onError: (err: unknown) => void;
+  },
+) {
+  options.mutate(id, {
+    onSuccess: options.onSuccess,
+    onError: options.onError,
+  });
 }
 
 export default function DataSourcesPage() {
-  const queryClient = useQueryClient();
-  const { data, isLoading, isError, error } = useQuery({ queryKey: ['admin', 'data-sources'], queryFn: fetchDataSources });
+  const { list, save, remove } = useDataSources();
+  const { data, isLoading, isError, error } = list;
   const [selectedId, setSelectedId] = useState<number | 'new' | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<DataSourceFormState>({
     code: '',
     type: '',
     enabled: true,
@@ -100,78 +140,22 @@ export default function DataSourcesPage() {
     }
   }, [selectedId, selectedSource]);
 
-  const saveMutation = useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
-      const isNew = selectedId === 'new';
-      const url = isNew ? '/api/admin/data-sources' : `/api/admin/data-sources?id=${selectedId}`;
-      const method = isNew ? 'POST' : 'PUT';
-      const res = await fetch(url, {
-        method,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || '保存失败');
-      }
-      return res.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-sources'] });
-      setMessage('数据源已保存');
-      setErrorMsg(null);
-      setSelectedId(null);
-    },
-    onError: (err: unknown) => {
-      setMessage(null);
-      setErrorMsg(err instanceof Error ? err.message : '保存失败');
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`/api/admin/data-sources?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || '删除失败');
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'data-sources'] });
-      setSelectedId(null);
-      setMessage('数据源已删除');
-      setErrorMsg(null);
-    },
-    onError: (err: unknown) => {
-      setMessage(null);
-      setErrorMsg(err instanceof Error ? err.message : '删除失败');
-    },
-  });
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      const baseOptions = form.baseOptionsJson.trim() ? JSON.parse(form.baseOptionsJson) : {};
-      const categories = form.categoriesJson.trim() ? JSON.parse(form.categoriesJson) : [];
-      const companies = form.companiesJson.trim() ? JSON.parse(form.companiesJson) : [];
-      if (!form.code) {
-        throw new Error('Code 不能为空');
-      }
-      if (!form.type) {
-        throw new Error('Type 不能为空');
-      }
-      const payload = {
-        code: form.code,
-        type: form.type,
-        enabled: form.enabled,
-        runOnStartup: form.runOnStartup,
-        requireOverride: form.requireOverride,
-        flow: form.flow,
-        baseOptions,
-        categories,
-        companies,
-      };
-      saveMutation.mutate(payload);
+      submitDataSourceForm(form, {
+        id: selectedId,
+        mutate: save.mutate,
+        onSuccess: () => {
+          setMessage('数据源已保存');
+          setErrorMsg(null);
+          setSelectedId(null);
+        },
+        onError: (err: unknown) => {
+          setMessage(null);
+          setErrorMsg(err instanceof Error ? err.message : '保存失败');
+        },
+      });
     } catch (err) {
       setMessage(null);
       setErrorMsg(err instanceof Error ? err.message : '无法解析 JSON');
@@ -391,7 +375,7 @@ export default function DataSourcesPage() {
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="submit"
-                  disabled={saveMutation.isPending}
+                  disabled={save.isPending}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 h-10 px-6 text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
                 >
                   {saveMutation.isPending ? '保存中...' : '💾 保存'}
@@ -399,7 +383,22 @@ export default function DataSourcesPage() {
                 {selectedId !== 'new' && selectedId !== null && (
                   <button
                     type="button"
-                    onClick={() => selectedId && typeof selectedId === 'number' && deleteMutation.mutate(selectedId)}
+                    onClick={() =>
+                      selectedId &&
+                      typeof selectedId === 'number' &&
+                      removeDataSourceById(selectedId, {
+                        mutate: remove.mutate,
+                        onSuccess: () => {
+                          setSelectedId(null);
+                          setMessage('数据源已删除');
+                          setErrorMsg(null);
+                        },
+                        onError: (err: unknown) => {
+                          setMessage(null);
+                          setErrorMsg(err instanceof Error ? err.message : '删除失败');
+                        },
+                      })
+                    }
                     className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] h-10 px-6 text-sm bg-rose-600 text-white hover:bg-rose-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/30"
                   >
                     🗑️ 删除
