@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LoginStepEmail from '@/modules/auth/components/LoginStepEmail';
 import LoginStepVerify from '@/modules/auth/components/LoginStepVerify';
-import { useAuth } from '@/shared/lib/auth';
+import { useAuth } from '@/modules/auth/hooks/useAuth';
 
 export type LoginStep = 'email' | 'verify';
 
