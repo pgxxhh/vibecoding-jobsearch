@@ -1,82 +1,21 @@
 'use client';
-import { useQuery } from '@tanstack/react-query';
 import JobDetail from '@/modules/job-search/components/JobDetail';
 import JobCardNew from '@/modules/job-search/components/JobCardNew';
-import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/modules/job-search/utils/jobs-normalization';
-import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/modules/job-search/types';
-import { joinApiPath } from '@/shared/lib/api-base';
+import { useJobDetail } from '@/modules/job-search/hooks/useJobDetail';
+import { useJobList, type JobListFilters } from '@/modules/job-search/hooks/useJobList';
+import type { Job } from '@/modules/job-search/types';
 import { useI18n } from '@/shared/lib/i18n';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/shared/ui';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-
-async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
-  const qs = new URLSearchParams(
-    Object.entries(params).filter(([, v]) => v !== '' && v !== undefined && v !== null) as any,
-  );
-  const res = await fetch(`${joinApiPath('jobs')}?${qs.toString()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch jobs');
-  const data = await res.json();
-  const items = Array.isArray(data?.items) ? data.items.map(normalizeJobFromApi) : [];
-  const rawTotal = data?.total;
-  let total: number | null = null;
-  if (typeof rawTotal === 'number') {
-    total = Number.isFinite(rawTotal) && rawTotal >= 0 ? rawTotal : null;
-  } else if (typeof rawTotal === 'string' && rawTotal.trim() !== '') {
-    const parsed = Number(rawTotal);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      total = parsed;
-    }
-  }
-  return {
-    items,
-    total,
-    nextCursor: typeof data?.nextCursor === 'string' ? data.nextCursor : null,
-    hasMore: Boolean(data?.hasMore),
-    size: Number.isFinite(Number(data?.size)) ? Number(data.size) : items.length,
-  };
-}
-
-async function fetchJobDetail(id: string): Promise<JobDetailData> {
-  const res = await fetch(joinApiPath(`jobs/${id}/detail`), { cache: 'no-store' });
-  if (!res.ok) throw new Error('Failed to fetch job detail');
-  const detail = await res.json();
-  return normalizeJobDetailFromApi(detail, id);
-}
-
-const PAGE_SIZE = 10;
-const DATE_FILTER_SIZE_MULTIPLIER = 5;
-
-function computeDateCutoff(daysValue: string): number | null {
-  const days = Number(daysValue);
-  if (!Number.isFinite(days) || days <= 0) return null;
-  return Date.now() - days * 24 * 60 * 60 * 1000;
-}
-
-function filterJobsByDate(items: Job[], cutoff: number | null): Job[] {
-  if (!cutoff) return items;
-  return items.filter(item => {
-    const postedAtMillis = new Date(item.postedAt).getTime();
-    return Number.isFinite(postedAtMillis) && postedAtMillis >= cutoff;
-  });
-}
-
-function encodeCursorValue(postedAt: string, id: string | number): string | null {
-  const postedAtMillis = new Date(postedAt).getTime();
-  const numericId = Number(id);
-  if (!Number.isFinite(postedAtMillis) || !Number.isFinite(numericId)) {
-    return null;
-  }
-  const payload = `${postedAtMillis}:${numericId}`;
-  if (typeof window === 'undefined' || typeof window.btoa !== 'function') {
-    return null;
-  }
-  try {
-    const base64 = window.btoa(payload);
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  } catch {
-    return null;
-  }
-}
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
 
 function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: boolean; onConfirm: () => void; onCancel: () => void; params: Record<string, any> }) {
   const { t } = useI18n();
@@ -132,8 +71,8 @@ function FilterDrawer({
 }: {
   visible: boolean;
   onClose: () => void;
-  filters: any;
-  setFilters: (f: any) => void;
+  filters: JobListFilters;
+  setFilters: Dispatch<SetStateAction<JobListFilters>>;
   onApply: () => void;
 }) {
   const { t } = useI18n();
@@ -263,7 +202,13 @@ export default function Page() {
   const { t } = useI18n();
   const [q, setQ] = useState('');
   const [location, setLocation] = useState('');
-  const [filters, setFilters] = useState({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
+  const [filters, setFilters] = useState<JobListFilters>({
+    company: '',
+    level: '',
+    remote: '',
+    salaryMin: '',
+    datePosted: '',
+  });
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   // const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   // const hasPromptedSubscription = useRef(false);
@@ -311,15 +256,51 @@ export default function Page() {
     [t],
   );
 
-  // 列表数据和分页状态
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-
   // 列表区域ref和底部检测ref
   const listRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  const handleJobListReset = useCallback(
+    (items: Job[]) => {
+      if (items.length === 0) {
+        setSelectedJob(null);
+        if (isMobile) {
+          setIsMobileDetailOpen(false);
+        }
+        return;
+      }
+
+      setSelectedJob((previous) => {
+        if (isMobile && previous) {
+          const stillExists = items.some((item) => item.id === previous.id);
+          if (stillExists) {
+            return previous;
+          }
+        }
+        return items[0];
+      });
+
+      if (isMobile) {
+        setIsMobileDetailOpen(false);
+      }
+    },
+    [isMobile],
+  );
+
+  const {
+    jobs,
+    hasMore,
+    isLoading: isListLoading,
+    isInitialLoading,
+    refresh,
+    loadMore,
+    nextCursor,
+  } = useJobList({
+    query: q,
+    location,
+    filters,
+    onReset: handleJobListReset,
+  });
 
   // 使用 Intersection Observer 检测底部元素
   useEffect(() => {
@@ -332,8 +313,8 @@ export default function Page() {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting && hasMore && !loading && nextCursor) {
-          loadJobs(nextCursor, false);
+        if (entry.isIntersecting && hasMore && !isListLoading && nextCursor) {
+          loadMore();
         }
       },
       {
@@ -348,7 +329,7 @@ export default function Page() {
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, loading, nextCursor, jobs.length, isMobile]);
+  }, [hasMore, isListLoading, nextCursor, jobs.length, isMobile, loadMore]);
 
 
   // 过滤计数
@@ -366,116 +347,25 @@ export default function Page() {
   //   [q, location, filters],
   // );
 
-  const selectedJobId = selectedJob?.id;
-
   const {
-    data: jobDetail,
+    job: combinedSelectedJob,
     isLoading: isDetailLoading,
     isError: isDetailError,
     isFetching: isDetailFetching,
     refetch: refetchJobDetail,
-  } = useQuery<JobDetailData>({
-    queryKey: ['job-detail', selectedJobId],
-    queryFn: () => fetchJobDetail(selectedJobId as string),
-    enabled: !!selectedJobId,
-  });
-
-  const combinedSelectedJob = useMemo<Job | null>(() => {
-    if (!selectedJob) return null;
-    if (!jobDetail) return selectedJob;
-    const baseSkills = Array.isArray(selectedJob.skills) ? selectedJob.skills : [];
-    const detailSkills = Array.isArray(jobDetail.skills) ? jobDetail.skills : [];
-    const baseHighlights = Array.isArray(selectedJob.highlights) ? selectedJob.highlights : [];
-    const detailHighlights = Array.isArray(jobDetail.highlights) ? jobDetail.highlights : [];
-    return {
-      ...selectedJob,
-      ...jobDetail,
-      content: jobDetail.content ?? selectedJob.content,
-      summary: jobDetail.summary ?? selectedJob.summary,
-      skills: detailSkills.length > 0 ? detailSkills : baseSkills,
-      highlights: detailHighlights.length > 0 ? detailHighlights : baseHighlights,
-      structuredData: jobDetail.structuredData ?? selectedJob.structuredData,
-    };
-  }, [selectedJob, jobDetail]);
-
-  // 加载数据
-  const loadJobs = async (cursor?: string, reset = false) => {
-    setLoading(true);
-    try {
-      const baseParams: Record<string, any> = { q, location, ...filters };
-      if (q.trim()) {
-        baseParams.searchDetail = true;
-      }
-      const cutoff = computeDateCutoff(filters.datePosted);
-      const isDateFilterActive = cutoff !== null;
-      const requestedSize = PAGE_SIZE * (isDateFilterActive ? DATE_FILTER_SIZE_MULTIPLIER : 1);
-      const paramsForFetch: Record<string, any> = {
-        ...baseParams,
-        size: requestedSize,
-      };
-      if (cursor) paramsForFetch.cursor = cursor;
-
-      const response = await fetchJobs(paramsForFetch);
-
-      const rawItems = (response.items ?? []).filter((item): item is Job => Boolean(item));
-      const filteredItems = isDateFilterActive ? filterJobsByDate(rawItems, cutoff) : rawItems;
-      const pageItems = filteredItems.slice(0, PAGE_SIZE);
-
-      let nextCursorValue: string | null = null;
-
-      const remainingFiltered = filteredItems.length - pageItems.length;
-      if (remainingFiltered > 0 && pageItems.length > 0) {
-        const lastItem = pageItems[pageItems.length - 1];
-        const encoded = encodeCursorValue(lastItem.postedAt, lastItem.id);
-        nextCursorValue = encoded ?? response.nextCursor ?? null;
-      } else if (response.nextCursor) {
-        nextCursorValue = response.nextCursor;
-      }
-
-      const hasMore = Boolean(nextCursorValue);
-
-      setJobs(prev => (reset ? pageItems : [...prev, ...pageItems]));
-      setNextCursor(nextCursorValue);
-      setHasMore(hasMore);
-      // 自动选中第一个
-      if (reset && pageItems.length > 0) {
-        setSelectedJob((previous) => {
-          if (isMobile && previous) {
-            const stillExists = pageItems.some((item) => item.id === previous.id);
-            if (stillExists) {
-              return previous;
-            }
-          }
-          return pageItems[0];
-        });
-        if (isMobile) {
-          setIsMobileDetailOpen(false);
-        }
-      }
-    } catch (e) {
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 首次和筛选/搜索时重置列表
-  useEffect(() => {
-    loadJobs(undefined, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, location, filters]);
+  } = useJobDetail(selectedJob);
 
   // 滚动加载 - 支持桌面和移动端
   const handleScroll = () => {
     const el = listRef.current;
-    if (!el || loading || !hasMore || !nextCursor) return;
+    if (!el || isListLoading || !hasMore || !nextCursor) return;
     const threshold = 100; // 增加阈值，提高移动端触发灵敏度
     const scrollPosition = el.scrollTop + el.clientHeight;
     const scrollHeight = el.scrollHeight;
-    
+
     if (scrollHeight - scrollPosition < threshold) {
       // 只追加，不重置
-      loadJobs(nextCursor, false);
+      loadMore();
     }
   };
 
@@ -507,7 +397,7 @@ export default function Page() {
     if (pullDistance > 50 && !isRefreshing) { // 下拉超过50px触发刷新
       setIsRefreshing(true);
       try {
-        await loadJobs(undefined, true); // 重新加载列表
+        await refresh(); // 重新加载列表
       } finally {
         setIsRefreshing(false);
       }
@@ -539,13 +429,13 @@ export default function Page() {
   }, [scrollTimer]);
 
   const skeletonPlaceholders = Array.from({ length: 4 });
-  const isInitialLoading = loading && jobs.length === 0;
 
   // 搜索/重置/筛选
   const handleReset = () => {
     setQ('');
     setLocation('');
     setFilters({ company: '', level: '', remote: '', salaryMin: '', datePosted: '' });
+    refresh();
   };
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -555,9 +445,9 @@ export default function Page() {
     //   setSubscriptionTrigger('search');
     //   hasPromptedSubscription.current = true;
     // } else {
-    //   loadJobs(undefined, true);
+    //   refresh();
     // }
-    loadJobs(undefined, true);
+    refresh();
   };
 
   // const handleConfirmSubscription = async () => {
@@ -568,18 +458,18 @@ export default function Page() {
   //     headers: { 'Content-Type': 'application/json' },
   //     body: JSON.stringify(subscriptionParams),
   //   });
-  //   loadJobs(undefined, true);
+  //   refresh();
   // };
 
   // const handleCancelSubscription = () => {
   //   setShowSubscriptionModal(false);
   //   setSubscriptionTrigger(null);
-  //   if (subscriptionTrigger === 'search') loadJobs(undefined, true);
+  //   if (subscriptionTrigger === 'search') refresh();
   // };
 
   const handleApplyFilters = () => {
     setShowFilterDrawer(false);
-    loadJobs(undefined, true);
+    refresh();
   };
 
   return (
@@ -587,14 +477,14 @@ export default function Page() {
       <HeroSection
         q={q}
         setQ={setQ}
-      location={location}
-      setLocation={setLocation}
-      onSearch={handleSearch}
-      onReset={handleReset}
-      onShowFilter={() => setShowFilterDrawer(true)}
-      activeFilterCount={activeFilterCount}
-      isSearching={loading}
-    />
+        location={location}
+        setLocation={setLocation}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        onShowFilter={() => setShowFilterDrawer(true)}
+        activeFilterCount={activeFilterCount}
+        isSearching={isListLoading}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
@@ -678,7 +568,7 @@ export default function Page() {
               </div>
             )}
             {/* 加载更多指示器和观察器元素 */}
-            {loading && jobs.length > 0 && (
+            {isListLoading && jobs.length > 0 && (
               <div className="flex justify-center mt-6">
                 <Skeleton className="h-8 w-32" />
               </div>
