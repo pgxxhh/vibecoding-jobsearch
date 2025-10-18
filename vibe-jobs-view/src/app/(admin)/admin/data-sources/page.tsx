@@ -378,7 +378,7 @@ export default function DataSourcesPage() {
                   disabled={save.isPending}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 h-10 px-6 text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
                 >
-                  {saveMutation.isPending ? '保存中...' : '💾 保存'}
+                  {save.isPending ? '保存中...' : '💾 保存'}
                 </button>
                 {selectedId !== 'new' && selectedId !== null && (
                   <button
