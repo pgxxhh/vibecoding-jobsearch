@@ -2,37 +2,12 @@
 
 import { useState, useRef, FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-interface DataSourcePayload {
-  code: string;
-  type: string;
-  enabled: boolean;
-  runOnStartup: boolean;
-  requireOverride: boolean;
-  flow: 'LIMITED' | 'UNLIMITED';
-  baseOptions: Record<string, any>;
-  categories: any[];
-  companies: any[];
-}
+import { bulkUploadDataSources } from '@/modules/admin/services/dataSourcesService';
+import type { DataSourcePayload } from '@/modules/admin/types';
 
 interface BulkUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-async function uploadBulkDataSources(dataSources: DataSourcePayload[]): Promise<any> {
-  const res = await fetch('/api/admin/data-sources/bulk', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataSources }),
-  });
-  
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || '批量上传失败');
-  }
-  
-  return res.json();
 }
 
 export default function DataSourceBulkUpload({ isOpen, onClose }: BulkUploadModalProps) {
@@ -43,7 +18,7 @@ export default function DataSourceBulkUpload({ isOpen, onClose }: BulkUploadModa
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: uploadBulkDataSources,
+    mutationFn: bulkUploadDataSources,
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'data-sources'] });
       setMessage(`成功上传 ${result.success || 0} 个数据源，失败 ${result.failed || 0} 个`);

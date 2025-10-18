@@ -1,4 +1,4 @@
-import type { Job, JobDetail as JobDetailData } from '@/lib/types';
+import type { Job, JobDetail as JobDetailData } from '@/modules/job-search/types';
 
 function toRecord(value: unknown): Record<string, unknown> | undefined {
   if (value && typeof value === 'object' && !Array.isArray(value)) {

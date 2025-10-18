@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NEXT_DISABLE_FONT_DOWNLOADS=1 next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint --max-warnings=0 \"src/**/*.{js,jsx,ts,tsx}\" \"__tests__/**/*.{js,jsx,ts,tsx}\"",
+    "test": "jest"
   },
   "dependencies": {
     "@tanstack/react-query": "5.51.1",

@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Card, Badge } from '@/components/ui';
-import { cn } from '@/lib/cn';
-import { RelativeTime } from '@/components/TimeDisplay';
-import type { Job } from '@/lib/types';
+import { Card, Badge } from '@/shared/ui';
+import { cn } from '@/shared/lib/cn';
+import { RelativeTime } from '@/shared/components/TimeDisplay';
+import type { Job } from '@/modules/job-search/types';
 
 function normalizeStringList(values?: string[] | null): string[] {
   if (!values || values.length === 0) return [];

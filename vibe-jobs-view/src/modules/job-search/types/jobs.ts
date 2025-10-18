@@ -38,7 +38,7 @@ export type JobsQuery = {
   level?: string;
   size?: number;
   cursor?: string | null;
-};
+} & Record<string, string | number | boolean | null | undefined>;
 export type JobsResponse = {
   items: Job[];
   total: number | null;

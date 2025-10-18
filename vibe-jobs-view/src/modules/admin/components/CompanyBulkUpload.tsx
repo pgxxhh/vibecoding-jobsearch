@@ -2,15 +2,8 @@
 
 import { FormEvent, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-interface CompanyData {
-  reference: string;
-  displayName?: string;
-  slug?: string;
-  enabled?: boolean;
-  placeholderOverrides?: Record<string, string>;
-  overrideOptions?: Record<string, string>;
-}
+import { bulkUploadCompanies } from '@/modules/admin/services/dataSourcesService';
+import type { CompanyBulkPayload } from '@/modules/admin/types';
 
 interface BulkCompanyUploadProps {
   isOpen: boolean;
@@ -36,18 +29,7 @@ export default function CompanyBulkUpload({ isOpen, onClose, dataSourceCode }: B
   };
 
   const uploadMutation = useMutation({
-    mutationFn: async (companies: CompanyData[]) => {
-      const res = await fetch(`/api/admin/data-sources/${dataSourceCode}/companies/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companies }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Upload failed');
-      }
-      return res.json();
-    },
+    mutationFn: (companies: CompanyBulkPayload[]) => bulkUploadCompanies(dataSourceCode, companies),
     onSuccess: async (result) => {
       // Invalidate both paged and non-paged queries
       await queryClient.invalidateQueries({ queryKey: ['admin', 'data-source', dataSourceCode] });
@@ -100,7 +82,7 @@ export default function CompanyBulkUpload({ isOpen, onClose, dataSourceCode }: B
 
     try {
       // Parse JSON data
-      let companies: CompanyData[];
+      let companies: CompanyBulkPayload[];
       const parsed = JSON.parse(uploadData.trim());
       
       // Handle both single object and array

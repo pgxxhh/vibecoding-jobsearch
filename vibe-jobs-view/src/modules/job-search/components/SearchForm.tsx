@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { TimeUtils } from '@/lib/time-utils';
+import { TimeUtils } from '@/shared/lib/time-utils';
 
 interface SearchParams {
   keyword?: string;
