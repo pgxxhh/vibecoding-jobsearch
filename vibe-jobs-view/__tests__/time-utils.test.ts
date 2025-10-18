@@ -1,4 +1,4 @@
-import { TimeUtils } from '@/lib/time-utils';
+import { TimeUtils } from '@/shared/lib/time-utils';
 
 describe('TimeUtils', () => {
   describe('toLocal', () => {
