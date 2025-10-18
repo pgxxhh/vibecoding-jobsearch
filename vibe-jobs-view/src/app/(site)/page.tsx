@@ -1,11 +1,11 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import JobDetail from '@/components/JobDetail';
-import JobCardNew from '@/components/JobCardNew';
-import { Badge, Button, Card, Input, Select, Skeleton } from '@/components/ui';
-import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/lib/jobs-normalization';
-import { useI18n } from '@/lib/i18n';
-import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/lib/types';
+import JobDetail from '@/modules/job-search/components/JobDetail';
+import JobCardNew from '@/modules/job-search/components/JobCardNew';
+import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/modules/job-search/utils/jobs-normalization';
+import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/modules/job-search/types';
+import { useI18n } from '@/shared/lib/i18n';
+import { Badge, Button, Card, Input, Select, Skeleton } from '@/shared/ui';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 const API_BASE =
