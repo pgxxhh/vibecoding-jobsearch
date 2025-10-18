@@ -16,12 +16,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class JobDetailRepositoryImpl implements JobDetailRepositoryCustom {
+public class JobDetailJpaRepositoryImpl implements JobDetailJpaRepositoryCustom {
 
     private final EntityManager entityManager;
     private final boolean supportsFullText;
 
-    public JobDetailRepositoryImpl(EntityManager entityManager) {
+    public JobDetailJpaRepositoryImpl(EntityManager entityManager) {
         this.entityManager = entityManager;
         this.supportsFullText = detectFullTextSupport(entityManager);
     }

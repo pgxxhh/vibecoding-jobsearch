@@ -6,9 +6,9 @@ import com.vibe.jobs.auth.domain.EmailAddress;
 import com.vibe.jobs.auth.domain.LoginChallenge;
 import com.vibe.jobs.auth.domain.UserAccount;
 import com.vibe.jobs.auth.domain.VerificationCodeGenerator;
-import com.vibe.jobs.auth.repo.AuthSessionRepository;
-import com.vibe.jobs.auth.repo.LoginChallengeRepository;
-import com.vibe.jobs.auth.repo.UserAccountRepository;
+import com.vibe.jobs.auth.domain.spi.AuthSessionRepositoryPort;
+import com.vibe.jobs.auth.domain.spi.LoginChallengeRepositoryPort;
+import com.vibe.jobs.auth.domain.spi.UserAccountRepositoryPort;
 import com.vibe.jobs.auth.spi.EmailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,17 +32,17 @@ import java.util.UUID;
 public class EmailAuthService {
     private static final Logger log = LoggerFactory.getLogger(EmailAuthService.class);
     
-    private final LoginChallengeRepository challengeRepository;
-    private final UserAccountRepository userRepository;
-    private final AuthSessionRepository sessionRepository;
+    private final LoginChallengeRepositoryPort challengeRepository;
+    private final UserAccountRepositoryPort userRepository;
+    private final AuthSessionRepositoryPort sessionRepository;
     private final VerificationCodeGenerator codeGenerator;
     private final EmailSender emailSender;
     private final EmailAuthProperties properties;
     private final Clock clock;
 
-    public EmailAuthService(LoginChallengeRepository challengeRepository,
-                            UserAccountRepository userRepository,
-                            AuthSessionRepository sessionRepository,
+    public EmailAuthService(LoginChallengeRepositoryPort challengeRepository,
+                            UserAccountRepositoryPort userRepository,
+                            AuthSessionRepositoryPort sessionRepository,
                             VerificationCodeGenerator codeGenerator,
                             EmailSender emailSender,
                             EmailAuthProperties properties,
@@ -68,7 +68,7 @@ public class EmailAuthService {
         String codeHash = hash(code);
 
         LoginChallenge challenge = challengeRepository
-                .findTopByEmail_ValueOrderByCreatedAtDesc(email.value())
+                .findLatestByEmail(email.value())
                 .filter(existing -> !existing.isExpired(now))
                 .orElse(null);
 
@@ -129,7 +129,7 @@ public class EmailAuthService {
             throw new AuthFlowException(HttpStatus.UNAUTHORIZED, "INVALID_CODE", "The verification code is invalid or no longer valid.");
         }
 
-        UserAccount user = userRepository.findByEmail_Value(challenge.getEmail().value())
+        UserAccount user = userRepository.findByEmail(challenge.getEmail().value())
                 .orElseGet(() -> UserAccount.create(challenge.getEmail(), now));
         user.markLogin(now);
         userRepository.save(user);

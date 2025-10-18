@@ -1,72 +1,48 @@
 package com.vibe.jobs.auth.domain;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.Where;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-@Entity
-@Table(name = "auth_login_challenge", indexes = {
-        @Index(name = "idx_auth_login_challenge_email", columnList = "email"),
-        @Index(name = "idx_auth_login_challenge_deleted", columnList = "deleted")
-})
-@Where(clause = "deleted = false")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LoginChallenge {
     private static final int MAX_ATTEMPTS = 5;
 
-    @Id
-    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
-
-    @Embedded
     private EmailAddress email;
-
-    @Column(name = "code_hash", nullable = false, length = 128)
     private String codeHash;
-
-    @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
-
-    @Column(name = "last_sent_at", nullable = false)
     private Instant lastSentAt;
-
-    @Column(name = "verified", nullable = false)
     private boolean verified;
-
-    @Column(name = "attempts", nullable = false)
     private int attemptCount;
-
-    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-
-    // 软删除字段
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    protected LoginChallenge() {
-        // for JPA
-    }
-
-    private LoginChallenge(UUID id, EmailAddress email, String codeHash, Instant expiresAt, Instant lastSentAt, Instant now) {
-        this.id = id;
-        this.email = email;
-        this.codeHash = codeHash;
-        this.expiresAt = expiresAt;
-        this.lastSentAt = lastSentAt;
-        this.createdAt = now;
-        this.updatedAt = now;
-        this.verified = false;
-        this.attemptCount = 0;
-    }
+    private boolean deleted;
 
     public static LoginChallenge create(EmailAddress email, String codeHash, Instant now, Duration ttl) {
         Instant expiry = now.plus(ttl);
-        return new LoginChallenge(UUID.randomUUID(), email, codeHash, expiry, now, now);
+        return LoginChallenge.builder()
+                .id(UUID.randomUUID())
+                .email(email)
+                .codeHash(codeHash)
+                .expiresAt(expiry)
+                .lastSentAt(now)
+                .createdAt(now)
+                .updatedAt(now)
+                .verified(false)
+                .attemptCount(0)
+                .deleted(false)
+                .build();
     }
 
     public void refreshCode(String newHash, Instant now, Duration ttl) {
@@ -106,52 +82,12 @@ public class LoginChallenge {
         return true;
     }
 
-    public void delete() {
+    public void markDeleted(Instant now) {
         this.deleted = true;
-        this.updatedAt = Instant.now();
+        this.updatedAt = now;
     }
 
     public boolean isNotDeleted() {
         return !deleted;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public EmailAddress getEmail() {
-        return email;
-    }
-
-    public Instant getExpiresAt() {
-        return expiresAt;
-    }
-
-    public Instant getLastSentAt() {
-        return lastSentAt;
-    }
-
-    public boolean isVerified() {
-        return verified;
-    }
-
-    public int getAttemptCount() {
-        return attemptCount;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public boolean isDeleted() {
-        return deleted;
-    }
-
-    public void setDeleted(boolean deleted) {
-        this.deleted = deleted;
     }
 }

@@ -8,7 +8,7 @@ import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichmentStatus;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,11 +25,11 @@ public class JobDetailEnrichmentWriter {
 
     private static final Logger log = LoggerFactory.getLogger(JobDetailEnrichmentWriter.class);
 
-    private final JobDetailRepository repository;
+    private final JobDetailRepositoryPort repository;
     private final ObjectMapper objectMapper;
     private final JobDetailEnrichmentRetryStrategy retryStrategy;
 
-    public JobDetailEnrichmentWriter(JobDetailRepository repository,
+    public JobDetailEnrichmentWriter(JobDetailRepositoryPort repository,
                                      ObjectMapper objectMapper,
                                      JobDetailEnrichmentRetryStrategy retryStrategy) {
         this.repository = repository;

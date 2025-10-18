@@ -1,8 +1,5 @@
 package com.vibe.jobs.jobposting.domain;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.Where;
-
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -11,48 +8,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-@Entity
-@Table(name = "job_details", indexes = {
-        @Index(name = "idx_job_details_job_id", columnList = "job_id", unique = true),
-        @Index(name = "idx_job_details_deleted", columnList = "deleted")
-})
-@Where(clause = "deleted = false")
 public class JobDetail {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_id", nullable = false, unique = true)
     private Job job;
-
-    @Lob
-    @Column(columnDefinition = "longtext")
     private String content;
-
-    @Lob
-    @Column(name = "content_text", columnDefinition = "longtext")
     private String contentText;
-
-    @OneToMany(mappedBy = "jobDetail", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Where(clause = "deleted = 0")
     private Set<JobDetailEnrichment> enrichments = new LinkedHashSet<>();
-
-    @Column(nullable = false, columnDefinition = "timestamp")
     private Instant createdAt;
-
-    @Column(nullable = false, columnDefinition = "timestamp")
     private Instant updatedAt;
-
-    // 软删除字段
-    @Column(nullable = false)
     private boolean deleted = false;
-
-    @Column(name = "content_version", nullable = false)
     private long contentVersion = 0L;
 
-    protected JobDetail() {
+    public JobDetail() {
     }
 
     public JobDetail(Job job, String content, String contentText) {
@@ -61,29 +29,12 @@ public class JobDetail {
         this.contentText = contentText;
     }
 
-    @PrePersist
-    void onCreate() {
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
-    public void delete() {
-        this.deleted = true;
-        this.updatedAt = Instant.now();
-    }
-
-    public boolean isNotDeleted() {
-        return !deleted;
-    }
-
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Job getJob() {
@@ -110,12 +61,28 @@ public class JobDetail {
         this.contentText = contentText;
     }
 
+    public Set<JobDetailEnrichment> getEnrichments() {
+        return enrichments;
+    }
+
+    public void setEnrichments(Set<JobDetailEnrichment> enrichments) {
+        this.enrichments = enrichments != null ? enrichments : new LinkedHashSet<>();
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public boolean isDeleted() {
@@ -126,8 +93,39 @@ public class JobDetail {
         this.deleted = deleted;
     }
 
-    public Set<JobDetailEnrichment> getEnrichments() {
-        return enrichments;
+    public boolean isNotDeleted() {
+        return !deleted;
+    }
+
+    public long getContentVersion() {
+        return contentVersion;
+    }
+
+    public void setContentVersion(long contentVersion) {
+        this.contentVersion = contentVersion;
+    }
+
+    public void incrementContentVersion() {
+        this.contentVersion = Math.max(0, this.contentVersion) + 1;
+    }
+
+    public void markCreated(Instant timestamp) {
+        Instant safeTimestamp = timestamp != null ? timestamp : Instant.now();
+        this.createdAt = safeTimestamp;
+        this.updatedAt = safeTimestamp;
+    }
+
+    public void markUpdated(Instant timestamp) {
+        this.updatedAt = timestamp != null ? timestamp : Instant.now();
+    }
+
+    public void delete() {
+        delete(null);
+    }
+
+    public void delete(Instant deletedAt) {
+        this.deleted = true;
+        this.updatedAt = deletedAt != null ? deletedAt : Instant.now();
     }
 
     public Optional<JobDetailEnrichment> findEnrichment(JobEnrichmentKey key) {
@@ -161,13 +159,5 @@ public class JobDetail {
             map.put(enrichment.getEnrichmentKey(), enrichment);
         }
         return map;
-    }
-
-    public long getContentVersion() {
-        return contentVersion;
-    }
-
-    public void incrementContentVersion() {
-        this.contentVersion = Math.max(0, this.contentVersion) + 1;
     }
 }
