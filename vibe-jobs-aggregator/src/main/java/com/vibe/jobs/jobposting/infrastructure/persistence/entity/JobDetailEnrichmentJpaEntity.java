@@ -185,7 +185,7 @@ public class JobDetailEnrichmentJpaEntity {
 
     public void markRetrying(Instant attemptedAt) {
         Instant now = Objects.requireNonNullElseGet(attemptedAt, Instant::now);
-        this.statusState = JobDetailEnrichmentStatus.RETRYING.name();
+        this.statusState = JobDetailEnrichmentStatus.RETRYING;
         this.lastAttemptAt = now;
         this.nextRetryAt = null;
         this.updatedAt = now;
