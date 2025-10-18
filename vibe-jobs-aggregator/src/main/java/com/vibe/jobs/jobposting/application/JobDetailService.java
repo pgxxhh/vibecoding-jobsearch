@@ -3,7 +3,7 @@ package com.vibe.jobs.jobposting.application;
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import com.vibe.jobs.jobposting.application.HtmlTextExtractor;
 import com.vibe.jobs.jobposting.application.JobContentFingerprintCalculator;
 import com.vibe.jobs.jobposting.application.enrichment.JobDetailContentUpdatedEvent;
@@ -26,11 +26,11 @@ import java.util.stream.Collectors;
 @Service
 public class JobDetailService {
 
-    private final JobDetailRepository repository;
+    private final JobDetailRepositoryPort repository;
     private final ApplicationEventPublisher eventPublisher;
     private final JobContentFingerprintCalculator fingerprintCalculator;
 
-    public JobDetailService(JobDetailRepository repository,
+    public JobDetailService(JobDetailRepositoryPort repository,
                             ApplicationEventPublisher eventPublisher,
                             JobContentFingerprintCalculator fingerprintCalculator) {
         this.repository = repository;
@@ -118,15 +118,15 @@ public class JobDetailService {
         Map<Long, EnumMap<JobEnrichmentKey, String>> aggregated = new HashMap<>();
         repository.findEnrichmentsByJobIds(distinctIds)
                 .forEach(view -> {
-                    Long jobId = view.getJobId();
+                    Long jobId = view.jobId();
                     if (jobId == null) {
                         return;
                     }
                     EnumMap<JobEnrichmentKey, String> values = aggregated.computeIfAbsent(jobId,
                             id -> new EnumMap<>(JobEnrichmentKey.class));
-                    JobEnrichmentKey key = view.getEnrichmentKey();
+                    JobEnrichmentKey key = view.enrichmentKey();
                     if (key != null) {
-                        values.put(key, view.getValueJson());
+                        values.put(key, view.valueJson());
                     }
                 });
 
@@ -147,8 +147,8 @@ public class JobDetailService {
             return Map.of();
         }
         return repository.findContentTextByJobIds(distinctIds).stream()
-                .collect(Collectors.toMap(JobDetailRepository.ContentTextView::getJobId,
-                        JobDetailRepository.ContentTextView::getContentText));
+                .collect(Collectors.toMap(JobDetailRepositoryPort.JobDetailContentText::jobId,
+                        JobDetailRepositoryPort.JobDetailContentText::contentText));
     }
 
     @Transactional(readOnly = true)

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -24,12 +24,12 @@ public class JobDetailEnrichmentProcessor {
 
     private final JobContentEnrichmentClient enrichmentClient;
     private final JobDetailEnrichmentWriter writer;
-    private final JobDetailRepository repository;
+    private final JobDetailRepositoryPort repository;
     private final ObjectMapper objectMapper;
 
     public JobDetailEnrichmentProcessor(JobContentEnrichmentClient enrichmentClient,
                                         JobDetailEnrichmentWriter writer,
-                                        JobDetailRepository repository,
+                                        JobDetailRepositoryPort repository,
                                         ObjectMapper objectMapper) {
         this.enrichmentClient = enrichmentClient;
         this.writer = writer;
