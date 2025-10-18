@@ -4,7 +4,6 @@
 
 Elaine Jobs is a talent intelligence platform designed for users in Mainland China. It aggregates job postings from overseas companies through a unified ingestion pipeline and enriches the content with LLM-powered summaries so that openings are searchable, subscribable, and always up to date.
 
-> 97% of the system was implemented with the help of Codex and GitHub Copilot. I focused on solution design, prompting, reviews, testing, and deployment.
 
 ## Table of contents
 - [System overview](#system-overview)
