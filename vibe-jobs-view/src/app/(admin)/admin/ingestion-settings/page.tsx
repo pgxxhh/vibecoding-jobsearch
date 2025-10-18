@@ -1,35 +1,65 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 
-interface IngestionSettingsResponse {
-  fixedDelayMs: number;
-  initialDelayMs: number;
-  pageSize: number;
-  recentDays: number;
-  concurrency: number;
-  companyOverrides: Record<string, unknown>;
-  locationFilter: unknown;
-  roleFilter: unknown;
-  updatedAt: string;
+import { useIngestionSettings } from '@/modules/admin/hooks/useIngestionSettings';
+import type { IngestionSettings } from '@/modules/admin/types';
+
+export interface IngestionFormState {
+  fixedDelayMs: string;
+  initialDelayMs: string;
+  pageSize: string;
+  recentDays: string;
+  concurrency: string;
+  locationJson: string;
+  roleJson: string;
 }
 
-async function fetchSettings(): Promise<IngestionSettingsResponse> {
-  const res = await fetch('/api/admin/ingestion-settings', { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error('无法获取采集配置');
+export function buildIngestionSettingsPayload(
+  form: IngestionFormState,
+  fallback?: IngestionSettings | null,
+): Partial<IngestionSettings> {
+  const { fixedDelayMs, initialDelayMs, pageSize, recentDays, concurrency, locationJson, roleJson } = form;
+
+  if (!fixedDelayMs || !initialDelayMs || !pageSize || !recentDays || !concurrency) {
+    throw new Error('请填写所有必填字段');
   }
-  return res.json();
+
+  const location = locationJson.trim() ? JSON.parse(locationJson) : {};
+  const role = roleJson.trim() ? JSON.parse(roleJson) : {};
+
+  return {
+    fixedDelayMs: Number(fixedDelayMs) || fallback?.fixedDelayMs,
+    initialDelayMs: Number(initialDelayMs) || fallback?.initialDelayMs,
+    pageSize: Number(pageSize) || fallback?.pageSize,
+    recentDays: Number(recentDays) || fallback?.recentDays,
+    concurrency: Number(concurrency) || fallback?.concurrency,
+    companyOverrides: fallback?.companyOverrides ?? {},
+    locationFilter: location,
+    roleFilter: role,
+  };
+}
+
+export function submitIngestionSettingsForm(
+  form: IngestionFormState,
+  options: {
+    fallback?: IngestionSettings | null;
+    mutate: ReturnType<typeof useIngestionSettings>['update']['mutate'];
+    onSuccess: () => void;
+    onError: (err: unknown) => void;
+  },
+) {
+  const payload = buildIngestionSettingsPayload(form, options.fallback);
+  options.mutate(payload, {
+    onSuccess: options.onSuccess,
+    onError: options.onError,
+  });
 }
 
 export default function IngestionSettingsPage() {
-  const queryClient = useQueryClient();
-  const { data, isLoading, isError, error } = useQuery({ 
-    queryKey: ['admin', 'ingestion-settings'], 
-    queryFn: fetchSettings 
-  });
-  
+  const { query, update } = useIngestionSettings();
+  const { data, isLoading, isError, error } = query;
+
   const [fixedDelayMs, setFixedDelayMs] = useState('3600000');
   const [initialDelayMs, setInitialDelayMs] = useState('10000');
   const [pageSize, setPageSize] = useState('100');
@@ -52,51 +82,31 @@ export default function IngestionSettingsPage() {
     }
   }, [data]);
 
-  const mutation = useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
-      const res = await fetch('/api/admin/ingestion-settings', {
-        method: 'PUT', // 修改为PUT方法
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || '保存失败');
-      }
-      return res.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'ingestion-settings'] });
-      setMessage('配置已保存，后台任务将在 1-2 秒内重新调度');
-      setErrorMsg(null);
-    },
-    onError: (err: unknown) => {
-      setMessage(null);
-      setErrorMsg(err instanceof Error ? err.message : '保存失败');
-    },
-  });
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formState: IngestionFormState = {
+      fixedDelayMs,
+      initialDelayMs,
+      pageSize,
+      recentDays,
+      concurrency,
+      locationJson,
+      roleJson,
+    };
+
     try {
-      const location = locationJson.trim() ? JSON.parse(locationJson) : {};
-      const role = roleJson.trim() ? JSON.parse(roleJson) : {};
-
-      if (!fixedDelayMs || !initialDelayMs || !pageSize || !recentDays || !concurrency) {
-        throw new Error('请填写所有必填字段');
-      }
-
-      const payload = {
-        fixedDelayMs: Number(fixedDelayMs) || data?.fixedDelayMs,
-        initialDelayMs: Number(initialDelayMs) || data?.initialDelayMs,
-        pageSize: Number(pageSize) || data?.pageSize,
-        recentDays: Number(recentDays) || data?.recentDays,
-        concurrency: Number(concurrency) || data?.concurrency,
-        companyOverrides: data?.companyOverrides ?? {},
-        locationFilter: location,
-        roleFilter: role,
-      };
-      mutation.mutate(payload);
+      submitIngestionSettingsForm(formState, {
+        fallback: data,
+        mutate: update.mutate,
+        onSuccess: () => {
+          setMessage('配置已保存，后台任务将在 1-2 秒内重新调度');
+          setErrorMsg(null);
+        },
+        onError: (err: unknown) => {
+          setMessage(null);
+          setErrorMsg(err instanceof Error ? err.message : '保存失败');
+        },
+      });
     } catch (err) {
       setMessage(null);
       setErrorMsg(err instanceof Error ? err.message : '无法解析 JSON 配置');
@@ -258,10 +268,10 @@ export default function IngestionSettingsPage() {
         <div className="flex items-center gap-3 pt-4">
           <button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={update.isPending}
             className="inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 h-12 px-8 text-sm font-medium bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
           >
-            {mutation.isPending ? (
+            {update.isPending ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
                 保存中...
