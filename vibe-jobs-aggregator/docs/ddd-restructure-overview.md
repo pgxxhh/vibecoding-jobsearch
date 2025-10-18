@@ -34,6 +34,31 @@ com/vibe/jobs/
 
 `Bootstrap` 通过 `@SpringBootApplication(scanBasePackages = "com.vibe.jobs")` 覆盖所有上下文，避免因入口包下沉导致的组件扫描缺口。
 
+## 领域层与基础设施分离
+
+2024 年 7 月补充了一轮“去 ORM 化”的重构，目标是让领域层只关注业务语义：
+
+- **聚合与值对象**（`Job`、`JobDetail`、`AuthSession`、`UserAccount` 等）全部迁移为不含 JPA 注解的纯 Java 对象。
+- 每个上下文在 `domain.spi` 下声明 **仓储端口**（`JobRepositoryPort`、`JobDetailRepositoryPort`、`AuthSessionRepositoryPort` 等），仅暴露应用用例真正需要的方法。
+- `infrastructure.persistence` 下提供 **适配器实现**，负责：
+  - 使用 Spring Data JPA 接口（统一命名为 `*JpaRepository`）完成数据库访问；
+  - 在端口与数据库实体（`JobJpaEntity` 等）之间进行映射；
+  - 维护 `@Entity`、`@Table`、`@PrePersist` 等 ORM 注解。
+- 应用层通过构造器注入端口接口，从而与具体持久化技术解耦；若未来切换到 MyBatis 或其他实现，只需新增适配器并在 Spring 上下文中替换 Bean。
+
+该模式同样适用于后续新增的限界上下文。命名建议：
+
+| 类型 | 命名约定 | 示例 |
+| --- | --- | --- |
+| 领域端口接口 | `<Aggregate>RepositoryPort` | `JobDetailRepositoryPort` |
+| Spring Data 仓储 | `<Aggregate>JpaRepository` | `AuthSessionJpaRepository` |
+| 适配器 | `<Aggregate>RepositoryAdapter` | `JobRepositoryAdapter` |
+| JPA 实体 | `<Aggregate>JpaEntity` | `UserAccountJpaEntity` |
+
+> ⚠️ `domain.spi` 仅作为“领域定义协议、基础设施提供实现”的命名约定，与 Java `ServiceLoader` 无直接关系。
+
+领域层如需领域服务或工厂，可继续放在 `domain` 包内，但不得依赖 Spring、JPA 或其他基础设施框架。
+
 ## 主要迁移对应关系
 
 | 原路径 | 新路径 |
