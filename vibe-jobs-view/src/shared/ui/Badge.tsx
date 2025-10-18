@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 type Props = React.HTMLAttributes<HTMLSpanElement> & {
   tone?: 'default' | 'brand' | 'muted';

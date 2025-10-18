@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import Input from '@/shared/ui/Input';
+import Button from '@/shared/ui/Button';
 
 interface Props {
   onSuccess: (challengeId: string, email: string, resendAvailableAt?: string | null, debugCode?: string | null) => void;

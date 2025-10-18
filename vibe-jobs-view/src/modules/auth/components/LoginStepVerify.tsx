@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Button from '@/components/ui/Button';
+import Button from '@/shared/ui/Button';
 
 interface Props {
   challengeId: string | null;

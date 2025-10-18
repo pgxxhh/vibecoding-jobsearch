@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TimeDisplay, RelativeTime, DateOnly, CompactDateTime } from '@/components/TimeDisplay';
-import { SearchForm } from '@/components/SearchForm';
-import { TimeUtils } from '@/lib/time-utils';
+import { TimeDisplay, RelativeTime, DateOnly, CompactDateTime } from '@/shared/components/TimeDisplay';
+import { SearchForm } from '@/modules/job-search';
+import { TimeUtils } from '@/shared/lib/time-utils';
 
 /**
  * 时区处理测试页面
