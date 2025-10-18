@@ -16,6 +16,7 @@ Vibe Jobs View is the Next.js front-end for the Vibe Jobs talent intelligence pl
 - [Runtime configuration](#runtime-configuration)
 - [Admin console](#admin-console)
 - [Front-end behaviors](#front-end-behaviors)
+- [Development guidelines](#development-guidelines)
 - [Development & testing](#development--testing)
 
 ## Overview
@@ -138,6 +139,12 @@ Admin routes proxy to the backend via `app/api/admin/*` for create/update/delete
 - **Responsive UX**: viewport watcher toggles between desktop split layout and mobile full-screen drawer, preserving selection state.
 - **Internationalization**: initial language auto-detected from browser, persisted in `localStorage`, and synchronized to `<html lang>`.
 - **Authentication**: `AuthProvider` wraps the tree, fetching `/api/auth/session` and broadcasting login/logout state to header menu and admin routes.
+
+## Development guidelines
+- Read the full [front-end rules](docs/rules.md) before contributing; the document mirrors the backend DDD contexts (`jobposting`, `admin`, `shared`) and maps them to App Router segments.
+- Keep API access inside `app/api/*` routes and `lib/infrastructure` helpers so pages/components stay framework-agnostic and testable.
+- Share cross-context logic via `components/*` and `lib/domain|application` instead of importing files across `(site)` and `(admin)` boundaries.
+- Add tests for application hooks and critical pages, and run `pnpm lint` before opening a PR.
 
 ## Development & testing
 - `pnpm dev` — start local Next.js server.

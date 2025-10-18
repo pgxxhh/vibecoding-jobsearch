@@ -16,6 +16,7 @@ Vibe Jobs View 是 Vibe Jobs 人才情报平台的 Next.js 前端，提供职位
 - [运行时配置](#运行时配置)
 - [管理控制台](#管理控制台)
 - [前端行为说明](#前端行为说明)
+- [开发规范](#开发规范)
 - [开发与测试](#开发与测试)
 
 ## 概览
@@ -137,6 +138,12 @@ Docker 部署通常设置 `BACKEND_BASE_URL="http://backend:8080"`，保证容�
 - **详情富化控制**：仅当 `enrichmentStatus.state === 'SUCCESS'` 时展示 AI 摘要/技能/亮点，其他状态显示提示。
 - **响应式体验**：根据视口切换桌面分栏与移动抽屉，保持选中状态一致。
 - **认证**：`AuthProvider` 包裹应用树，拉取 `/api/auth/session` 并同步登录态到头部菜单与后台页面。
+
+## 开发规范
+- 提交前请阅读完整的[前端规则文档](docs/rules.md)，该文档将后端的 DDD 上下文（`jobposting`、`admin`、`shared`）映射到 App Router 目录。
+- 后端访问统一通过 `app/api/*` Route 与 `lib/infrastructure` 封装的客户端完成，页面与组件保持无副作用可测试。
+- 跨上下文的通用逻辑放在 `components/*` 与 `lib/domain|application`，禁止直接引用 `(site)` 与 `(admin)` 之间的文件。
+- 新增应用层 Hook 与关键页面需补充测试，并在 PR 前执行 `pnpm lint`。
 
 ## 开发与测试
 - `pnpm dev` — 启动本地 Next.js 服务。
