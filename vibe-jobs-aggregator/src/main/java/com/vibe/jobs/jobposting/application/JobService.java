@@ -2,9 +2,10 @@
 package com.vibe.jobs.jobposting.application;
 
 import com.vibe.jobs.jobposting.domain.Job;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -12,16 +13,19 @@ import java.util.Optional;
 
 @Service
 public class JobService {
-    private final JobRepository repo;
-    public JobService(JobRepository repo){ this.repo = repo; }
+    private final JobRepositoryPort repo;
+
+    public JobService(JobRepositoryPort repo){ this.repo = repo; }
 
     @Transactional
     public Job upsert(Job incoming){
-        Job existing = repo.findBySourceAndExternalId(incoming.getSource(), incoming.getExternalId());
         String checksum = checksum(incoming);
-        if(existing != null){
+        Optional<Job> existingOpt = repo.findBySourceAndExternalId(incoming.getSource(), incoming.getExternalId());
+        if(existingOpt.isPresent()){
+            Job existing = existingOpt.get();
             if(!checksum.equals(existing.getChecksum())){
                 applyUpdates(existing, incoming, checksum);
+                existing = repo.save(existing);
             }
             return existing;
         }
@@ -33,6 +37,7 @@ public class JobService {
                 Job current = duplicate.get();
                 if(!checksum.equals(current.getChecksum())){
                     applyUpdates(current, incoming, checksum);
+                    current = repo.save(current);
                 }
                 return current;
             }

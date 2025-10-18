@@ -1,14 +1,11 @@
 package com.vibe.jobs.jobposting.application;
 
 import com.vibe.jobs.jobposting.domain.JobDetail;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,12 +20,12 @@ public class JobDetailMaintenanceService {
 
     public static final int DEFAULT_BATCH_SIZE = 500;
 
-    private final JobDetailRepository jobDetailRepository;
+    private final JobDetailRepositoryPort jobDetailRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public JobDetailMaintenanceService(JobDetailRepository jobDetailRepository) {
+    public JobDetailMaintenanceService(JobDetailRepositoryPort jobDetailRepository) {
         this.jobDetailRepository = jobDetailRepository;
     }
 
@@ -40,16 +37,15 @@ public class JobDetailMaintenanceService {
         int batches = 0;
         int pageNumber = 0;
 
-        Sort sort = Sort.by(Sort.Direction.ASC, "id");
-
         while (true) {
-            Page<JobDetail> page = jobDetailRepository.findAll(PageRequest.of(pageNumber, batchSize, sort));
-            if (page.isEmpty()) {
+            JobDetailRepositoryPort.JobDetailPage page = jobDetailRepository.fetchPageOrderedById(pageNumber, batchSize);
+            List<JobDetail> content = page.content();
+            if (content.isEmpty()) {
                 break;
             }
 
             List<JobDetail> toUpdate = new ArrayList<>();
-            for (JobDetail detail : page.getContent()) {
+            for (JobDetail detail : content) {
                 processed++;
                 String normalized = HtmlTextExtractor.toPlainText(detail.getContent());
                 if (!Objects.equals(normalized, detail.getContentText())) {

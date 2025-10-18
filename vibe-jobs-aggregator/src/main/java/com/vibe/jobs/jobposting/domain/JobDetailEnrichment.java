@@ -1,73 +1,29 @@
 package com.vibe.jobs.jobposting.domain;
 
-import jakarta.persistence.*;
-import org.hibernate.annotations.Where;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
-@Entity
-@Table(name = "job_detail_enrichments", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_job_detail_enrichments_job_key", columnNames = {"job_detail_id", "enrichment_key"})
-})
-@Where(clause = "deleted = 0")
 public class JobDetailEnrichment {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "job_detail_id", nullable = false)
     private JobDetail jobDetail;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "enrichment_key", nullable = false, length = 64)
     private JobEnrichmentKey enrichmentKey;
-
-    @Lob
-    @Column(name = "value_json", columnDefinition = "longtext")
     private String valueJson;
-
-    @Column(name = "source_fingerprint", length = 128)
     private String sourceFingerprint;
-
-    @Column(name = "provider", length = 128)
     private String provider;
-
-    @Column(name = "confidence", precision = 5, scale = 4)
     private BigDecimal confidence;
-
-    @Lob
-    @Column(name = "metadata_json", columnDefinition = "longtext")
     private String metadataJson;
-
-    @Column(name = "status_state", length = 32)
     private String statusState;
-
-    @Column(name = "retry_count", nullable = false)
     private int retryCount;
-
-    @Column(name = "next_retry_at", columnDefinition = "timestamp")
     private Instant nextRetryAt;
-
-    @Column(name = "last_attempt_at", columnDefinition = "timestamp")
     private Instant lastAttemptAt;
-
-    @Column(name = "max_attempts")
     private Integer maxAttempts;
-
-    @Column(name = "created_at", nullable = false, columnDefinition = "timestamp")
     private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp")
     private Instant updatedAt;
-
-    @Column(name = "deleted", nullable = false)
     private boolean deleted;
 
-    protected JobDetailEnrichment() {
+    public JobDetailEnrichment() {
     }
 
     public JobDetailEnrichment(JobDetail jobDetail, JobEnrichmentKey key) {
@@ -75,84 +31,146 @@ public class JobDetailEnrichment {
         this.enrichmentKey = key;
     }
 
-    @PrePersist
-    void onCreate() {
-        Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        this.updatedAt = Instant.now();
-    }
-
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public JobDetail getJobDetail() {
         return jobDetail;
     }
 
+    public void setJobDetail(JobDetail jobDetail) {
+        this.jobDetail = jobDetail;
+    }
+
     public JobEnrichmentKey getEnrichmentKey() {
         return enrichmentKey;
+    }
+
+    public void setEnrichmentKey(JobEnrichmentKey enrichmentKey) {
+        this.enrichmentKey = enrichmentKey;
     }
 
     public String getValueJson() {
         return valueJson;
     }
 
+    public void setValueJson(String valueJson) {
+        this.valueJson = valueJson;
+    }
+
     public String getSourceFingerprint() {
         return sourceFingerprint;
+    }
+
+    public void setSourceFingerprint(String sourceFingerprint) {
+        this.sourceFingerprint = sourceFingerprint;
     }
 
     public String getProvider() {
         return provider;
     }
 
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
     public BigDecimal getConfidence() {
         return confidence;
+    }
+
+    public void setConfidence(BigDecimal confidence) {
+        this.confidence = confidence;
     }
 
     public String getMetadataJson() {
         return metadataJson;
     }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
+    public void setMetadataJson(String metadataJson) {
+        this.metadataJson = metadataJson;
     }
 
     public String getStatusState() {
         return statusState;
     }
 
+    public void setStatusState(String statusState) {
+        this.statusState = statusState;
+    }
+
     public int getRetryCount() {
         return retryCount;
+    }
+
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
     }
 
     public Instant getNextRetryAt() {
         return nextRetryAt;
     }
 
+    public void setNextRetryAt(Instant nextRetryAt) {
+        this.nextRetryAt = nextRetryAt;
+    }
+
     public Instant getLastAttemptAt() {
         return lastAttemptAt;
+    }
+
+    public void setLastAttemptAt(Instant lastAttemptAt) {
+        this.lastAttemptAt = lastAttemptAt;
     }
 
     public Integer getMaxAttempts() {
         return maxAttempts;
     }
 
+    public void setMaxAttempts(Integer maxAttempts) {
+        this.maxAttempts = maxAttempts;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public boolean isDeleted() {
         return deleted;
     }
 
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
     public void markDeleted() {
         this.deleted = true;
+    }
+
+    public void markCreated(Instant timestamp) {
+        Instant safeTimestamp = timestamp != null ? timestamp : Instant.now();
+        this.createdAt = safeTimestamp;
+        this.updatedAt = safeTimestamp;
+    }
+
+    public void markUpdated(Instant timestamp) {
+        this.updatedAt = timestamp != null ? timestamp : Instant.now();
     }
 
     public void updateValue(String valueJson, String provider, String fingerprint, BigDecimal confidence, String metadataJson) {
@@ -178,7 +196,7 @@ public class JobDetailEnrichment {
             changed = true;
         }
         if (changed) {
-            this.updatedAt = Instant.now();
+            markUpdated(null);
         }
     }
 
