@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { TimeUtils } from '@/lib/time-utils';
-import { type FormatType } from '@/lib/timezone-config';
+import { TimeUtils } from '@/shared/lib/time-utils';
+import { type FormatType } from '@/shared/lib/timezone-config';
 
 interface TimeDisplayProps {
   /** UTC时间字符串 */

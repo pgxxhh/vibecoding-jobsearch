@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import DataSourceBulkUpload from '@/components/admin/DataSourceBulkUpload';
+import DataSourceBulkUpload from '@/modules/admin/components/DataSourceBulkUpload';
 
 interface CategoryQuotaDefinition {
   name: string;

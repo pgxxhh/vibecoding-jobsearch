@@ -1,8 +1,8 @@
 'use client';
 
-import LanguageSwitcher from '@/components/LanguageSwitcher';
+import LanguageSwitcher from '@/shared/components/LanguageSwitcher';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/shared/lib/auth';
 import { useState, useRef, useEffect } from 'react';
 
 export default function AppHeader() {

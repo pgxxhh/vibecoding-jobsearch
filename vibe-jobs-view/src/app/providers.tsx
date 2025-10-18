@@ -2,8 +2,8 @@
 'use client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import { LanguageProvider } from '@/lib/i18n';
-import { AuthProvider } from '@/lib/auth';
+import { LanguageProvider } from '@/shared/lib/i18n';
+import { AuthProvider } from '@/shared/lib/auth';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());

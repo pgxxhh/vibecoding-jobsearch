@@ -1,5 +1,5 @@
-import AppHeader from '@/components/AppHeader';
-import AppFooter from '@/components/AppFooter';
+import AppHeader from '@/shared/components/AppHeader';
+import AppFooter from '@/shared/components/AppFooter';
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
