@@ -4,20 +4,16 @@ import JobDetail from '@/modules/job-search/components/JobDetail';
 import JobCardNew from '@/modules/job-search/components/JobCardNew';
 import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/modules/job-search/utils/jobs-normalization';
 import type { Job, JobDetail as JobDetailData, JobsResponse } from '@/modules/job-search/types';
+import { joinApiPath } from '@/shared/lib/api-base';
 import { useI18n } from '@/shared/lib/i18n';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/shared/ui';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_BASE ??
-  process.env.NEXT_PUBLIC_API_BASE ??
-  '/api';
 
 async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
   const qs = new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== '' && v !== undefined && v !== null) as any,
   );
-  const res = await fetch(`${API_BASE}/jobs?` + qs.toString(), { cache: 'no-store' });
+  const res = await fetch(`${joinApiPath('jobs')}?${qs.toString()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch jobs');
   const data = await res.json();
   const items = Array.isArray(data?.items) ? data.items.map(normalizeJobFromApi) : [];
@@ -41,7 +37,7 @@ async function fetchJobs(params: Record<string, any>): Promise<JobsResponse> {
 }
 
 async function fetchJobDetail(id: string): Promise<JobDetailData> {
-  const res = await fetch(`${API_BASE}/jobs/${id}/detail`, { cache: 'no-store' });
+  const res = await fetch(joinApiPath(`jobs/${id}/detail`), { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch job detail');
   const detail = await res.json();
   return normalizeJobDetailFromApi(detail, id);

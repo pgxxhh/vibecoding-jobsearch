@@ -1,15 +1,6 @@
 import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/modules/job-search/utils/jobs-normalization';
-import type {
-  Job,
-  JobDetail as JobDetailData,
-  JobsQuery,
-  JobsResponse,
-} from '@/modules/job-search/types';
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_BASE ??
-  process.env.NEXT_PUBLIC_API_BASE ??
-  '/api';
+import type { Job, JobDetail as JobDetailData, JobsQuery, JobsResponse } from '@/modules/job-search/types';
+import { joinApiPath } from '@/shared/lib/api-base';
 
 function parseTotal(rawTotal: unknown, fallback: number): number | null {
   if (typeof rawTotal === 'number') {
@@ -31,7 +22,7 @@ export async function fetchJobs(params: JobsQuery): Promise<JobsResponse> {
 
   const qs = new URLSearchParams(queryEntries);
 
-  const response = await fetch(`${API_BASE}/jobs?${qs.toString()}`, { cache: 'no-store' });
+  const response = await fetch(`${joinApiPath('jobs')}?${qs.toString()}`, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error('Failed to fetch jobs');
   }
@@ -51,7 +42,7 @@ export async function fetchJobs(params: JobsQuery): Promise<JobsResponse> {
 }
 
 export async function fetchJobDetail(id: string): Promise<JobDetailData> {
-  const response = await fetch(`${API_BASE}/jobs/${id}/detail`, { cache: 'no-store' });
+  const response = await fetch(joinApiPath(`jobs/${id}/detail`), { cache: 'no-store' });
   if (!response.ok) {
     throw new Error('Failed to fetch job detail');
   }
