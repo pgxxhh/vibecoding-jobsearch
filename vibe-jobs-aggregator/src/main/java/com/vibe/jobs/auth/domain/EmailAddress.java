@@ -1,22 +1,14 @@
 package com.vibe.jobs.auth.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-@Embeddable
-public class EmailAddress {
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
+public final class EmailAddress {
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
 
-    @Column(name = "email", nullable = false, length = 320)
-    private String value;
-
-    protected EmailAddress() {
-        // for JPA
-    }
+    private final String value;
 
     private EmailAddress(String value) {
         this.value = value;
@@ -31,6 +23,13 @@ public class EmailAddress {
             throw new IllegalArgumentException("Invalid email address format");
         }
         return new EmailAddress(trimmed.toLowerCase(Locale.ROOT));
+    }
+
+    public static EmailAddress restored(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Email must not be null or blank");
+        }
+        return new EmailAddress(value);
     }
 
     public String value() {

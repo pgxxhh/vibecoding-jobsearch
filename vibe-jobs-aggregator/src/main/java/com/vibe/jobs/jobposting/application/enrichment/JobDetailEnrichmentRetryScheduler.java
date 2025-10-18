@@ -5,14 +5,11 @@ import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichmentStatus;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailEnrichmentRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailEnrichmentRepositoryPort;
 import com.vibe.jobs.jobposting.application.JobContentFingerprintCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,12 +25,12 @@ public class JobDetailEnrichmentRetryScheduler {
     private static final Logger log = LoggerFactory.getLogger(JobDetailEnrichmentRetryScheduler.class);
 
     private final JobDetailEnrichmentRetryStrategy retryStrategy;
-    private final JobDetailEnrichmentRepository enrichmentRepository;
+    private final JobDetailEnrichmentRepositoryPort enrichmentRepository;
     private final JobContentFingerprintCalculator fingerprintCalculator;
     private final ApplicationEventPublisher eventPublisher;
 
     public JobDetailEnrichmentRetryScheduler(JobDetailEnrichmentRetryStrategy retryStrategy,
-                                             JobDetailEnrichmentRepository enrichmentRepository,
+                                             JobDetailEnrichmentRepositoryPort enrichmentRepository,
                                              JobContentFingerprintCalculator fingerprintCalculator,
                                              ApplicationEventPublisher eventPublisher) {
         this.retryStrategy = retryStrategy;
@@ -49,13 +46,12 @@ public class JobDetailEnrichmentRetryScheduler {
             return;
         }
         Instant now = Instant.now();
-        Pageable pageable = PageRequest.of(0, retryStrategy.batchSize(), Sort.by(Sort.Direction.ASC, "nextRetryAt"));
         List<JobDetailEnrichment> candidates = enrichmentRepository
                 .findByEnrichmentKeyAndStatusStateAndNextRetryAtLessThanEqual(
                         JobEnrichmentKey.STATUS,
                         JobDetailEnrichmentStatus.RETRY_SCHEDULED,
                         now,
-                        pageable);
+                        retryStrategy.batchSize());
         if (CollectionUtils.isEmpty(candidates)) {
             return;
         }

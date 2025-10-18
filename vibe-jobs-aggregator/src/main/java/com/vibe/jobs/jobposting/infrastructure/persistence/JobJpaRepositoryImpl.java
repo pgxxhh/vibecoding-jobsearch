@@ -1,12 +1,11 @@
 package com.vibe.jobs.jobposting.infrastructure.persistence;
 
-import com.vibe.jobs.jobposting.domain.Job;
+import com.vibe.jobs.jobposting.infrastructure.persistence.entity.JobJpaEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
 
 import java.sql.Timestamp;
@@ -16,32 +15,33 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class JobRepositoryImpl implements JobRepositoryCustom {
+public class JobJpaRepositoryImpl implements JobJpaRepositoryCustom {
 
     private final EntityManager entityManager;
     private final boolean supportsFullText;
 
-    public JobRepositoryImpl(EntityManager entityManager) {
+    public JobJpaRepositoryImpl(EntityManager entityManager) {
         this.entityManager = entityManager;
         this.supportsFullText = detectFullTextSupport(entityManager);
     }
 
     @Override
-    public List<Job> searchAfter(String q,
-                                 String company,
-                                 String location,
-                                 String level,
-                                 Instant postedAfter,
-                                 Instant cursorPostedAt,
-                                 Long cursorId,
-                                 boolean searchDetail,
-                                 Pageable pageable) {
+    public List<JobJpaEntity> searchAfter(String q,
+                                          String company,
+                                          String location,
+                                          String level,
+                                          Instant postedAfter,
+                                          Instant cursorPostedAt,
+                                          Long cursorId,
+                                          boolean searchDetail,
+                                          int offset,
+                                          int limit) {
         String normalizedQuery = normalize(q);
         boolean hasQuery = normalizedQuery != null;
         boolean detailEnabled = searchDetail && hasQuery;
         boolean hasCursor = cursorPostedAt != null && cursorId != null;
         Query query = entityManager.createNativeQuery(
-                buildSearchSql(false, detailEnabled, hasCursor, hasQuery), Job.class);
+                buildSearchSql(false, detailEnabled, hasCursor, hasQuery), JobJpaEntity.class);
         Map<String, Object> params = new HashMap<>();
         String fullTextQuery = supportsFullText && hasQuery ? buildFullTextQuery(normalizedQuery) : null;
         populateCommonParameters(params, normalizedQuery, fullTextQuery, company, location, level, postedAfter, detailEnabled);
@@ -50,12 +50,14 @@ public class JobRepositoryImpl implements JobRepositoryCustom {
             params.put("cursorId", cursorId);
         }
         applyParameters(query, params);
-        if (pageable != null) {
-            query.setFirstResult((int) pageable.getOffset());
-            query.setMaxResults(pageable.getPageSize());
+        if (offset > 0) {
+            query.setFirstResult(offset);
+        }
+        if (limit > 0) {
+            query.setMaxResults(limit);
         }
         @SuppressWarnings("unchecked")
-        List<Job> jobs = query.getResultList();
+        List<JobJpaEntity> jobs = query.getResultList();
         return jobs;
     }
 

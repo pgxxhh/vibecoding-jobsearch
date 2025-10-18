@@ -2,13 +2,10 @@
 package com.vibe.jobs.jobposting.interfaces.rest;
 
 import com.vibe.jobs.jobposting.application.JobDetailService;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import com.vibe.jobs.jobposting.interfaces.rest.JobMapper;
 import com.vibe.jobs.jobposting.interfaces.rest.dto.JobDetailResponse;
 import com.vibe.jobs.jobposting.interfaces.rest.dto.JobsResponse;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,12 +22,12 @@ import java.util.stream.Collectors;
 @RequestMapping("/jobs")
 @CrossOrigin(origins = "*")
 public class JobController {
-    private final JobRepository repo;
+    private final JobRepositoryPort repo;
     private final JobDetailService jobDetailService;
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 100;
 
-    public JobController(JobRepository repo, JobDetailService jobDetailService) {
+    public JobController(JobRepositoryPort repo, JobDetailService jobDetailService) {
         this.repo = repo;
         this.jobDetailService = jobDetailService;
     }
@@ -57,12 +54,6 @@ public class JobController {
             postedAfter = referenceDate.atStartOfDay(ZoneOffset.UTC).toInstant();
         }
 
-        Pageable pageable = PageRequest.of(
-                0,
-                size + 1,
-                Sort.by(Sort.Direction.DESC, "postedAt", "id")
-        );
-
         String normalizedQuery = emptyToNull(q);
         boolean detailEnabled = searchDetail && normalizedQuery != null;
 
@@ -75,7 +66,8 @@ public class JobController {
                 cursorPosition != null ? cursorPosition.postedAt() : null,
                 cursorPosition != null ? cursorPosition.id() : null,
                 detailEnabled,
-                pageable
+                0,
+                size + 1
         ));
 
         boolean hasMore = jobs.size() > size;

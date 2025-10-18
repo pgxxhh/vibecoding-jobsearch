@@ -1,7 +1,7 @@
 package com.vibe.jobs.jobposting.application;
 
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +14,10 @@ import java.util.List;
 @Service
 public class DeleteService {
 
-    private final JobRepository jobRepository;
-    private final JobDetailRepository jobDetailRepository;
+    private final JobRepositoryPort jobRepository;
+    private final JobDetailRepositoryPort jobDetailRepository;
 
-    public DeleteService(JobRepository jobRepository, JobDetailRepository jobDetailRepository) {
+    public DeleteService(JobRepositoryPort jobRepository, JobDetailRepositoryPort jobDetailRepository) {
         this.jobRepository = jobRepository;
         this.jobDetailRepository = jobDetailRepository;
     }
