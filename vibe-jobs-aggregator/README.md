@@ -41,6 +41,29 @@ The ingestion loop is driven by `JobIngestionScheduler`, which fetches source de
 
 ---
 
+## 1.1 Domain-Driven layering
+
+The codebase follows a hexagonal/DDD layout inside each bounded context:
+
+```text
+com/vibe/jobs/<context>/
+├── domain/           // Aggregates, value objects, domain services
+│   └── spi/          // Output ports (interfaces) consumed by domain/application code
+├── application/      // Use cases, schedulers, orchestration logic
+├── infrastructure/
+│   └── persistence/  // Adapters that implement the ports + JPA entities/mappers
+└── interfaces/       // REST controllers, DTOs and other inbound adapters
+```
+
+- **Domain aggregates** (`Job`, `JobDetail`, `AuthSession`, …) are persistence-agnostic Java objects. They no longer carry JPA annotations or lifecycle callbacks.
+- **Ports** in `domain.spi` declare the persistence contract required by the use cases. For example, `JobRepositoryPort` and `AuthSessionRepositoryPort` expose the queries and mutations needed by the application layer.
+- **Infrastructure adapters** translate between aggregates and database entities. Spring Data repositories (`JobJpaRepository`, `AuthSessionJpaRepository`, …) are private to the adapters and must not leak into domain/application code.
+- When introducing a new persistence technology (e.g. MyBatis), create another adapter that implements the same port without changing the domain layer.
+
+All contexts (job posting, auth, ingestion, …) should follow this structure going forward.
+
+---
+
 ## 2. Core Data Model
 
 ```mermaid
