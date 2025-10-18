@@ -41,6 +41,29 @@ flowchart LR
 
 ---
 
+## 1.1 分层与端口设计
+
+每个限界上下文都遵循 DDD/六边形架构的目录结构：
+
+```text
+com/vibe/jobs/<context>/
+├── domain/           // 聚合根、值对象、领域服务
+│   └── spi/          // 领域输出端口（接口），供领域/应用层依赖
+├── application/      // 用例服务、调度器、编排逻辑
+├── infrastructure/
+│   └── persistence/  // 适配器实现端口 + JPA 实体与映射
+└── interfaces/       // REST 控制器、DTO 等入站适配器
+```
+
+- **领域聚合**（如 `Job`、`JobDetail`、`AuthSession` 等）保持为纯 Java 对象，不再直接依赖 JPA 注解或生命周期回调。
+- `domain.spi` 下的 **端口接口** 声明了持久化所需的操作，例如 `JobRepositoryPort`、`AuthSessionRepositoryPort`，由应用层通过构造器注入使用。
+- **基础设施适配器** 负责在聚合与数据库实体之间转换，内部可以组合 Spring Data 仓储（如 `JobJpaRepository`、`AuthSessionJpaRepository`），但不得向领域/应用层泄露。
+- 如需接入新的持久化技术（例如 MyBatis），只需新增实现同一端口的适配器，无需修改领域层代码。
+
+当前所有上下文（jobposting、auth、ingestion 等）均按此规范演进，后续开发保持一致即可。
+
+---
+
 ## 2. 核心数据模型
 
 ```mermaid

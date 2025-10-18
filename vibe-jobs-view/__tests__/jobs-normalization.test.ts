@@ -1,4 +1,4 @@
-import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/lib/jobs-normalization';
+import { normalizeJobDetailFromApi, normalizeJobFromApi } from '@/modules/job-search/utils/jobs-normalization';
 
 const baseJobPayload = {
   id: 'job-1',

@@ -4,7 +4,7 @@ import com.vibe.jobs.ingestion.domain.IngestionCursor;
 import com.vibe.jobs.ingestion.domain.IngestionCursorKey;
 import com.vibe.jobs.ingestion.infrastructure.jpa.IngestionCursorEntity;
 import com.vibe.jobs.ingestion.infrastructure.jpa.SpringDataIngestionCursorRepository;
-import com.vibe.jobs.domain.Job;
+import com.vibe.jobs.jobposting.domain.Job;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

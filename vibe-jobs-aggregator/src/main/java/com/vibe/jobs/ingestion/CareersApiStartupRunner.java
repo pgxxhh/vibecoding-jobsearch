@@ -1,13 +1,13 @@
 package com.vibe.jobs.ingestion;
 
-import com.vibe.jobs.config.IngestionProperties;
-import com.vibe.jobs.service.JobDetailService;
-import com.vibe.jobs.service.JobService;
-import com.vibe.jobs.service.LocationFilterService;
-import com.vibe.jobs.service.RoleFilterService;
-import com.vibe.jobs.domain.Job;
-import com.vibe.jobs.sources.SourceClient;
-import com.vibe.jobs.sources.FetchedJob;
+import com.vibe.jobs.jobposting.application.JobDetailService;
+import com.vibe.jobs.jobposting.application.JobService;
+import com.vibe.jobs.jobposting.application.LocationFilterService;
+import com.vibe.jobs.jobposting.application.RoleFilterService;
+import com.vibe.jobs.jobposting.domain.Job;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClient;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;

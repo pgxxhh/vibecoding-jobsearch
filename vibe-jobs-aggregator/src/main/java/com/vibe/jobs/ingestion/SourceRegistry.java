@@ -1,16 +1,16 @@
 package com.vibe.jobs.ingestion;
 
+import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.domain.JobDataSource.CategoryQuotaDefinition;
 import com.vibe.jobs.datasource.domain.JobDataSource.DataSourceCompany;
 import com.vibe.jobs.datasource.domain.PlaceholderContext;
 import com.vibe.jobs.datasource.domain.SourceOptionDefaults;
-import com.vibe.jobs.sources.SourceClient;
-import com.vibe.jobs.sources.SourceClientFactory;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClient;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 

@@ -2,7 +2,7 @@ package com.vibe.jobs.admin.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
-import com.vibe.jobs.config.IngestionProperties;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 
 import java.time.Instant;
 import java.util.Map;

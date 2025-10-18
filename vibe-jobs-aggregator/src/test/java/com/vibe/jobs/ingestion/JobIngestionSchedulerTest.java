@@ -1,17 +1,16 @@
 package com.vibe.jobs.ingestion;
 
 import com.vibe.jobs.admin.application.IngestionSettingsService;
-import com.vibe.jobs.config.IngestionProperties;
 import com.vibe.jobs.admin.domain.IngestionSettingsSnapshot;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
-import com.vibe.jobs.domain.Job;
-import com.vibe.jobs.ingestion.IngestionCursorService;
-import com.vibe.jobs.service.LocationFilterService;
-import com.vibe.jobs.service.LocationEnhancementService;
-import com.vibe.jobs.service.RoleFilterService;
-import com.vibe.jobs.sources.FetchedJob;
-import com.vibe.jobs.sources.SourceClient;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClient;
+import com.vibe.jobs.jobposting.application.LocationEnhancementService;
+import com.vibe.jobs.jobposting.application.LocationFilterService;
+import com.vibe.jobs.jobposting.application.RoleFilterService;
+import com.vibe.jobs.jobposting.domain.Job;
+import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

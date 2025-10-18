@@ -3,7 +3,12 @@ const uiExtend = require('./vibe-jobs-ui-pack/tailwind.extend.js');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}", "./vibe-jobs-ui-pack/**/*.{js,ts,jsx,tsx}", "./lib/**/*.{js,ts,jsx,tsx}", "./styles/**/*.{css,scss}"],
+  content: [
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/modules/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/shared/**/*.{js,ts,jsx,tsx,mdx}',
+    './vibe-jobs-ui-pack/**/*.{js,ts,jsx,tsx}',
+  ],
   theme: {
     extend: {
       ...uiExtend,

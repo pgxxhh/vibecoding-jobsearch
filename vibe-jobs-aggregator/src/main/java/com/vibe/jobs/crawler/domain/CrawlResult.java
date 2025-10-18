@@ -1,6 +1,6 @@
 package com.vibe.jobs.crawler.domain;
 
-import com.vibe.jobs.sources.FetchedJob;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
 
 import java.util.Map;
 

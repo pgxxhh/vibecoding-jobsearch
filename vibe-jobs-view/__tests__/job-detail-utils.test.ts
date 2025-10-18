@@ -1,5 +1,5 @@
-import { resolveEnrichmentStatus } from '@/components/JobDetail';
-import type { Job } from '@/lib/types';
+import { resolveEnrichmentStatus } from '@/modules/job-search/components/JobDetail';
+import type { Job } from '@/modules/job-search/types';
 
 function createJob(overrides: Partial<Job> = {}): Job {
   return {

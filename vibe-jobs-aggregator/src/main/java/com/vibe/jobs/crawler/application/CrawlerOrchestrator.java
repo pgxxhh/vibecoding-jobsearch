@@ -6,7 +6,7 @@ import com.vibe.jobs.crawler.domain.*;
 import com.vibe.jobs.crawler.infrastructure.engine.CrawlPageSnapshot;
 import com.vibe.jobs.crawler.infrastructure.engine.HybridCrawlerExecutionEngine;
 import com.vibe.jobs.crawler.infrastructure.parser.CrawlerParserEngine;
-import com.vibe.jobs.sources.FetchedJob;
+import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
