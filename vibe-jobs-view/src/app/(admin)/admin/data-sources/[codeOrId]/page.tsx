@@ -4,8 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import CompanyBulkUpload from '@/components/admin/CompanyBulkUpload';
-import Pagination from '@/components/ui/Pagination';
+import CompanyBulkUpload from '@/modules/admin/components/CompanyBulkUpload';
+import Pagination from '@/shared/ui/Pagination';
 
 interface DataSourceCompany {
   id: number | null;

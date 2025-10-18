@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 export default function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   const { className, children, ...rest } = props;

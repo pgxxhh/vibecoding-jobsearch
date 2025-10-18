@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildBackendUrl, resolveBackendBase } from '@/lib/backend';
+import { buildBackendUrl, resolveBackendBase } from '@/shared/lib/backend';
 
 type Params = { params: { id: string } };
 

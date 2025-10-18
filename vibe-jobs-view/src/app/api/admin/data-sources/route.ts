@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { buildBackendUrl, resolveBackendBase } from '@/lib/backend';
+import { buildBackendUrl, resolveBackendBase } from '@/shared/lib/backend';
 
 function resolveToken(req: NextRequest): string | null {
   const headerToken = req.headers.get('x-session-token');

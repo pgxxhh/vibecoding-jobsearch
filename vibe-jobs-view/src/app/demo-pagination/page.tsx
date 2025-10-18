@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import Pagination from '@/components/ui/Pagination';
+import Pagination from '@/shared/ui/Pagination';
 
 interface DataSourceCompany {
   id: number | null;
