@@ -125,18 +125,6 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   const normalizedTags = normalizeStringList(job.tags ?? []);
   const skillBadges = normalizedSkills.length > 0 ? normalizedSkills : normalizedTags;
   const highlights = shouldShowEnrichment ? normalizeStringList(job.highlights) : [];
-  const isFailed = statusState === 'FAILED';
-  const statusMessage = (() => {
-    if (!enrichmentStatus) return '';
-    const error = enrichmentStatus.error as Record<string, unknown> | undefined;
-    if (error && typeof error.message === 'string' && error.message.trim()) {
-      return error.message.trim();
-    }
-    if (typeof enrichmentStatus.message === 'string' && enrichmentStatus.message.trim()) {
-      return enrichmentStatus.message.trim();
-    }
-    return '';
-  })();
 
   const shouldShowHighlightsSection = isLoading || (shouldShowEnrichment && highlights.length > 0);
 
@@ -153,12 +141,6 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
         </div>
       </div>
-      {isFailed && (
-        <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
-          <p>{labels.enrichmentFailed}</p>
-          {statusMessage && <p className="mt-1 text-red-600/80">{statusMessage}</p>}
-        </div>
-      )}
       {(shouldShowEnrichment || isLoading) && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
