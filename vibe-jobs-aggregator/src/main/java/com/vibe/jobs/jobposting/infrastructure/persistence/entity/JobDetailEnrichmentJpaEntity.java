@@ -2,6 +2,7 @@ package com.vibe.jobs.jobposting.infrastructure.persistence.entity;
 
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
+import com.vibe.jobs.jobposting.domain.JobDetailEnrichmentStatus;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -184,7 +185,7 @@ public class JobDetailEnrichmentJpaEntity {
 
     public void markRetrying(Instant attemptedAt) {
         Instant now = Objects.requireNonNullElseGet(attemptedAt, Instant::now);
-        this.statusState = com.vibe.jobs.jobposting.domain.JobDetailEnrichmentStatus.RETRYING;
+        this.statusState = JobDetailEnrichmentStatus.RETRYING;
         this.lastAttemptAt = now;
         this.nextRetryAt = null;
         this.updatedAt = now;
