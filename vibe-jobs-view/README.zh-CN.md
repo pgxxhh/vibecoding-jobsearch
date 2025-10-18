@@ -26,7 +26,7 @@ Vibe Jobs View 是 Vibe Jobs 人才情报平台的 Next.js 前端，提供职位
 
 ## 技术栈
 - Next.js 14 App Router + TypeScript + React 18。
-- Tailwind CSS 设计令牌与 `components/ui`、`vibe-jobs-ui-pack` 自研组件库。
+- Tailwind CSS 设计令牌与 `src/shared/ui`、`vibe-jobs-ui-pack` 自研组件库。
 - TanStack React Query v5 负责缓存、变更、认证与后台数据刷新。
 - date-fns 与 date-fns-tz 处理时间线渲染。
 - Jest + Testing Library 已配置，可按需补充测试。
@@ -39,12 +39,21 @@ pnpm dev # http://localhost:3000
 
 推荐 Node.js 版本 ≥ 18。后端连接配置见 [运行时配置](#运行时配置)。
 
+## 项目结构
+```
+src/
+  app/           # App Router 路由、布局与全局 Provider
+  modules/       # 业务模块（职位搜索、后台、认证）的组件、服务与 hooks
+  shared/        # 通用 UI 与工具库
+__tests__/      # Jest + Testing Library 测试用例
+```
+
 ## 系统架构
-前端依赖 Java 后端提供搜索、富化与管理能力。`app/api/*` 下的 API Route 负责代理浏览器请求、标准化响应并处理认证 Cookie。
+前端依赖 Java 后端提供搜索、富化与管理能力。`src/app/api/*` 下的 API Route 负责代理浏览器请求、标准化响应并处理认证 Cookie。
 
 ```mermaid
 flowchart LR
-  Admin[运营团队] --> AdminUI["Admin UI\napp/(admin)"]
+  Admin[运营团队] --> AdminUI["Admin UI\nsrc/app/(admin)"]
   AdminUI --> AdminAPI["API route: /api/admin"]
   AdminAPI --> Backend[Java backend]
   Backend --> Scheduler[Ingestion scheduler]
@@ -52,7 +61,7 @@ flowchart LR
   Store --> Backend
   Backend --> JobsAPI["API route: /api/jobs"]
   Backend --> DetailAPI["API route: /api/jobs/:id/detail"]
-  JobsAPI --> SiteUI["Job seeker UI\napp/(site)/page.tsx"]
+  JobsAPI --> SiteUI["Job seeker UI\nsrc/app/(site)/page.tsx"]
   DetailAPI --> SiteUI
   SiteUI --> Candidate[Job seeker]
 ```
@@ -94,20 +103,20 @@ sequenceDiagram
 ## 领域模型
 | 模型 | 文件 | 关键字段 |
 | --- | --- | --- |
-| `Job` | `lib/types.ts` | `id`、`title`、`company`、`location`、`level`、`postedAt`、`tags`、`summary`、`skills`、`highlights`、`structuredData`、`enrichmentStatus` |
-| `JobDetail` | `lib/types.ts` | 在 `Job` 基础上包含 `content`、富化元数据与结构化 JSON |
-| `JobsResponse` | `lib/types.ts` | `items: Job[]`、`total`、`nextCursor`、`hasMore`、`size` |
-| `JobsQuery` | `lib/types.ts` | 透传给后端的检索条件（`q`、`location`、`company`、`level`、`cursor`、`size` 等） |
+| `Job` | `src/modules/job-search/types/jobs.ts` | `id`、`title`、`company`、`location`、`level`、`postedAt`、`tags`、`summary`、`skills`、`highlights`、`structuredData`、`enrichmentStatus` |
+| `JobDetail` | `src/modules/job-search/types/jobs.ts` | 在 `Job` 基础上包含 `content`、富化元数据与结构化 JSON |
+| `JobsResponse` | `src/modules/job-search/types/jobs.ts` | `items: Job[]`、`total`、`nextCursor`、`hasMore`、`size` |
+| `JobsQuery` | `src/modules/job-search/types/jobs.ts` | 透传给后端的检索条件（`q`、`location`、`company`、`level`、`cursor`、`size` 等） |
 
-`lib/jobs-normalization.ts` 负责归一化响应，仅在富化状态为 `SUCCESS` 时暴露 AI 字段。
+`src/modules/job-search/utils/jobs-normalization.ts` 负责归一化响应，仅在富化状态为 `SUCCESS` 时暴露 AI 字段。
 
 ## 功能模块
-- `app/(site)` — 营销外壳与职位发现体验，含搜索、筛选抽屉、IntersectionObserver 分页与移动详情抽屉。
-- `app/api/jobs` — 无状态代理 `/api/jobs`，输出校验后的 JSON，异常时返回 502。
-- `components/JobDetail` — 清洗 HTML，合并富化字段并优雅降级。
-- `lib/i18n.tsx` — 轻量化 i18n Provider，支持 localStorage 与 `<LanguageSwitcher />`。
-- `app/(auth)` — 邮件挑战流程（`LoginStepEmail` / `LoginStepVerify`），调用 `/api/auth/request-code` 与 `/api/auth/verify-code`。
-- `app/(admin)/admin` — 调度配置、数据源 CRUD、公司批量导入工具（JSON 编辑器）。
+- `src/app/(site)` — 营销外壳与职位发现体验，含搜索、筛选抽屉、IntersectionObserver 分页与移动详情抽屉。
+- `src/modules/job-search` — 列表/详情组件、服务与 hooks（`useJobList`、`useJobDetail`）协调分页与富化合并。
+- `src/app/api/jobs` — 无状态代理 `/api/jobs`，输出校验后的 JSON，异常时返回 502。
+- `src/shared/lib/i18n.tsx` — 轻量化 i18n Provider，支持 localStorage 与 `<LanguageSwitcher />`。
+- `src/modules/auth` — 邮件挑战流程组件与服务，封装 `/api/auth/*` 的 hooks。
+- `src/modules/admin` — 调度配置、数据源 CRUD 与批量导入，基于 React Query 封装服务层。
 
 ## 运行时配置
 下表列出主要环境变量：
@@ -116,7 +125,7 @@ sequenceDiagram
 | --- | --- | --- |
 | `BACKEND_BASE_URL` | `undefined` | 服务端首选配置，会自动拼接 `/api`。|
 | `NEXT_PUBLIC_BACKEND_BASE` | `/api` | 浏览器端代理后端的地址，支持绝对 URL、`/api` 路径或协议相对值。|
-| `NEXT_PUBLIC_API_BASE` | `/api` | 兼容旧配置的备选项，客户端请求也会使用。|
+| `NEXT_PUBLIC_API_BASE` | `/api` | 兼容旧配置的备选项，客户端请求也会使用，主要用于 `src/app/(site)/page.tsx`。|
 
 本地连接后端示例：
 ```bash
@@ -125,14 +134,14 @@ BACKEND_BASE_URL="http://localhost:8080" pnpm dev
 Docker 部署通常设置 `BACKEND_BASE_URL="http://backend:8080"`，保证容器网络内可达。
 
 ## 管理控制台
-- **Ingestion settings** (`app/(admin)/admin/ingestion-settings/page.tsx`): 调整延迟、并发、分页以及 JSON 过滤条件，保存后触发 React Query 失效。
-- **Data sources** (`app/(admin)/admin/data-sources/page.tsx`): 维护数据源定义、分类配额与公司覆盖，包含 JSON 编辑器与批量导入弹窗（`components/admin/DataSourceBulkUpload`、`CompanyBulkUpload`）。
-- **Dashboard landing** (`app/(admin)/admin/page.tsx`): 提供快速入口与运营提示。所有后台页面都要求已认证会话。
+- **Ingestion settings** (`src/app/(admin)/admin/ingestion-settings/page.tsx`): 调整延迟、并发、分页以及 JSON 过滤条件，保存后触发 React Query 失效。
+- **Data sources** (`src/app/(admin)/admin/data-sources/page.tsx`): 维护数据源定义、分类配额与公司覆盖，包含 JSON 编辑器与批量导入弹窗（`src/modules/admin/components/DataSourceBulkUpload`、`CompanyBulkUpload`）。
+- **Dashboard landing** (`src/app/(admin)/admin/page.tsx`): 提供快速入口与运营提示。所有后台页面都要求已认证会话。
 
-后台路由通过 `app/api/admin/*` 与后端交互，统一处理 JSON 响应与错误。
+后台路由通过 `src/app/api/admin/*` 与后端交互，统一处理 JSON 响应与错误。
 
 ## 前端行为说明
-- **React Query 缓存**：`app/providers.tsx` 中注入共享 `QueryClient`，用于职位详情、会话轮询与后台操作。
+- **React Query 缓存**：`src/app/providers.tsx` 中注入共享 `QueryClient`，用于职位详情、会话轮询与后台操作。
 - **无限滚动**：职位列表利用 `IntersectionObserver` 与触摸兜底逻辑（防抖滚动 + 下拉刷新）。
 - **详情富化控制**：仅当 `enrichmentStatus.state === 'SUCCESS'` 时展示 AI 摘要/技能/亮点，其他状态显示提示。
 - **响应式体验**：根据视口切换桌面分栏与移动抽屉，保持选中状态一致。
@@ -141,7 +150,7 @@ Docker 部署通常设置 `BACKEND_BASE_URL="http://backend:8080"`，保证容�
 ## 开发与测试
 - `pnpm dev` — 启动本地 Next.js 服务。
 - `pnpm build && pnpm start` — 生产构建与启动。
-- `pnpm lint` — 运行 ESLint（Next.js 配置）。
-- Jest + Testing Library 已准备好，可在 `__tests__` 或组件旁新增测试。
+- `pnpm lint` — 运行 ESLint（Next.js 规则集，覆盖 `src/` 与 `__tests__/`）。
+- `pnpm test` — 执行基于 Jest + Testing Library 的单元测试（hooks、服务、工具）。
 
 提交前请确保 lint 通过，并验证核心流程（搜索、详情、后台配置）在目标后端环境中可用。

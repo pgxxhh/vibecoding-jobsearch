@@ -26,10 +26,10 @@ Vibe Jobs View is the Next.js front-end for the Vibe Jobs talent intelligence pl
 
 ## Tech stack
 - Next.js 14 App Router + TypeScript + React 18.
-- Tailwind CSS design tokens plus custom UI kit under `components/ui` and `vibe-jobs-ui-pack`.
+- Tailwind CSS design tokens plus custom UI kit under `src/shared/ui` and `vibe-jobs-ui-pack`.
 - TanStack React Query v5 for caching, mutations, auth/session fetching, and admin data refresh.
 - Date-fns + date-fns-tz for timeline rendering.
-- Jest + Testing Library ready for component tests (no suites committed yet).
+- Jest + Testing Library covering utilities and hooks, with suites under `__tests__/`.
 
 ## Getting started
 ```bash
@@ -39,12 +39,21 @@ pnpm dev # http://localhost:3000
 
 Recommended Node.js ≥ 18. Configure backend connectivity with environment variables described in [Runtime configuration](#runtime-configuration).
 
+## Project layout
+```
+src/
+  app/           # App Router routes, layouts, and providers
+  modules/       # Feature modules (job search, admin, auth) with hooks, services, and components
+  shared/        # Cross-cutting UI primitives and utilities
+__tests__/      # Jest + Testing Library suites
+```
+
 ## System architecture
-The front-end relies on the Vibe Jobs Java backend for search, enrichment, and admin orchestration. API Routes under `app/api/*` bridge the browser and the backend, handling proxy, normalization, and authentication cookies.
+The front-end relies on the Vibe Jobs Java backend for search, enrichment, and admin orchestration. API Routes under `src/app/api/*` bridge the browser and the backend, handling proxy, normalization, and authentication cookies.
 
 ```mermaid
 flowchart LR
-  Admin[Operations team] --> AdminUI["Admin UI\napp/(admin)"]
+  Admin[Operations team] --> AdminUI["Admin UI\nsrc/app/(admin)"]
   AdminUI --> AdminAPI["API route: /api/admin"]
   AdminAPI --> Backend[Java backend]
   Backend --> Scheduler[Ingestion scheduler]
@@ -52,7 +61,7 @@ flowchart LR
   Store --> Backend
   Backend --> JobsAPI["API route: /api/jobs"]
   Backend --> DetailAPI["API route: /api/jobs/:id/detail"]
-  JobsAPI --> SiteUI["Job seeker UI\napp/(site)/page.tsx"]
+  JobsAPI --> SiteUI["Job seeker UI\nsrc/app/(site)/page.tsx"]
   DetailAPI --> SiteUI
   SiteUI --> Candidate[Job seeker]
 ```
@@ -94,20 +103,20 @@ sequenceDiagram
 ## Domain models
 | Model | File | Key fields |
 | --- | --- | --- |
-| `Job` | `lib/types.ts` | `id`, `title`, `company`, `location`, `level`, `postedAt`, `tags`, `summary`, `skills`, `highlights`, `structuredData`, `enrichmentStatus` |
-| `JobDetail` | `lib/types.ts` | Mirrors `Job` plus raw `content`, enrichment metadata, optional structured JSON blob |
-| `JobsResponse` | `lib/types.ts` | `items: Job[]`, `total`, `nextCursor`, `hasMore`, `size` |
-| `JobsQuery` | `lib/types.ts` | Search filters propagated to the backend (`q`, `location`, `company`, `level`, `cursor`, `size`) |
+| `Job` | `src/modules/job-search/types/jobs.ts` | `id`, `title`, `company`, `location`, `level`, `postedAt`, `tags`, `summary`, `skills`, `highlights`, `structuredData`, `enrichmentStatus` |
+| `JobDetail` | `src/modules/job-search/types/jobs.ts` | Mirrors `Job` plus raw `content`, enrichment metadata, optional structured JSON blob |
+| `JobsResponse` | `src/modules/job-search/types/jobs.ts` | `items: Job[]`, `total`, `nextCursor`, `hasMore`, `size` |
+| `JobsQuery` | `src/modules/job-search/types/jobs.ts` | Search filters propagated to the backend (`q`, `location`, `company`, `level`, `cursor`, `size`) |
 
-Normalization happens in `lib/jobs-normalization.ts`, ensuring enrichment data is only exposed after the backend reports a `SUCCESS` state.
+Normalization happens in `src/modules/job-search/utils/jobs-normalization.ts`, ensuring enrichment data is only exposed after the backend reports a `SUCCESS` state.
 
 ## Feature modules
-- `app/(site)` — marketing shell and job discovery experience with hero search, filter drawer, intersection-observer pagination, and mobile detail drawer.
-- `app/api/jobs` — stateless proxy connected to the backend `/api/jobs`, returning validated JSON or 502 on malformed payloads.
-- `components/JobDetail` — sanitizes HTML content, merges enrichment fields, and renders summary/skills/highlights with graceful fallbacks.
-- `lib/i18n.tsx` — lightweight internationalization provider with localStorage persistence and `<LanguageSwitcher />` integration.
-- `app/(auth)` — email challenge flow across `LoginStepEmail` and `LoginStepVerify`, leveraging `/api/auth/request-code` and `/api/auth/verify-code` routes.
-- `app/(admin)/admin` — ingestion configuration, data source CRUD, and bulk upload tooling (JSON-based) for company whitelists.
+- `src/app/(site)` — marketing shell and job discovery experience with hero search, filter drawer, intersection-observer pagination, and mobile detail drawer.
+- `src/modules/job-search` — job list/detail components, fetch services, and hooks (`useJobList`, `useJobDetail`) that coordinate pagination and enrichment merges.
+- `src/app/api/jobs` — stateless proxy connected to the backend `/api/jobs`, returning validated JSON or 502 on malformed payloads.
+- `src/shared/lib/i18n.tsx` — lightweight internationalization provider with localStorage persistence and `<LanguageSwitcher />` integration.
+- `src/modules/auth` — email challenge flow components plus `useAuth` hook and services wrapping `/api/auth/*` routes.
+- `src/modules/admin` — ingestion configuration, data source CRUD, and bulk upload tooling with React Query hooks and REST services.
 
 ## Runtime configuration
 Environment variables control which backend the UI proxies to:
@@ -116,7 +125,7 @@ Environment variables control which backend the UI proxies to:
 | --- | --- | --- |
 | `BACKEND_BASE_URL` | `undefined` | Preferred at runtime (server-side). Full URL to the Java backend root; `/api` is appended automatically. |
 | `NEXT_PUBLIC_BACKEND_BASE` | `/api` | Browser fallback for API routes when `BACKEND_BASE_URL` is not set. Accepts absolute URL, `/api` path, or protocol-relative value. |
-| `NEXT_PUBLIC_API_BASE` | `/api` | Secondary fallback for legacy setups; also used by client-side fetches in `app/(site)/page.tsx`. |
+| `NEXT_PUBLIC_API_BASE` | `/api` | Secondary fallback for legacy setups; also used by client-side fetches in `src/app/(site)/page.tsx`. |
 
 When running locally with the Java backend on `localhost:8080`:
 ```bash
@@ -125,14 +134,14 @@ BACKEND_BASE_URL="http://localhost:8080" pnpm dev
 Docker deployments commonly set `BACKEND_BASE_URL="http://backend:8080"` so both API routes and client fetches resolve inside the container network.
 
 ## Admin console
-- **Ingestion settings** (`app/(admin)/admin/ingestion-settings/page.tsx`): adjust delay, concurrency, page size, and JSON-based location/role filters. Saves trigger invalidation via React Query.
-- **Data sources** (`app/(admin)/admin/data-sources/page.tsx`): maintain source definitions, category quota definitions, and company overrides; includes JSON editors and bulk upload modals (`components/admin/DataSourceBulkUpload`, `CompanyBulkUpload`).
-- **Dashboard landing** (`app/(admin)/admin/page.tsx`): quick links plus operational tips. All admin screens expect an authenticated session.
+- **Ingestion settings** (`src/app/(admin)/admin/ingestion-settings/page.tsx`): adjust delay, concurrency, page size, and JSON-based location/role filters. Saves trigger invalidation via React Query.
+- **Data sources** (`src/app/(admin)/admin/data-sources/page.tsx`): maintain source definitions, category quota definitions, and company overrides; includes JSON editors and bulk upload modals (`src/modules/admin/components/DataSourceBulkUpload`, `CompanyBulkUpload`).
+- **Dashboard landing** (`src/app/(admin)/admin/page.tsx`): quick links plus operational tips. All admin screens expect an authenticated session.
 
-Admin routes proxy to the backend via `app/api/admin/*` for create/update/delete operations and enforce consistent JSON responses.
+Admin routes proxy to the backend via `src/app/api/admin/*` for create/update/delete operations and enforce consistent JSON responses.
 
 ## Front-end behaviors
-- **React Query caching**: `app/providers.tsx` wires a shared `QueryClient` for job detail fetching, auth session polling, and admin mutations.
+- **React Query caching**: `src/app/providers.tsx` wires a shared `QueryClient` for job detail fetching, auth session polling, and admin mutations.
 - **Infinite scroll + observer**: job list uses an `IntersectionObserver` anchored at `loadMoreRef` with mobile-friendly fallbacks (debounced scroll + pull-to-refresh touch handlers).
 - **Detail enrichment gating**: UI shows AI summaries, skills, and highlights only when `enrichmentStatus.state === 'SUCCESS'`; pending/failed states surface subtle banners.
 - **Responsive UX**: viewport watcher toggles between desktop split layout and mobile full-screen drawer, preserving selection state.
@@ -142,7 +151,7 @@ Admin routes proxy to the backend via `app/api/admin/*` for create/update/delete
 ## Development & testing
 - `pnpm dev` — start local Next.js server.
 - `pnpm build && pnpm start` — production build + serve.
-- `pnpm lint` — run ESLint (Next.js config).
-- Jest + Testing Library are configured; add suites under `__tests__` or alongside components as needed.
+- `pnpm lint` — run ESLint with the Next.js rule-set against `src/` and `__tests__/`.
+- `pnpm test` — execute Jest + Testing Library suites covering hooks, utilities, and services.
 
 Before pushing changes, ensure lint passes and that critical flows (search, detail view, admin edits) work against the intended backend environment.

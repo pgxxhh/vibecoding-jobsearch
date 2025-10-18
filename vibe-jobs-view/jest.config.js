@@ -7,7 +7,10 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   testEnvironment: 'node',
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/modules/(.*)$': '<rootDir>/src/modules/$1',
+    '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
+    '^@/vibe-jobs-ui-pack/(.*)$': '<rootDir>/vibe-jobs-ui-pack/$1',
   },
   setupFilesAfterEnv: [],
 };

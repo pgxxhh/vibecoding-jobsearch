@@ -1,6 +1,6 @@
-import { Badge, Button, Skeleton } from '@/components/ui';
-import { TimeDisplay } from '@/components/TimeDisplay';
-import type { Job } from '@/lib/types';
+import { Badge, Button, Skeleton } from '@/shared/ui';
+import { TimeDisplay } from '@/shared/components/TimeDisplay';
+import type { Job } from '@/modules/job-search/types';
 
 type Labels = {
   empty: string;

@@ -1,5 +1,5 @@
 
-import { Job } from '@/lib/types';
+import type { Job } from '@/modules/job-search/types';
 export default function JobCard({ job }: { job: Job }) {
   return (
     <article className="card p-5 hover:shadow-glow transition">

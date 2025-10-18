@@ -15,7 +15,13 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./*"] }
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"],
+      "@/modules/*": ["modules/*"],
+      "@/shared/*": ["shared/*"],
+      "@/vibe-jobs-ui-pack/*": ["../vibe-jobs-ui-pack/*"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
