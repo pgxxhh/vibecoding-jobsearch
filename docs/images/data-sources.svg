@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#03111f" rx="28"/>
+  <text x="80" y="110" fill="#38bdf8" font-size="32" font-family="Inter, sans-serif" font-weight="600">Data sources</text>
+  <rect x="80" y="140" width="800" height="340" rx="26" fill="#0f172a"/>
+  <g font-family="Inter, sans-serif" font-size="20">
+    <rect x="120" y="190" width="720" height="52" rx="14" fill="#1e293b"/>
+    <text x="150" y="223" fill="#f8fafc">Ashby</text>
+    <text x="720" y="223" fill="#34d399">● Active</text>
+    <rect x="120" y="260" width="720" height="52" rx="14" fill="#1e293b"/>
+    <text x="150" y="293" fill="#f8fafc">Greenhouse</text>
+    <text x="720" y="293" fill="#facc15">● Paused</text>
+    <rect x="120" y="330" width="720" height="52" rx="14" fill="#1e293b"/>
+    <text x="150" y="363" fill="#f8fafc">Lever</text>
+    <text x="720" y="363" fill="#34d399">● Active</text>
+    <rect x="120" y="400" width="720" height="52" rx="14" fill="#1e293b"/>
+    <text x="150" y="433" fill="#f8fafc">Custom crawler</text>
+    <text x="720" y="433" fill="#f87171">● Error</text>
+  </g>
+  <text x="80" y="480" fill="#94a3b8" font-size="20" font-family="Inter, sans-serif">Toggle connectors and monitor health in one dashboard.</text>
+</svg>

@@ -4,6 +4,33 @@
 
 Elaine Jobs is a talent intelligence platform designed for users in Mainland China. It aggregates job postings from overseas companies through a unified ingestion pipeline and enriches the content with LLM-powered summaries so that openings are searchable, subscribable, and always up to date.
 
+## Product tour
+
+> _Note: The vector illustrations below are lightweight recreations of the UI so the documentation stays binary-free._
+
+<p align="center">
+  <img src="docs/images/home-hero.svg" alt="Elaine Jobs landing page highlighting hero search panel" width="75%" />
+</p>
+
+- **Search experience** – The landing page lets talent discover curated openings with natural-language filters, quick tag selectors (location, job type, tech stack), and instant results.
+- **Rich job detail** – AI-generated highlights and structured metadata surface the most relevant information alongside the original description so candidates can act quickly.
+
+<p align="center">
+  <img src="docs/images/home-detail.svg" alt="Job detail page showing AI-generated summary and structured metadata" width="75%" />
+</p>
+
+- **Ingestion controls** – Operations teams can fine-tune crawler cadence, request budgets, and retry policies directly in the admin console to match business requirements.
+
+<p align="center">
+  <img src="docs/images/ingestion-settings.svg" alt="Admin console ingestion settings with configurable quotas" width="75%" />
+</p>
+
+- **Source management** – Toggle ATS connectors or custom crawlers with a single click and monitor their status to ensure feeds stay fresh.
+
+<p align="center">
+  <img src="docs/images/data-sources.svg" alt="Admin console data source list showing active and paused connectors" width="75%" />
+</p>
+
 
 ## Table of contents
 - [System overview](#system-overview)
