@@ -2,6 +2,7 @@ package com.vibe.jobs.jobposting.infrastructure.persistence;
 
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -21,7 +22,7 @@ class JobSearchTest {
     private JobRepository jobRepository;
 
     @Autowired
-    private JobDetailRepository jobDetailRepository;
+    private JobDetailRepositoryPort jobDetailRepository;
 
     @Test
     void testKeywordSearchInAllFields() {

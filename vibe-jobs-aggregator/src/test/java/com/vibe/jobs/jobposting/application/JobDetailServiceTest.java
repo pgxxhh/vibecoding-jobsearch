@@ -1,8 +1,7 @@
 package com.vibe.jobs.jobposting.application;
 
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository.EnrichmentView;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import com.vibe.jobs.jobposting.application.dto.JobDetailEnrichmentsDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,7 @@ import static org.mockito.Mockito.when;
 class JobDetailServiceTest {
 
     @Mock
-    private JobDetailRepository repository;
+    private JobDetailRepositoryPort repository;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -84,22 +83,7 @@ class JobDetailServiceTest {
         assertThat(dto.findValue(JobEnrichmentKey.SUMMARY)).isEmpty();
     }
 
-    private EnrichmentView view(Long jobId, JobEnrichmentKey key, String valueJson) {
-        return new EnrichmentView() {
-            @Override
-            public Long getJobId() {
-                return jobId;
-            }
-
-            @Override
-            public JobEnrichmentKey getEnrichmentKey() {
-                return key;
-            }
-
-            @Override
-            public String getValueJson() {
-                return valueJson;
-            }
-        };
+    private JobDetailRepositoryPort.JobDetailEnrichmentView view(Long jobId, JobEnrichmentKey key, String valueJson) {
+        return new JobDetailRepositoryPort.JobDetailEnrichmentView(jobId, key, valueJson);
     }
 }

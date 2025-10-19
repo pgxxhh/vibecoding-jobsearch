@@ -2,6 +2,7 @@ package com.vibe.jobs.jobposting.infrastructure.persistence;
 
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,14 +54,17 @@ class JobSearchMySqlIntegrationTest {
     private JobRepository jobRepository;
 
     @Autowired
-    private JobDetailRepository jobDetailRepository;
+    private JobDetailRepositoryPort jobDetailRepository;
+
+    @Autowired
+    private JobDetailJpaRepository jobDetailJpaRepository;
 
     @Autowired
     private EntityManager entityManager;
 
     @BeforeEach
     void cleanDatabase() {
-        jobDetailRepository.deleteAll();
+        jobDetailJpaRepository.deleteAll();
         jobRepository.deleteAll();
     }
 

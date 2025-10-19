@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +35,7 @@ class JobDetailEnrichmentProcessorTest {
     private JobDetailEnrichmentWriter writer;
 
     @Mock
-    private JobDetailRepository repository;
+    private JobDetailRepositoryPort repository;
 
     private ObjectMapper objectMapper;
 

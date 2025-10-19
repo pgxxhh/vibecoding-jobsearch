@@ -7,7 +7,7 @@ import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichmentStatus;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobDetailRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,13 +26,13 @@ import static org.mockito.Mockito.when;
 
 class JobDetailEnrichmentWriterTest {
 
-    private JobDetailRepository repository;
+    private JobDetailRepositoryPort repository;
     private ObjectMapper objectMapper;
     private JobDetailEnrichmentRetryStrategy retryStrategy;
 
     @BeforeEach
     void setUp() {
-        repository = mock(JobDetailRepository.class);
+        repository = mock(JobDetailRepositoryPort.class);
         objectMapper = new ObjectMapper();
         JobDetailEnrichmentRetryProperties properties = new JobDetailEnrichmentRetryProperties();
         properties.setInitialDelay(Duration.ofMinutes(1));
