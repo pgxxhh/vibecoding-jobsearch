@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#020617" rx="24"/>
+  <rect x="60" y="60" width="320" height="420" rx="20" fill="#0f172a"/>
+  <rect x="90" y="110" width="260" height="36" rx="10" fill="#38bdf8" opacity="0.25"/>
+  <text x="106" y="136" fill="#bae6fd" font-size="18" font-family="Inter, sans-serif">Company · Location</text>
+  <rect x="90" y="170" width="260" height="220" rx="14" fill="#1e293b"/>
+  <text x="108" y="208" fill="#f8fafc" font-size="20" font-family="Inter, sans-serif" font-weight="600">Summary</text>
+  <text x="108" y="236" fill="#cbd5f5" font-size="16" font-family="Inter, sans-serif" opacity="0.85">• LLM highlights</text>
+  <text x="108" y="264" fill="#cbd5f5" font-size="16" font-family="Inter, sans-serif" opacity="0.85">• Key responsibilities</text>
+  <text x="108" y="292" fill="#cbd5f5" font-size="16" font-family="Inter, sans-serif" opacity="0.85">• Skills extracted</text>
+  <rect x="420" y="60" width="480" height="420" rx="24" fill="#0f172a"/>
+  <rect x="450" y="100" width="420" height="52" rx="14" fill="#38bdf8" opacity="0.3"/>
+  <text x="470" y="134" fill="#e2e8f0" font-size="24" font-family="Inter, sans-serif">Staff Frontend Engineer</text>
+  <rect x="450" y="180" width="420" height="210" rx="18" fill="#1e293b"/>
+  <text x="470" y="212" fill="#f8fafc" font-size="20" font-family="Inter, sans-serif" font-weight="600">Original description</text>
+  <text x="470" y="244" fill="#94a3b8" font-size="16" font-family="Inter, sans-serif">Rich HTML content rendered alongside AI insights.</text>
+  <rect x="450" y="410" width="180" height="44" rx="14" fill="#38bdf8"/>
+  <text x="490" y="438" fill="#0f172a" font-size="20" font-family="Inter, sans-serif" font-weight="600">Apply now</text>
+</svg>
