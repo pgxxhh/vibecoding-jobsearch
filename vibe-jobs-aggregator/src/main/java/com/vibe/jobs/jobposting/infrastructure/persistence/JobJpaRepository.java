@@ -16,8 +16,7 @@ public interface JobJpaRepository extends JpaRepository<JobJpaEntity, Long>, Job
     @Query("SELECT j FROM JobJpaEntity j WHERE j.source = :source AND j.externalId = :externalId AND j.deleted = false")
     Optional<JobJpaEntity> findBySourceAndExternalId(@Param("source") String source, @Param("externalId") String externalId);
 
-    @Query("SELECT j FROM JobJpaEntity j WHERE j.deleted = false AND lower(j.company) = lower(:company) AND lower(j.title) = lower(:title) ORDER BY j.createdAt DESC")
-    Optional<JobJpaEntity> findTopByCompanyIgnoreCaseAndTitleIgnoreCase(@Param("company") String company, @Param("title") String title);
+    Optional<JobJpaEntity> findFirstByDeletedFalseAndCompanyIgnoreCaseAndTitleIgnoreCaseOrderByCreatedAtDesc(String company, String title);
 
     @Modifying
     @Query("UPDATE JobJpaEntity j SET j.deleted = true, j.updatedAt = :deletedAt WHERE j.id = :id")

@@ -16,7 +16,7 @@ public interface JobRepositoryPort {
 
     Optional<Job> findBySourceAndExternalId(String source, String externalId);
 
-    Optional<Job> findTopByCompanyIgnoreCaseAndTitleIgnoreCase(String company, String title);
+    Optional<Job> findMostRecentByCompanyAndTitleIgnoreCase(String company, String title);
 
     void softDeleteById(Long id, Instant deletedAt);
 

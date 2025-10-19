@@ -31,7 +31,7 @@ public class JobService {
         }
 
         if(hasCompanyAndTitle(incoming)){
-            Optional<Job> duplicate = repo.findTopByCompanyIgnoreCaseAndTitleIgnoreCase(
+            Optional<Job> duplicate = repo.findMostRecentByCompanyAndTitleIgnoreCase(
                     incoming.getCompany(), incoming.getTitle());
             if(duplicate.isPresent()){
                 Job current = duplicate.get();

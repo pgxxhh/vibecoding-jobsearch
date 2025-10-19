@@ -54,8 +54,10 @@ public class JobRepositoryAdapter implements JobRepositoryPort {
     }
 
     @Override
-    public Optional<Job> findTopByCompanyIgnoreCaseAndTitleIgnoreCase(String company, String title) {
-        return jobJpaRepository.findTopByCompanyIgnoreCaseAndTitleIgnoreCase(company, title).map(JobJpaEntity::toDomain);
+    public Optional<Job> findMostRecentByCompanyAndTitleIgnoreCase(String company, String title) {
+        return jobJpaRepository
+                .findFirstByDeletedFalseAndCompanyIgnoreCaseAndTitleIgnoreCaseOrderByCreatedAtDesc(company, title)
+                .map(JobJpaEntity::toDomain);
     }
 
     @Override

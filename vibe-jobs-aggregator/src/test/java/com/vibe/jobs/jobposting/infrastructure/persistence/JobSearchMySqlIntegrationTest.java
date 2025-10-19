@@ -5,6 +5,7 @@ import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import com.vibe.jobs.jobposting.infrastructure.persistence.JobJpaRepository;
+import com.vibe.jobs.jobposting.infrastructure.persistence.JobJpaRepositoryImpl;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
