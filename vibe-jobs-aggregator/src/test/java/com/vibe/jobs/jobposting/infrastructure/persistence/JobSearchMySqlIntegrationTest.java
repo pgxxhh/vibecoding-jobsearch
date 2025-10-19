@@ -4,6 +4,7 @@ import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
 import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
+import com.vibe.jobs.jobposting.infrastructure.persistence.JobJpaRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,12 +61,15 @@ class JobSearchMySqlIntegrationTest {
     private JobDetailJpaRepository jobDetailJpaRepository;
 
     @Autowired
+    private JobJpaRepository jobJpaRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @BeforeEach
     void cleanDatabase() {
         jobDetailJpaRepository.deleteAll();
-        jobRepository.deleteAll();
+        jobJpaRepository.deleteAll();
     }
 
     @Test
@@ -175,7 +179,7 @@ class JobSearchMySqlIntegrationTest {
                                              Instant cursorPostedAt,
                                              Long cursorId,
                                              boolean searchDetail) {
-        JobRepositoryImpl repositoryImpl = new JobRepositoryImpl(entityManager);
+        JobJpaRepositoryImpl repositoryImpl = new JobJpaRepositoryImpl(entityManager);
         String normalizedQuery = (String) ReflectionTestUtils.invokeMethod(repositoryImpl, "normalize", q);
         boolean hasQuery = normalizedQuery != null;
         boolean detailEnabled = searchDetail && hasQuery;
