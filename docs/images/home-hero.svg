@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <rect width="960" height="540" fill="#0f172a" rx="24"/>
+  <text x="60" y="90" fill="#38bdf8" font-size="42" font-family="Inter, sans-serif" font-weight="600">Elaine Jobs</text>
+  <rect x="60" y="130" width="520" height="70" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+  <text x="86" y="175" fill="#e2e8f0" font-size="26" font-family="Inter, sans-serif">Search for "Staff Frontend Engineer"</text>
+  <rect x="60" y="230" width="840" height="190" rx="18" fill="#1e293b"/>
+  <rect x="88" y="260" width="220" height="120" rx="16" fill="#334155"/>
+  <text x="104" y="305" fill="#f1f5f9" font-size="20" font-family="Inter, sans-serif">Filters</text>
+  <rect x="120" y="330" width="160" height="32" rx="16" fill="#38bdf8" opacity="0.35"/>
+  <text x="132" y="353" fill="#bae6fd" font-size="16" font-family="Inter, sans-serif">Location · Remote</text>
+  <rect x="332" y="260" width="540" height="120" rx="16" fill="#0ea5e9" opacity="0.25"/>
+  <text x="356" y="308" fill="#f8fafc" font-size="20" font-family="Inter, sans-serif" font-weight="500">Job results update instantly with LLM highlights</text>
+  <rect x="332" y="330" width="180" height="32" rx="16" fill="#38bdf8" opacity="0.35"/>
+  <text x="352" y="353" fill="#bae6fd" font-size="16" font-family="Inter, sans-serif">Subscribe</text>
+  <text x="60" y="460" fill="#94a3b8" font-size="20" font-family="Inter, sans-serif">Natural-language filters and instant feedback help candidates explore roles quickly.</text>
+</svg>

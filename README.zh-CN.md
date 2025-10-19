@@ -5,6 +5,34 @@
 Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统一的抓取管线和 LLM 加持的内容增强，提供近实时、可检索、可订阅的招聘信息聚合服务。
 
 
+## 产品巡礼
+
+> _说明：以下为基于界面重绘的矢量示意图，方便在不提交二进制资源的情况下展示核心流程。_
+
+<p align="center">
+  <img src="docs/images/home-hero.svg" alt="Elaine Jobs 首页搜索面板" width="75%" />
+</p>
+
+- **搜索体验** —— 首页提供自然语言检索、快速标签（地点、职位类型、技术栈）以及即时结果，帮助候选人快速发现合适的岗位。
+- **职位详情** —— AI 生成的高亮摘要与结构化元数据，与原始职位描述同屏展示，便于候选人快速判断是否匹配。
+
+<p align="center">
+  <img src="docs/images/home-detail.svg" alt="职位详情页展示 AI 摘要和结构化信息" width="75%" />
+</p>
+
+- **采集控制** —— 运营同学可在后台直接配置抓取频率、预算与重试策略，以满足不同业务诉求。
+
+<p align="center">
+  <img src="docs/images/ingestion-settings.svg" alt="后台抓取配置页面" width="75%" />
+</p>
+
+- **数据源管理** —— 一键启用 / 暂停 ATS 连接器或自定义爬虫，并实时查看当前状态，确保职位信息持续更新。
+
+<p align="center">
+  <img src="docs/images/data-sources.svg" alt="后台数据源管理列表" width="75%" />
+</p>
+
+
 ## 目录
 - [系统总览](#系统总览)
 - [架构与核心组件](#架构与核心组件)
