@@ -5,83 +5,12 @@ import Link from 'next/link';
 
 import DataSourceBulkUpload from '@/modules/admin/components/DataSourceBulkUpload';
 import { useDataSources } from '@/modules/admin/hooks/useDataSources';
-import type { DataSourcePayload, DataSourceResponse } from '@/modules/admin/types';
-
-export interface DataSourceFormState {
-  code: string;
-  type: string;
-  enabled: boolean;
-  runOnStartup: boolean;
-  requireOverride: boolean;
-  flow: 'LIMITED' | 'UNLIMITED';
-  baseOptionsJson: string;
-  categoriesJson: string;
-  companiesJson: string;
-}
-
-export function buildDataSourcePayload(form: DataSourceFormState): DataSourcePayload {
-  const baseOptions = form.baseOptionsJson.trim()
-    ? (JSON.parse(form.baseOptionsJson) as DataSourcePayload['baseOptions'])
-    : {};
-  const categories = form.categoriesJson.trim()
-    ? (JSON.parse(form.categoriesJson) as DataSourcePayload['categories'])
-    : [];
-  const companies = form.companiesJson.trim()
-    ? (JSON.parse(form.companiesJson) as DataSourcePayload['companies'])
-    : [];
-
-  if (!form.code) {
-    throw new Error('Code 不能为空');
-  }
-  if (!form.type) {
-    throw new Error('Type 不能为空');
-  }
-
-  return {
-    code: form.code,
-    type: form.type,
-    enabled: form.enabled,
-    runOnStartup: form.runOnStartup,
-    requireOverride: form.requireOverride,
-    flow: form.flow,
-    baseOptions,
-    categories,
-    companies,
-  };
-}
-
-export function submitDataSourceForm(
-  form: DataSourceFormState,
-  options: {
-    id: number | 'new' | null;
-    mutate: ReturnType<typeof useDataSources>['save']['mutate'];
-    onSuccess: () => void;
-    onError: (err: unknown) => void;
-  },
-) {
-  const payload = buildDataSourcePayload(form);
-  options.mutate(
-    { payload, id: options.id },
-    {
-      onSuccess: options.onSuccess,
-      onError: options.onError,
-    },
-  );
-}
-
-export function removeDataSourceById(
-  id: number,
-  options: {
-    mutate: ReturnType<typeof useDataSources>['remove']['mutate'];
-    onSuccess: () => void;
-    onError: (err: unknown) => void;
-  },
-) {
-  options.mutate(id, {
-    onSuccess: options.onSuccess,
-    onError: options.onError,
-  });
-}
+import {
+  buildDataSourcePayload,
+  removeDataSourceById,
+  submitDataSourceForm,
+  type DataSourceFormState,
+} from '@/modules/admin/utils/dataSourceForm';
 
 export default function DataSourcesPage() {
   const { list, save, remove } = useDataSources();

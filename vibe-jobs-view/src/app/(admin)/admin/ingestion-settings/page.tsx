@@ -3,58 +3,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 
 import { useIngestionSettings } from '@/modules/admin/hooks/useIngestionSettings';
-import type { IngestionSettings } from '@/modules/admin/types';
-
-export interface IngestionFormState {
-  fixedDelayMs: string;
-  initialDelayMs: string;
-  pageSize: string;
-  recentDays: string;
-  concurrency: string;
-  locationJson: string;
-  roleJson: string;
-}
-
-export function buildIngestionSettingsPayload(
-  form: IngestionFormState,
-  fallback?: IngestionSettings | null,
-): Partial<IngestionSettings> {
-  const { fixedDelayMs, initialDelayMs, pageSize, recentDays, concurrency, locationJson, roleJson } = form;
-
-  if (!fixedDelayMs || !initialDelayMs || !pageSize || !recentDays || !concurrency) {
-    throw new Error('请填写所有必填字段');
-  }
-
-  const location = locationJson.trim() ? JSON.parse(locationJson) : {};
-  const role = roleJson.trim() ? JSON.parse(roleJson) : {};
-
-  return {
-    fixedDelayMs: Number(fixedDelayMs) || fallback?.fixedDelayMs,
-    initialDelayMs: Number(initialDelayMs) || fallback?.initialDelayMs,
-    pageSize: Number(pageSize) || fallback?.pageSize,
-    recentDays: Number(recentDays) || fallback?.recentDays,
-    concurrency: Number(concurrency) || fallback?.concurrency,
-    companyOverrides: fallback?.companyOverrides ?? {},
-    locationFilter: location,
-    roleFilter: role,
-  };
-}
-
-export function submitIngestionSettingsForm(
-  form: IngestionFormState,
-  options: {
-    fallback?: IngestionSettings | null;
-    mutate: ReturnType<typeof useIngestionSettings>['update']['mutate'];
-    onSuccess: () => void;
-    onError: (err: unknown) => void;
-  },
-) {
-  const payload = buildIngestionSettingsPayload(form, options.fallback);
-  options.mutate(payload, {
-    onSuccess: options.onSuccess,
-    onError: options.onError,
-  });
-}
+import {
+  buildIngestionSettingsPayload,
+  submitIngestionSettingsForm,
+  type IngestionFormState,
+} from '@/modules/admin/utils/ingestionForm';
 
 export default function IngestionSettingsPage() {
   const { query, update } = useIngestionSettings();

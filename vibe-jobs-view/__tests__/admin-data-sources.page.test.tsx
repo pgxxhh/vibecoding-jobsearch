@@ -2,14 +2,15 @@
 
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import DataSourcesPage, {
+import DataSourcesPage from '@/app/(admin)/admin/data-sources/page';
+import { useDataSources } from '@/modules/admin/hooks/useDataSources';
+import type { DataSourcePayload, DataSourceResponse } from '@/modules/admin/types';
+import {
   buildDataSourcePayload,
   removeDataSourceById,
   submitDataSourceForm,
   type DataSourceFormState,
-} from '@/app/(admin)/admin/data-sources/page';
-import { useDataSources } from '@/modules/admin/hooks/useDataSources';
-import type { DataSourcePayload, DataSourceResponse } from '@/modules/admin/types';
+} from '@/modules/admin/utils/dataSourceForm';
 
 type DataSourcesHookReturn = ReturnType<typeof useDataSources>;
 

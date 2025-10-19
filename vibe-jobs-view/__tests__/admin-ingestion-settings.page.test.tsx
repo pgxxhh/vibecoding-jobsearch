@@ -2,13 +2,14 @@
 
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import IngestionSettingsPage, {
+import IngestionSettingsPage from '@/app/(admin)/admin/ingestion-settings/page';
+import { useIngestionSettings } from '@/modules/admin/hooks/useIngestionSettings';
+import type { IngestionSettings } from '@/modules/admin/types';
+import {
   buildIngestionSettingsPayload,
   submitIngestionSettingsForm,
   type IngestionFormState,
-} from '@/app/(admin)/admin/ingestion-settings/page';
-import { useIngestionSettings } from '@/modules/admin/hooks/useIngestionSettings';
-import type { IngestionSettings } from '@/modules/admin/types';
+} from '@/modules/admin/utils/ingestionForm';
 
 type IngestionHookReturn = ReturnType<typeof useIngestionSettings>;
 
