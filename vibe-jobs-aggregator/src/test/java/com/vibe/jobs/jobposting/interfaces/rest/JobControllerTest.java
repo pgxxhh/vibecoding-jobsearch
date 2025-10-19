@@ -2,14 +2,13 @@ package com.vibe.jobs.jobposting.interfaces.rest;
 
 import com.vibe.jobs.jobposting.application.JobDetailService;
 import com.vibe.jobs.jobposting.domain.Job;
-import com.vibe.jobs.jobposting.infrastructure.persistence.JobRepository;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Pageable;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
@@ -19,6 +18,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,7 +33,7 @@ class JobControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private JobRepository repo;
+    private JobRepositoryPort repo;
 
     @MockBean
     private JobDetailService jobDetailService;
@@ -45,7 +45,7 @@ class JobControllerTest {
 
     @Test
     void listWithoutIncludeTotalSkipsCounting() throws Exception {
-        when(repo.searchAfter(any(), any(), any(), any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(repo.searchAfter(any(), any(), any(), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
                 .thenReturn(List.of(sampleJob()));
 
         mockMvc.perform(get("/jobs").param("size", "1"))
@@ -57,7 +57,7 @@ class JobControllerTest {
 
     @Test
     void listWithIncludeTotalReturnsValue() throws Exception {
-        when(repo.searchAfter(any(), any(), any(), any(), any(), any(), any(), anyBoolean(), any(Pageable.class)))
+        when(repo.searchAfter(any(), any(), any(), any(), any(), any(), any(), anyBoolean(), anyInt(), anyInt()))
                 .thenReturn(List.of(sampleJob()));
         when(repo.countSearch(any(), any(), any(), any(), any(), anyBoolean())).thenReturn(42L);
 

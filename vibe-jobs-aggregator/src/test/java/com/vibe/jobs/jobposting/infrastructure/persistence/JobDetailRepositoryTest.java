@@ -5,6 +5,7 @@ import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.JobDetailEnrichment;
 import com.vibe.jobs.jobposting.domain.JobEnrichmentKey;
 import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class JobDetailRepositoryTest {
 
     @Autowired
-    private JobRepository jobRepository;
+    private JobRepositoryPort jobRepository;
 
     @Autowired
     private JobDetailRepositoryPort jobDetailRepository;

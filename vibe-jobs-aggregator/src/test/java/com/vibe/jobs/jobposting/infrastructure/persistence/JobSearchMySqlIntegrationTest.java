@@ -3,6 +3,7 @@ package com.vibe.jobs.jobposting.infrastructure.persistence;
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.JobDetail;
 import com.vibe.jobs.jobposting.domain.spi.JobDetailRepositoryPort;
+import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -51,7 +51,7 @@ class JobSearchMySqlIntegrationTest {
     }
 
     @Autowired
-    private JobRepository jobRepository;
+    private JobRepositoryPort jobRepository;
 
     @Autowired
     private JobDetailRepositoryPort jobDetailRepository;
@@ -75,7 +75,7 @@ class JobSearchMySqlIntegrationTest {
         saveJob("p3", "Marketing Manager", "Gamma", "New York", "manager", Instant.parse("2024-05-03T10:00:00Z"));
 
         List<Job> results = jobRepository.searchAfter(
-                "Engineer", null, null, null, null, null, null, false, PageRequest.of(0, 10));
+                "Engineer", null, null, null, null, null, null, false, 0, 10);
 
         assertThat(results)
                 .extracting(Job::getId)
@@ -89,10 +89,10 @@ class JobSearchMySqlIntegrationTest {
         Job job = saveJob("d1", "Backend Developer", "Infra", "Remote", "mid", Instant.parse("2024-06-01T09:00:00Z"));
         jobDetailRepository.save(new JobDetail(job, "<p>Kubernetes experts wanted</p>", "Kubernetes experts wanted"));
 
-        assertTrue(jobRepository.searchAfter("Kubernetes", null, null, null, null, null, null, false, PageRequest.of(0, 10)).isEmpty());
+        assertTrue(jobRepository.searchAfter("Kubernetes", null, null, null, null, null, null, false, 0, 10).isEmpty());
 
         List<Job> results = jobRepository.searchAfter(
-                "Kubernetes", null, null, null, null, null, null, true, PageRequest.of(0, 10));
+                "Kubernetes", null, null, null, null, null, null, true, 0, 10);
 
         assertThat(results)
                 .extracting(Job::getId)
@@ -108,7 +108,7 @@ class JobSearchMySqlIntegrationTest {
         saveJob("m3", "DevOps Engineer", "Other", "Remote", "junior", Instant.parse("2024-07-03T08:00:00Z"));
 
         List<Job> results = jobRepository.searchAfter(
-                "DevOps", "Cloudy", "Remote", "senior", null, null, null, false, PageRequest.of(0, 10));
+                "DevOps", "Cloudy", "Remote", "senior", null, null, null, false, 0, 10);
 
         assertThat(results)
                 .extracting(Job::getId)
@@ -122,7 +122,7 @@ class JobSearchMySqlIntegrationTest {
         Job oldest = saveJob("c3", "QA Engineer", "Acme", "Remote", "mid", Instant.parse("2024-08-01T12:00:00Z"));
 
         List<Job> firstPage = jobRepository.searchAfter(
-                "QA", "Acme", "Remote", null, null, null, null, false, PageRequest.of(0, 2));
+                "QA", "Acme", "Remote", null, null, null, null, false, 0, 2);
 
         assertThat(firstPage)
                 .extracting(Job::getId)
@@ -130,8 +130,13 @@ class JobSearchMySqlIntegrationTest {
 
         Job lastOfFirstPage = firstPage.get(firstPage.size() - 1);
         List<Job> secondPage = jobRepository.searchAfter(
-                "QA", "Acme", "Remote", null, null,
-                lastOfFirstPage.getPostedAt(), lastOfFirstPage.getId(), false, PageRequest.of(0, 2));
+                "QA", "Acme", "Remote", null,
+                null,
+                lastOfFirstPage.getPostedAt(),
+                lastOfFirstPage.getId(),
+                false,
+                0,
+                2);
 
         assertThat(secondPage)
                 .extracting(Job::getId)
