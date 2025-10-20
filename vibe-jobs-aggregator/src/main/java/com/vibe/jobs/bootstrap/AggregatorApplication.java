@@ -2,6 +2,7 @@
 package com.vibe.jobs.bootstrap;
 
 import com.vibe.jobs.auth.config.EmailAuthProperties;
+import com.vibe.jobs.crawler.infrastructure.config.CrawlerBlueprintGenerationExecutorProperties;
 import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import com.vibe.jobs.shared.infrastructure.config.JobContentEnrichmentExecutorProperties;
 import com.vibe.jobs.shared.infrastructure.config.JobDetailEnrichmentRetryProperties;
@@ -23,6 +24,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({IngestionProperties.class,
         EmailAuthProperties.class,
         JobContentEnrichmentExecutorProperties.class,
+        CrawlerBlueprintGenerationExecutorProperties.class,
         JobDetailEnrichmentRetryProperties.class})
 public class AggregatorApplication {
 
