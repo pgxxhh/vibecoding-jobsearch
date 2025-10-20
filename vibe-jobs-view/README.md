@@ -137,6 +137,7 @@ Docker deployments commonly set `BACKEND_BASE_URL="http://backend:8080"` so both
 ## Admin console
 - **Ingestion settings** (`src/app/(admin)/admin/ingestion-settings/page.tsx`): adjust delay, concurrency, page size, and JSON-based location/role filters. Saves trigger invalidation via React Query.
 - **Data sources** (`src/app/(admin)/admin/data-sources/page.tsx`): maintain source definitions, category quota definitions, and company overrides; includes JSON editors and bulk upload modals (`src/modules/admin/components/DataSourceBulkUpload`, `CompanyBulkUpload`).
+- **Crawler blueprints** (`src/app/(admin)/admin/crawler-blueprints/page.tsx`): browse blueprint cards, drill into `[code]/page.tsx` for execution logs, trigger reruns/activation, and launch the guided creator (`new/page.tsx`).
 - **Dashboard landing** (`src/app/(admin)/admin/page.tsx`): quick links plus operational tips. All admin screens expect an authenticated session.
 
 Admin routes proxy to the backend via `src/app/api/admin/*` for create/update/delete operations and enforce consistent JSON responses.
