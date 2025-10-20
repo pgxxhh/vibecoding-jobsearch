@@ -16,13 +16,13 @@ CREATE TABLE IF NOT EXISTS crawler_blueprint_generation_task (
 );
 
 ALTER TABLE crawler_blueprint
-    ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
-    ADD COLUMN IF NOT EXISTS draft_config_json JSON NULL,
-    ADD COLUMN IF NOT EXISTS last_test_report JSON NULL,
-    ADD COLUMN IF NOT EXISTS auto_generated TINYINT(1) NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS generated_by VARCHAR(128) NULL,
-    ADD COLUMN IF NOT EXISTS generated_at TIMESTAMP NULL;
+    ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    ADD COLUMN draft_config_json JSON NULL,
+    ADD COLUMN last_test_report JSON NULL,
+    ADD COLUMN auto_generated TINYINT(1) NOT NULL DEFAULT 0,
+    ADD COLUMN generated_by VARCHAR(128) NULL,
+    ADD COLUMN generated_at TIMESTAMP NULL;
 
 ALTER TABLE job_data_source
-    ADD COLUMN IF NOT EXISTS crawler_blueprint_code VARCHAR(128) NULL,
-    ADD COLUMN IF NOT EXISTS auto_generated TINYINT(1) NOT NULL DEFAULT 0;
+    ADD COLUMN crawler_blueprint_code VARCHAR(128) NULL,
+    ADD COLUMN auto_generated TINYINT(1) NOT NULL DEFAULT 0;
