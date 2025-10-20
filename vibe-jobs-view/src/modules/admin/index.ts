@@ -4,6 +4,8 @@ export { default as DataSourceBulkUpload } from './components/DataSourceBulkUplo
 export * from './hooks/useDataSources';
 export * from './hooks/useDataSourceCompanies';
 export * from './hooks/useIngestionSettings';
+export * from './hooks/useCrawlerBlueprints';
 export * from './services/dataSourcesService';
 export * from './services/ingestionService';
+export * from './services/crawlerBlueprintService';
 export * from './types';
