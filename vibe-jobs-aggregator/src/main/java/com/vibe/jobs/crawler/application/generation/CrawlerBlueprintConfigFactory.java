@@ -82,10 +82,10 @@ public class CrawlerBlueprintConfigFactory {
             ParserProfile.DetailFetchConfig detail = profile.getDetailFetchConfig();
             Map<String, Object> detailJson = new LinkedHashMap<>();
             detailJson.put("enabled", true);
-            detailJson.put("baseUrl", detail.baseUrl());
-            detailJson.put("urlField", detail.urlField());
-            detailJson.put("contentSelectors", detail.contentSelectors());
-            detailJson.put("delayMs", detail.delayMs());
+            detailJson.put("baseUrl", detail.getBaseUrl());
+            detailJson.put("urlField", detail.getUrlField());
+            detailJson.put("contentSelectors", detail.getContentSelectors());
+            detailJson.put("delayMs", detail.getDelayMs());
             parser.put("detailFetch", detailJson);
         }
         if (profile.fields().containsKey("tags")) {

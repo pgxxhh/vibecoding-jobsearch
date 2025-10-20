@@ -127,9 +127,19 @@ final class JobEnrichmentExtractor {
                 ? readStructured(nodes.get(JobEnrichmentKey.STRUCTURED_DATA))
                 : Optional.empty();
 
-        Map<String, Object> enrichments = values.isEmpty()
-                ? Map.of()
-                : Collections.unmodifiableMap(new LinkedHashMap<>(values));
+        Map<String, Object> enrichments;
+        if (values.isEmpty()) {
+            enrichments = Map.of();
+        } else {
+            Map<String, Object> mutable = new LinkedHashMap<>(values);
+            if (!skills.isEmpty()) {
+                mutable.put(JobEnrichmentKey.SKILLS.storageKey(), skills);
+            }
+            if (!highlights.isEmpty()) {
+                mutable.put(JobEnrichmentKey.HIGHLIGHTS.storageKey(), highlights);
+            }
+            enrichments = Collections.unmodifiableMap(mutable);
+        }
 
         if (summary.isEmpty() && skills.isEmpty() && highlights.isEmpty() && structured.isEmpty()
                 && status.isEmpty() && enrichments.isEmpty()) {

@@ -9,6 +9,7 @@ import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 @ActiveProfiles("test")
+@Import({JobRepositoryAdapter.class, JobDetailRepositoryAdapter.class})
 class JobDetailRepositoryTest {
 
     @Autowired

@@ -105,11 +105,11 @@ public class CrawlerBlueprintGenerationManager {
         payload.put(KEY_OPERATOR, command.operatorEmail());
 
         CrawlerBlueprintGenerationTask task = CrawlerBlueprintGenerationTask.create(code, payload);
-        task = taskRepository.save(task);
+        CrawlerBlueprintGenerationTask persistedTask = taskRepository.save(task);
 
-        generationExecutor.execute(() -> runGenerationTask(task.id()));
+        generationExecutor.execute(() -> runGenerationTask(persistedTask.id()));
 
-        return new GenerationLaunchResult(draft, task);
+        return new GenerationLaunchResult(draft, persistedTask);
     }
 
     public Optional<CrawlerBlueprintDraft> findDraft(String code) {
@@ -146,11 +146,12 @@ public class CrawlerBlueprintGenerationManager {
         try {
             CrawlerBlueprintGenerationTask task = taskRepository.findById(taskId)
                     .orElseThrow(() -> new IllegalStateException("Generation task not found: " + taskId));
-            CrawlerBlueprintDraft draft = draftRepository.findByCode(task.blueprintCode())
-                    .orElseThrow(() -> new IllegalStateException("Blueprint draft missing: " + task.blueprintCode()));
-            task = taskRepository.save(task.markRunning(clock.instant()));
+            String blueprintCode = task.blueprintCode();
+            CrawlerBlueprintDraft draft = draftRepository.findByCode(blueprintCode)
+                    .orElseThrow(() -> new IllegalStateException("Blueprint draft missing: " + blueprintCode));
+            CrawlerBlueprintGenerationTask runningTask = taskRepository.save(task.markRunning(clock.instant()));
 
-            Map<String, Object> payload = task.inputPayload();
+            Map<String, Object> payload = runningTask.inputPayload();
             String entryUrl = Objects.toString(payload.get(KEY_ENTRY_URL), draft.entryUrl());
             String keywords = Objects.toString(payload.get(KEY_SEARCH_KEYWORDS), "");
             String name = Objects.toString(payload.get(KEY_NAME), draft.name());
@@ -185,9 +186,9 @@ public class CrawlerBlueprintGenerationManager {
                     .withDraftResult(configJson, reportJson, clock.instant(), operator);
             draftRepository.save(updatedDraft);
 
-            CrawlerBlueprintGenerationTask succeeded = task.markSucceeded(clock.instant(), snapshot, validation.samples());
+            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), snapshot, validation.samples());
             taskRepository.save(succeeded);
-            log.info("Blueprint generation succeeded for {}", task.blueprintCode());
+            log.info("Blueprint generation succeeded for {}", blueprintCode);
         } catch (Exception ex) {
             log.warn("Blueprint generation failed for task {}: {}", taskId, ex.getMessage(), ex);
             handleFailure(taskId, ex);

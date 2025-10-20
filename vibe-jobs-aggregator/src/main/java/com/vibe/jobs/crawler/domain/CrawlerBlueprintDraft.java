@@ -222,12 +222,12 @@ public class CrawlerBlueprintDraft {
         );
     }
 
-    public CrawlerBlueprint toBlueprint(ParserProfile profile,
-                                        PagingStrategy paging,
-                                        CrawlFlow flow,
-                                        AutomationSettings automation,
-                                        Map<String, Object> metadata,
-                                        CrawlBlueprint.RateLimit rateLimit) {
+    public CrawlBlueprint toBlueprint(ParserProfile profile,
+                                      PagingStrategy paging,
+                                      CrawlFlow flow,
+                                      AutomationSettings automation,
+                                      Map<String, Object> metadata,
+                                      CrawlBlueprint.RateLimit rateLimit) {
         Objects.requireNonNull(profile, "profile");
         return new CrawlBlueprint(
                 code,

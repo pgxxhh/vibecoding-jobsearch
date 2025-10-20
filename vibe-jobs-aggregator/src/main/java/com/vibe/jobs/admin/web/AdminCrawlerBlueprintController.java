@@ -102,9 +102,7 @@ public class AdminCrawlerBlueprintController {
                                                  @RequestParam(defaultValue = "5") int tasks) {
         CrawlerBlueprintDraft draft = blueprintService.findDraft(code)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Blueprint not found"));
-        List<CrawlerBlueprintTaskResponse> recentTasks = blueprintService.listTasks(code, Math.max(1, tasks)).stream()
-                .map(CrawlerBlueprintTaskResponse::fromDomain)
-                .toList();
+        List<CrawlerBlueprintGenerationTask> recentTasks = blueprintService.listTasks(code, Math.max(1, tasks));
         return buildDetailResponse(draft, recentTasks);
     }
 

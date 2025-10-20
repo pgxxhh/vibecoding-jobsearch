@@ -1,5 +1,7 @@
 package com.vibe.jobs.jobposting.interfaces.rest;
 
+import com.vibe.jobs.admin.application.AdminAccessService;
+import com.vibe.jobs.auth.application.EmailAuthService;
 import com.vibe.jobs.jobposting.application.JobDetailService;
 import com.vibe.jobs.jobposting.domain.Job;
 import com.vibe.jobs.jobposting.domain.spi.JobRepositoryPort;
@@ -37,6 +39,12 @@ class JobControllerTest {
 
     @MockBean
     private JobDetailService jobDetailService;
+
+    @MockBean
+    private EmailAuthService emailAuthService;
+
+    @MockBean
+    private AdminAccessService adminAccessService;
 
     @BeforeEach
     void setUp() {

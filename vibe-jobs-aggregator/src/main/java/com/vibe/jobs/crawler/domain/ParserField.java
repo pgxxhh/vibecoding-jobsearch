@@ -79,6 +79,22 @@ public class ParserField {
         return attribute;
     }
 
+    public String constant() {
+        return constant;
+    }
+
+    public String format() {
+        return format;
+    }
+
+    public String delimiter() {
+        return delimiter;
+    }
+
+    public String baseUrl() {
+        return baseUrl;
+    }
+
     public boolean required() {
         return required;
     }
