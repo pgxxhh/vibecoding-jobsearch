@@ -179,7 +179,8 @@ describe('Crawler blueprint admin pages', () => {
 
     expect(markup).toContain('新建爬虫蓝图');
     expect(markup).toContain('蓝图 Code');
-    expect(markup).toContain('配置 JSON');
+    expect(markup).toContain('高阶选项');
+    expect(markup).toContain('搜索关键词');
   });
 
   it('exposes crawler blueprint link in admin layout navigation', () => {

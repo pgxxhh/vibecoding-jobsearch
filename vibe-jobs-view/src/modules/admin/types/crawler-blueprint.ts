@@ -64,14 +64,12 @@ export interface CrawlerBlueprintDetail extends CrawlerBlueprintSummary {
 }
 
 export interface CreateCrawlerBlueprintPayload {
-  code: string;
-  name: string;
-  entryUrl?: string;
-  parserTemplateCode?: string;
-  concurrencyLimit?: number;
-  description?: string;
-  tags?: string[];
-  configJson: string;
+  code?: string;
+  name?: string;
+  entryUrl: string;
+  searchKeywords?: string;
+  excludeSelectors?: string[];
+  notes?: string;
 }
 
 export interface ActivateCrawlerBlueprintPayload {
@@ -81,5 +79,9 @@ export interface ActivateCrawlerBlueprintPayload {
 
 export interface RerunCrawlerBlueprintPayload {
   code: string;
-  context?: Record<string, unknown>;
+  name?: string;
+  entryUrl?: string;
+  searchKeywords?: string;
+  excludeSelectors?: string[];
+  notes?: string;
 }

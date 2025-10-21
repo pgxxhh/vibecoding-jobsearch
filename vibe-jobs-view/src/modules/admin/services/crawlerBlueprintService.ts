@@ -53,11 +53,26 @@ export async function createCrawlerBlueprint(payload: CreateCrawlerBlueprintPayl
   return parseJson<CrawlerBlueprintDetail>(res);
 }
 
-export async function rerunCrawlerBlueprint({ code, context }: RerunCrawlerBlueprintPayload) {
+export async function rerunCrawlerBlueprint({ code, ...rest }: RerunCrawlerBlueprintPayload) {
   const encoded = encodeURIComponent(code);
+  const payload = {
+    name: rest.name?.trim() || undefined,
+    entryUrl: rest.entryUrl?.trim() || undefined,
+    searchKeywords: rest.searchKeywords?.trim() || undefined,
+    excludeSelectors: rest.excludeSelectors?.length ? rest.excludeSelectors : undefined,
+    notes: rest.notes?.trim() || undefined,
+  };
+
+  const hasPayload = Object.values(payload).some((value) => {
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+    return value !== undefined;
+  });
+
   const res = await fetch(`/api/admin/crawler-blueprints/${encoded}/rerun`, {
     method: 'POST',
-    ...withJson(context ? { context } : undefined),
+    ...withJson(hasPayload ? payload : {}),
   });
   return parseJson<{ taskId?: string }>(res);
 }

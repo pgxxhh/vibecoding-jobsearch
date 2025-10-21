@@ -5,10 +5,9 @@ import Link from 'next/link';
 
 import { useCrawlerBlueprints } from '@/modules/admin/hooks/useCrawlerBlueprints';
 import type { CreateCrawlerBlueprintPayload } from '@/modules/admin/types';
-import Badge from '@/shared/ui/Badge';
 import Button from '@/shared/ui/Button';
 
-const steps = ['基础信息', '配置 JSON', '确认创建'] as const;
+const steps = ['基础信息', '高阶选项', '确认创建'] as const;
 
 type Step = 0 | 1 | 2;
 
@@ -16,23 +15,26 @@ type FormState = {
   code: string;
   name: string;
   entryUrl: string;
-  parserTemplateCode: string;
-  concurrencyLimit: string;
-  description: string;
-  tags: string;
-  configJson: string;
+  searchKeywords: string;
+  excludeSelectors: string;
+  notes: string;
 };
 
 const initialForm: FormState = {
   code: '',
   name: '',
   entryUrl: '',
-  parserTemplateCode: '',
-  concurrencyLimit: '4',
-  description: '',
-  tags: '',
-  configJson: '{\n  "flow": [],\n  "parser": {}\n}',
+  searchKeywords: '',
+  excludeSelectors: '',
+  notes: '',
 };
+
+function parseExcludeSelectors(raw: string): string[] {
+  return raw
+    .split(/[\n,]/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
 
 export default function CrawlerBlueprintCreatePage() {
   const { create } = useCrawlerBlueprints();
@@ -43,42 +45,32 @@ export default function CrawlerBlueprintCreatePage() {
 
   const pending = create.isPending;
 
-  const tagsArray = useMemo(
-    () =>
-      form.tags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean),
-    [form.tags],
-  );
-
-  const isConfigValid = useMemo(() => {
-    try {
-      JSON.parse(form.configJson);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [form.configJson]);
+  const excludeSelectorList = useMemo(() => parseExcludeSelectors(form.excludeSelectors), [form.excludeSelectors]);
 
   const parsedPayload = useMemo<CreateCrawlerBlueprintPayload>(() => {
+    const trimmedCode = form.code.trim();
+    const trimmedName = form.name.trim();
+    const trimmedEntryUrl = form.entryUrl.trim();
+    const trimmedKeywords = form.searchKeywords.trim();
+    const trimmedNotes = form.notes.trim();
+
     return {
-      code: form.code.trim(),
-      name: form.name.trim(),
-      entryUrl: form.entryUrl.trim() || undefined,
-      parserTemplateCode: form.parserTemplateCode.trim() || undefined,
-      concurrencyLimit: form.concurrencyLimit ? Number(form.concurrencyLimit) : undefined,
-      description: form.description.trim() || undefined,
-      tags: tagsArray.length ? tagsArray : undefined,
-      configJson: form.configJson,
+      code: trimmedCode || undefined,
+      name: trimmedName || undefined,
+      entryUrl: trimmedEntryUrl,
+      searchKeywords: trimmedKeywords || undefined,
+      excludeSelectors: excludeSelectorList.length ? excludeSelectorList : undefined,
+      notes: trimmedNotes || undefined,
     };
-  }, [form, tagsArray]);
+  }, [form.code, form.entryUrl, form.name, form.notes, form.searchKeywords, excludeSelectorList]);
 
   const goNext = () => {
     setSuccess(null);
-    if (step === 1 && !isConfigValid) {
-      setError('配置 JSON 无法解析，请检查格式。');
-      return;
+    if (step === 0) {
+      if (!form.code.trim() || !form.name.trim() || !form.entryUrl.trim()) {
+        setError('请填写蓝图 Code、蓝图名称和入口 URL。');
+        return;
+      }
     }
     setError(null);
     setStep((prev) => Math.min(2, (prev + 1) as Step));
@@ -95,21 +87,15 @@ export default function CrawlerBlueprintCreatePage() {
     setError(null);
     setSuccess(null);
 
-    if (!isConfigValid) {
-      setError('配置 JSON 无法解析，请修正后再提交。');
-      setStep(1);
-      return;
-    }
-
-    if (!parsedPayload.code || !parsedPayload.name) {
-      setError('Code 和名称为必填项。');
+    if (!form.code.trim() || !form.name.trim() || !form.entryUrl.trim()) {
+      setError('蓝图 Code、名称和入口 URL 为必填项。');
       setStep(0);
       return;
     }
 
     create.mutate(parsedPayload, {
       onSuccess: () => {
-        setSuccess('蓝图创建成功，系统会在 5 秒内执行预热任务。');
+        setSuccess('蓝图创建成功，系统会立即触发自动生成任务。');
         setError(null);
       },
       onError: (err) => {
@@ -124,7 +110,7 @@ export default function CrawlerBlueprintCreatePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">新建爬虫蓝图</h1>
-          <p className="mt-1 text-sm text-gray-600">按照向导填写基础信息与执行配置，提交后即可激活。</p>
+          <p className="mt-1 text-sm text-gray-600">填写基础信息后提交，后端会通过 Playwright 自动生成配置。</p>
         </div>
         <Link
           href="/admin/crawler-blueprints"
@@ -175,52 +161,23 @@ export default function CrawlerBlueprintCreatePage() {
                   placeholder="京东 - 社招"
                 />
               </label>
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium text-gray-700">入口 URL</span>
+              <label className="flex flex-col gap-2 text-sm md:col-span-2">
+                <span className="font-medium text-gray-700">入口 URL *</span>
                 <input
                   className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
                   value={form.entryUrl}
                   onChange={(event) => setForm((prev) => ({ ...prev, entryUrl: event.target.value }))}
+                  required
                   placeholder="https://careers.jd.com/jobs"
                 />
               </label>
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium text-gray-700">解析模板 Code</span>
-                <input
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  value={form.parserTemplateCode}
-                  onChange={(event) => setForm((prev) => ({ ...prev, parserTemplateCode: event.target.value }))}
-                  placeholder="jd-parser-v1"
-                />
-              </label>
-              <label className="flex flex-col gap-2 text-sm">
-                <span className="font-medium text-gray-700">并发限制</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={32}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  value={form.concurrencyLimit}
-                  onChange={(event) => setForm((prev) => ({ ...prev, concurrencyLimit: event.target.value }))}
-                />
-              </label>
               <label className="flex flex-col gap-2 text-sm md:col-span-2">
-                <span className="font-medium text-gray-700">描述</span>
-                <textarea
-                  rows={3}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  value={form.description}
-                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="补充采集范围、目标公司等上下文，方便其他同学维护。"
-                />
-              </label>
-              <label className="flex flex-col gap-2 text-sm md:col-span-2">
-                <span className="font-medium text-gray-700">标签（逗号分隔）</span>
+                <span className="font-medium text-gray-700">搜索关键词（可选）</span>
                 <input
                   className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-                  value={form.tags}
-                  onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))}
-                  placeholder="browser,自动化,playwright"
+                  value={form.searchKeywords}
+                  onChange={(event) => setForm((prev) => ({ ...prev, searchKeywords: event.target.value }))}
+                  placeholder="输入关键字后系统会自动执行一次搜索"
                 />
               </label>
             </div>
@@ -229,94 +186,94 @@ export default function CrawlerBlueprintCreatePage() {
 
         {step === 1 && (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">② 执行配置</h2>
-            <p className="text-sm text-gray-600">
-              粘贴 YAML/JSON 转换后的配置，至少包括 `flow`、`parser` 等字段。保存前系统会校验 JSON 格式。
-            </p>
-            <textarea
-              rows={14}
-              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 font-mono text-xs text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
-              value={form.configJson}
-              onChange={(event) => setForm((prev) => ({ ...prev, configJson: event.target.value }))}
-            />
-            {!isConfigValid && (
-              <p className="text-xs text-rose-600">JSON 无法解析，请检查引号、逗号等格式。</p>
-            )}
-            {tagsArray.length > 0 && (
-              <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                <span className="font-medium text-gray-700">标签预览:</span>
-                {tagsArray.map((tag) => (
-                  <Badge key={tag} tone="muted">
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <h2 className="text-lg font-semibold text-gray-900">② 高阶选项</h2>
+            <p className="text-sm text-gray-600">可选地提供需要排除的选择器与备注，便于自动化解析更准确。</p>
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="font-medium text-gray-700">排除选择器（换行或逗号分隔）</span>
+              <textarea
+                className="min-h-[160px] rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                value={form.excludeSelectors}
+                onChange={(event) => setForm((prev) => ({ ...prev, excludeSelectors: event.target.value }))}
+                placeholder=".banner-ad\n.modal"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="font-medium text-gray-700">备注（例如登录方式、滚动要求等）</span>
+              <textarea
+                className="min-h-[120px] rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                value={form.notes}
+                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+                placeholder="抓取前需要点击“同意 Cookies”弹窗。"
+              />
+            </label>
           </div>
         )}
 
         {step === 2 && (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">③ 确认信息</h2>
-            <p className="text-sm text-gray-600">请再次确认以下字段，提交后后台会触发预热运行。</p>
+            <h2 className="text-lg font-semibold text-gray-900">③ 确认创建</h2>
+            <p className="text-sm text-gray-600">确认以下信息无误后提交，系统会触发 Playwright 自动生成蓝图。</p>
             <dl className="grid gap-3 text-sm text-gray-700 md:grid-cols-2">
               <div>
-                <dt className="font-medium text-gray-900">Code</dt>
-                <dd className="mt-1 text-gray-700">{parsedPayload.code || '未填写'}</dd>
+                <dt className="font-medium text-gray-900">蓝图 Code</dt>
+                <dd className="mt-1 text-gray-700">{form.code.trim() || '—'}</dd>
               </div>
               <div>
-                <dt className="font-medium text-gray-900">名称</dt>
-                <dd className="mt-1 text-gray-700">{parsedPayload.name || '未填写'}</dd>
+                <dt className="font-medium text-gray-900">蓝图名称</dt>
+                <dd className="mt-1 text-gray-700">{form.name.trim() || '—'}</dd>
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <dt className="font-medium text-gray-900">入口 URL</dt>
-                <dd className="mt-1 break-all text-gray-700">{parsedPayload.entryUrl || '未填写'}</dd>
+                <dd className="mt-1 break-all text-gray-700">{form.entryUrl.trim() || '—'}</dd>
               </div>
-              <div>
-                <dt className="font-medium text-gray-900">解析模板</dt>
-                <dd className="mt-1 text-gray-700">{parsedPayload.parserTemplateCode || '未填写'}</dd>
+              <div className="md:col-span-2">
+                <dt className="font-medium text-gray-900">搜索关键词</dt>
+                <dd className="mt-1 text-gray-700">{form.searchKeywords.trim() || '—'}</dd>
               </div>
-              <div>
-                <dt className="font-medium text-gray-900">并发限制</dt>
-                <dd className="mt-1 text-gray-700">{parsedPayload.concurrencyLimit ?? '未填写'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-gray-900">标签</dt>
+              <div className="md:col-span-2">
+                <dt className="font-medium text-gray-900">排除选择器</dt>
                 <dd className="mt-1 text-gray-700">
-                  {parsedPayload.tags?.length ? parsedPayload.tags.join(', ') : '未填写'}
+                  {excludeSelectorList.length ? (
+                    <ul className="space-y-1 whitespace-pre-line">
+                      {excludeSelectorList.map((selector) => (
+                        <li key={selector}>• {selector}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    '—'
+                  )}
                 </dd>
               </div>
+              <div className="md:col-span-2">
+                <dt className="font-medium text-gray-900">备注</dt>
+                <dd className="mt-1 whitespace-pre-line text-gray-700">{form.notes.trim() || '—'}</dd>
+              </div>
             </dl>
-            <div>
-              <dt className="font-medium text-gray-900">配置 JSON</dt>
-              <pre className="mt-2 max-h-64 overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-700">
-                {form.configJson}
-              </pre>
-            </div>
           </div>
-        )}
-
-        {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
-        )}
-        {success && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{success}</div>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={goPrev} disabled={step === 0 || pending}>
-              上一步
-            </Button>
+          <div className="text-sm text-gray-600">
+            {error && <p className="text-rose-600">{error}</p>}
+            {success && <p className="text-brand-700">{success}</p>}
+          </div>
+          <div className="flex items-center gap-3">
+            {step > 0 && (
+              <Button type="button" variant="ghost" onClick={goPrev} disabled={pending}>
+                上一步
+              </Button>
+            )}
             {step < 2 && (
-              <Button variant="outline" size="sm" onClick={goNext} disabled={pending}>
+              <Button type="button" onClick={goNext} disabled={pending}>
                 下一步
               </Button>
             )}
+            {step === 2 && (
+              <Button type="submit" variant="primary" disabled={pending}>
+                {pending ? '提交中...' : '确认创建'}
+              </Button>
+            )}
           </div>
-          <Button type="submit" variant="primary" size="md" disabled={pending}>
-            {pending ? '创建中...' : '提交蓝图'}
-          </Button>
         </div>
       </form>
     </div>
