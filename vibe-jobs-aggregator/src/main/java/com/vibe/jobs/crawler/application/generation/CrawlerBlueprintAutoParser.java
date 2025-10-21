@@ -163,21 +163,46 @@ public class CrawlerBlueprintAutoParser {
                     candidate = candidate.parent();
                     continue;
                 }
-                if (candidate == null) {
-                    break;
-                }
                 String selector = candidate.cssSelector();
                 scores.merge(selector, 1, Integer::sum);
                 samples.putIfAbsent(selector, candidate);
                 candidate = candidate.parent();
             }
         }
-        return scores.entrySet().stream()
-                .filter(entry -> entry.getValue() > 2)
+
+        Element preferred = scores.entrySet().stream()
+                .filter(entry -> entry.getValue() >= 3)
                 .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
                 .map(entry -> samples.get(entry.getKey()))
+                .filter(this::isLikelyJobList)
                 .findFirst()
                 .orElse(null);
+        if (preferred != null) {
+            return preferred;
+        }
+
+        return scores.entrySet().stream()
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .map(entry -> samples.get(entry.getKey()))
+                .filter(this::isLikelyJobList)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isLikelyJobList(Element element) {
+        if (element == null) {
+            return false;
+        }
+        String tag = element.tagName();
+        if (tag.equalsIgnoreCase("nav") || tag.equalsIgnoreCase("header") || tag.equalsIgnoreCase("footer")) {
+            return false;
+        }
+        String className = element.className().toLowerCase(Locale.ROOT);
+        if (className.contains("breadcrumb") || className.contains("header") || className.contains("footer")) {
+            return false;
+        }
+        int anchorCount = element.select("a[href]").size();
+        return anchorCount >= 2;
     }
 
     private Element findFirst(Element root, List<String> selectors) {
