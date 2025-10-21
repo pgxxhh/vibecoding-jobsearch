@@ -121,7 +121,7 @@ export default function CrawlerBlueprintListPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => activate.mutate({ code: blueprint.code, enabled: !blueprint.enabled })}
+                    onClick={() => activate.mutate({ code: blueprint.code, enable: !blueprint.enabled })}
                     disabled={running}
                   >
                     {blueprint.enabled ? '🚫 暂停蓝图' : '✅ 激活蓝图'}

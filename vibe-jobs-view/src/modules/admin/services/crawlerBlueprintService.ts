@@ -77,11 +77,11 @@ export async function rerunCrawlerBlueprint({ code, ...rest }: RerunCrawlerBluep
   return parseJson<{ taskId?: string }>(res);
 }
 
-export async function activateCrawlerBlueprint({ code, enabled }: ActivateCrawlerBlueprintPayload) {
+export async function activateCrawlerBlueprint({ code, enable }: ActivateCrawlerBlueprintPayload) {
   const encoded = encodeURIComponent(code);
   const res = await fetch(`/api/admin/crawler-blueprints/${encoded}/activate`, {
     method: 'POST',
-    ...withJson({ enabled }),
+    ...withJson({ enable }),
   });
   return parseJson<CrawlerBlueprintDetail | { success?: boolean }>(res);
 }
