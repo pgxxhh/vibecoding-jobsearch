@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +50,7 @@ class JobDetailServiceTest {
                         view(1L, JobEnrichmentKey.SUMMARY, "\"summary\""),
                         view(1L, JobEnrichmentKey.SKILLS, "[\"java\", \"spring\"]")));
 
-        Map<Long, JobDetailEnrichmentsDto> result = service.findByJobIds(List.of(1L, 1L, null));
+        Map<Long, JobDetailEnrichmentsDto> result = service.findByJobIds(Arrays.asList(1L, 1L, null));
 
         assertThat(result).containsOnlyKeys(1L);
         JobDetailEnrichmentsDto dto = result.get(1L);

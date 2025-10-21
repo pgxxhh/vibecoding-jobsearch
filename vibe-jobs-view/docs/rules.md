@@ -78,6 +78,7 @@
   ```
 - 共享 UI 组件仅依赖 `lib/domain` 暴露的类型，不得嵌入 React Query 逻辑；状态管理放在调用方的应用层 Hook 中。
 - 内部 fetch/缓存工具集中于 `lib/infrastructure`，便于在测试中替换或打桩。
+- 所有入参需在前端完成基本校验（必填、格式等）并给出友好提示，同时保证后端入口具备同等兜底逻辑，防止未校验数据落入服务。
 
 ## 编码规范
 - 组件命名使用 `PascalCase`，Hooks 使用 `useCamelCase`；文件名保持 kebab-case 或与组件同名（`ComponentName.tsx`）。
