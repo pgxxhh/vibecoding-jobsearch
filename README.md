@@ -25,7 +25,8 @@ Elaine Jobs is a talent intelligence platform designed for users in Mainland Chi
 - **Source management** – Toggle ATS connectors or custom crawlers with a single click and monitor their status to ensure feeds stay fresh.
 
 
-<img width="1296" height="900" alt="image" src="https://github.com/user-attachments/assets/ff17f523-4bd4-4f30-a3e5-7e27d0698063" />
+<img width="1299" height="850" alt="image" src="https://github.com/user-attachments/assets/886c38ca-d416-4e0d-b824-650dc0a51499" />
+
 
 
 ## Table of contents
