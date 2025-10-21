@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 import { buildBackendUrl, resolveBackendBase } from '@/shared/lib/backend';
 
+function resolveToken(request: NextRequest): string | null {
+  const headerToken = request.headers.get('x-session-token');
+  const cookieToken = cookies().get('vj_session')?.value;
+  const token = headerToken?.trim() || cookieToken?.trim();
+  return token && token.length > 0 ? token : null;
+}
+
 async function forward(request: NextRequest, path: string, init?: RequestInit) {
+  const token = resolveToken(request);
+  if (!token) {
+    return NextResponse.json({ code: 'NO_SESSION', message: 'Admin session required' }, { status: 401 });
+  }
+
   const base = resolveBackendBase(request);
   if (!base) {
     return NextResponse.json({ error: 'Backend base URL not configured' }, { status: 500 });
@@ -16,6 +29,7 @@ async function forward(request: NextRequest, path: string, init?: RequestInit) {
 
   const headers = new Headers(init?.headers);
   headers.set('accept', 'application/json');
+  headers.set('x-session-token', token);
   const cookie = request.headers.get('cookie');
   if (cookie) {
     headers.set('cookie', cookie);
