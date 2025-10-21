@@ -98,11 +98,13 @@ public class CrawlerBlueprintGenerationManager {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put(KEY_ENTRY_URL, command.entryUrl());
-        payload.put(KEY_SEARCH_KEYWORDS, command.searchKeywords());
-        payload.put(KEY_NOTES, command.notes());
-        payload.put(KEY_EXCLUDES, command.excludeSelectors());
-        payload.put(KEY_NAME, command.name());
-        payload.put(KEY_OPERATOR, command.operatorEmail());
+        payload.put(KEY_SEARCH_KEYWORDS, command.searchKeywords() == null ? "" : command.searchKeywords());
+        payload.put(KEY_NOTES, command.notes() == null ? "" : command.notes());
+        payload.put(KEY_EXCLUDES, command.excludeSelectors() == null
+                ? List.of()
+                : List.copyOf(command.excludeSelectors()));
+        payload.put(KEY_NAME, command.name() == null ? "" : command.name());
+        payload.put(KEY_OPERATOR, command.operatorEmail() == null ? "" : command.operatorEmail());
 
         CrawlerBlueprintGenerationTask task = CrawlerBlueprintGenerationTask.create(code, payload);
         CrawlerBlueprintGenerationTask persistedTask = taskRepository.save(task);
