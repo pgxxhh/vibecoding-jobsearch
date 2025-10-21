@@ -3,6 +3,8 @@
 ## Project Structure & Module Organization
 The workspace contains `vibe-jobs-aggregator` (Spring Boot 3, Java 17) and `vibe-jobs-view` (Next.js 14, TypeScript). Backend contexts live in `src/main/java/com/vibe/jobs/<context>/{domain,application,infrastructure,interfaces}` with migrations under `src/main/resources/db/migrations`. The frontend mirrors those boundaries: `app/(site)` for job seekers, `app/(admin)` for operations, `app/api` for backend proxies, and shared utilities in `src/modules`, `src/shared`, and `vibe-jobs-ui-pack`.
 
+When reorganising backend layers, always keep HTTP entry points under the `interfaces` namespace (e.g. `interfaces.rest`, `interfaces.graphql`). A directory rename must be accompanied by matching `package` statement updates, adjusted imports/component scanning hints, and a repo-wide search to confirm no references to the old package remain before opening a PR.
+
 ## Build, Test, and Development Commands
 Backend: `cd vibe-jobs-aggregator && mvn clean verify`; use `mvn spring-boot:run` for `:8080` or append `-DskipTests package` for fast builds. Frontend: `cd vibe-jobs-view && pnpm install`, then `pnpm dev` (`:3000`) or `pnpm build`. `docker compose up --build` spins MySQL, the Java API, the Next.js app, and Caddy for integrated testing.
 

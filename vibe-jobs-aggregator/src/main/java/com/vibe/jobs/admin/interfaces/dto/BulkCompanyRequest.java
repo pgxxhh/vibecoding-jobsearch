@@ -1,0 +1,12 @@
+package com.vibe.jobs.admin.interfaces.dto;
+
+import java.util.List;
+
+public record BulkCompanyRequest(List<CompanyRequest> companies) {
+    
+    public BulkCompanyRequest {
+        if (companies == null) {
+            companies = List.of();
+        }
+    }
+}

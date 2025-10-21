@@ -1,8 +1,8 @@
 package com.vibe.jobs.admin.application;
 
 import com.vibe.jobs.admin.domain.event.DataSourceConfigurationChangedEvent;
-import com.vibe.jobs.admin.web.dto.BulkUploadResult;
-import com.vibe.jobs.admin.web.dto.DataSourceRequest;
+import com.vibe.jobs.admin.interfaces.dto.BulkUploadResult;
+import com.vibe.jobs.admin.interfaces.dto.DataSourceRequest;
 import com.vibe.jobs.datasource.application.DataSourceCommandService;
 import com.vibe.jobs.datasource.application.DataSourceQueryService;
 import com.vibe.jobs.datasource.domain.JobDataSource;
@@ -195,19 +195,19 @@ public class AdminDataSourceService {
         );
     }
 
-    public com.vibe.jobs.admin.web.dto.BulkCompanyResult bulkCreateCompanies(
+    public com.vibe.jobs.admin.interfaces.dto.BulkCompanyResult bulkCreateCompanies(
             String dataSourceCode,
             List<JobDataSource.DataSourceCompany> companiesToCreate,
             String actorEmail) {
         
         if (companiesToCreate == null || companiesToCreate.isEmpty()) {
-            return com.vibe.jobs.admin.web.dto.BulkCompanyResult.success(List.of());
+            return com.vibe.jobs.admin.interfaces.dto.BulkCompanyResult.success(List.of());
         }
         
         // 验证数据源存在
         queryService.getByCode(dataSourceCode);
         
-        List<com.vibe.jobs.admin.web.dto.CompanyResponse> successful = new ArrayList<>();
+        List<com.vibe.jobs.admin.interfaces.dto.CompanyResponse> successful = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         Set<String> processedReferences = new java.util.HashSet<>(); // 跟踪本批次已处理的引用
 
@@ -261,7 +261,7 @@ public class AdminDataSourceService {
                         saved.getOverrideOptions() != null ? saved.getOverrideOptions() : Map.of()
                 );
                 
-                successful.add(com.vibe.jobs.admin.web.dto.CompanyResponse.fromDomain(domainCompany));
+                successful.add(com.vibe.jobs.admin.interfaces.dto.CompanyResponse.fromDomain(domainCompany));
 
             } catch (Exception e) {
                 String errorMsg = "Failed to create company '" +
@@ -278,7 +278,7 @@ public class AdminDataSourceService {
                 successful.size(), dataSourceCode, actorEmail);
         }
 
-        return com.vibe.jobs.admin.web.dto.BulkCompanyResult.withErrors(successful, errors);
+        return com.vibe.jobs.admin.interfaces.dto.BulkCompanyResult.withErrors(successful, errors);
     }
 
     public JobDataSource.DataSourceCompany getCompanyById(Long companyId) {
@@ -303,7 +303,7 @@ public class AdminDataSourceService {
         }
     }
 
-    public com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse getCompaniesPaged(
+    public com.vibe.jobs.admin.interfaces.dto.PagedDataSourceResponse.PagedCompanyResponse getCompaniesPaged(
             String dataSourceCode, int page, int size) {
         // 验证数据源存在
         queryService.getByCode(dataSourceCode);
@@ -332,7 +332,7 @@ public class AdminDataSourceService {
             log.info("Successfully fetched {} companies (page {}) for dataSourceCode: '{}'", 
                     companies.size(), page, dataSourceCode);
             
-            return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
+            return new com.vibe.jobs.admin.interfaces.dto.PagedDataSourceResponse.PagedCompanyResponse(
                 companies,
                 pageResult.getNumber(),
                 pageResult.getSize(),
@@ -372,7 +372,7 @@ public class AdminDataSourceService {
             log.info("Fallback: Returning {} companies (page {}/{}) for dataSourceCode: '{}'", 
                     companies.size(), page + 1, Math.max(totalPages, 1), dataSourceCode);
             
-            return new com.vibe.jobs.admin.web.dto.PagedDataSourceResponse.PagedCompanyResponse(
+            return new com.vibe.jobs.admin.interfaces.dto.PagedDataSourceResponse.PagedCompanyResponse(
                 companies,
                 page,
                 size,
