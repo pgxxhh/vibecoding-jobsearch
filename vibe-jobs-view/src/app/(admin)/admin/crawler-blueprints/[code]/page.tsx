@@ -3,7 +3,10 @@
 import Link from 'next/link';
 
 import { useCrawlerBlueprintDetail, useCrawlerBlueprints } from '@/modules/admin/hooks/useCrawlerBlueprints';
-import type { CrawlerBlueprintDetail, CrawlerBlueprintRun, CrawlerBlueprintTestReport } from '@/modules/admin/types';
+import type {
+  CrawlerBlueprintDetail,
+  CrawlerBlueprintGenerationTask,
+} from '@/modules/admin/types';
 import Badge from '@/shared/ui/Badge';
 import Button from '@/shared/ui/Button';
 
@@ -21,71 +24,90 @@ function formatDateTime(value?: string | null) {
 function statusTone(status?: string | null) {
   if (!status) return 'muted' as const;
   const normalized = status.toUpperCase();
-  if (normalized === 'SUCCESS') return 'brand' as const;
-  if (normalized === 'FAILED') return 'default' as const;
-  if (normalized === 'RUNNING' || normalized === 'PENDING') return 'brand' as const;
+  if (['SUCCEEDED', 'SUCCESS', 'READY', 'ACTIVE'].includes(normalized)) return 'brand' as const;
+  if (['FAILED'].includes(normalized)) return 'default' as const;
+  if (['RUNNING', 'PENDING'].includes(normalized)) return 'brand' as const;
   return 'muted' as const;
 }
 
-function RunsTable({ runs }: { runs: CrawlerBlueprintRun[] }) {
-  if (runs.length === 0) {
-    return <p className="text-sm text-gray-600">暂无运行记录。</p>;
+function formatJson(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
   }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2);
+    } catch (error) {
+      return value;
+    }
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function JsonSection({ title, json }: { title: string; json: string | null }) {
+  if (!json) {
+    return null;
+  }
+
   return (
-    <div className="overflow-auto">
-      <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-        <thead>
-          <tr className="text-xs uppercase tracking-wider text-gray-500">
-            <th className="px-4 py-2">运行 ID</th>
-            <th className="px-4 py-2">状态</th>
-            <th className="px-4 py-2">开始时间</th>
-            <th className="px-4 py-2">结束时间</th>
-            <th className="px-4 py-2">成功/失败</th>
-            <th className="px-4 py-2">备注</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {runs.map((run) => (
-            <tr key={run.id} className="bg-white">
-              <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-gray-700">{run.id}</td>
-              <td className="px-4 py-2"><Badge tone={statusTone(run.status)}>{run.status}</Badge></td>
-              <td className="px-4 py-2 text-gray-600">{formatDateTime(run.startedAt)}</td>
-              <td className="px-4 py-2 text-gray-600">{formatDateTime(run.finishedAt)}</td>
-              <td className="px-4 py-2 text-gray-600">
-                {run.successCount ?? 0} / {run.failureCount ?? 0}
-              </td>
-              <td className="px-4 py-2 text-xs text-gray-500">{run.message || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h4>
+      <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-gray-50 p-3 text-xs text-gray-700 shadow-inner">{json}</pre>
     </div>
   );
 }
 
-function TestReports({ reports }: { reports: CrawlerBlueprintTestReport[] }) {
-  if (!reports.length) {
-    return <p className="text-sm text-gray-600">暂无测试报告。</p>;
+function TasksList({ tasks }: { tasks: CrawlerBlueprintGenerationTask[] }) {
+  if (!tasks || tasks.length === 0) {
+    return <p className="text-sm text-gray-600">暂无生成任务。</p>;
   }
+
   return (
-    <div className="space-y-3">
-      {reports.map((report) => (
-        <div key={report.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-gray-900">测试报告 {report.id}</span>
-              <Badge tone={statusTone(report.status)}>{report.status}</Badge>
+    <div className="space-y-4">
+      {tasks.map((task) => {
+        const payloadJson = formatJson(task.inputPayload);
+        const sampleJson = task.sampleData && task.sampleData.length ? formatJson(task.sampleData) : null;
+        const snapshotJson = formatJson(task.browserSnapshot);
+        const hasDetails = Boolean(payloadJson || sampleJson || snapshotJson);
+
+        return (
+          <div key={task.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-900">任务 #{task.id}</span>
+                <Badge tone={statusTone(task.status)}>{task.status}</Badge>
+              </div>
+              <div className="text-xs text-gray-500">
+                <span>开始：{formatDateTime(task.startedAt)}</span>
+                <span className="mx-2 text-gray-300">·</span>
+                <span>结束：{formatDateTime(task.finishedAt)}</span>
+              </div>
             </div>
-            <span className="text-xs text-gray-500">{formatDateTime(report.createdAt)}</span>
+
+            {task.errorMessage && (
+              <p className="mt-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                ⚠️ 错误：{task.errorMessage}
+              </p>
+            )}
+
+            {hasDetails && (
+              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                <JsonSection title="输入参数" json={payloadJson} />
+                <JsonSection title="样例数据" json={sampleJson} />
+                <JsonSection title="浏览器快照" json={snapshotJson} />
+              </div>
+            )}
           </div>
-          {report.summary && <p className="mt-2 text-sm text-gray-600">{report.summary}</p>}
-          {report.details && (
-            <pre className="mt-3 max-h-48 overflow-auto rounded-xl bg-gray-50 p-3 text-xs text-gray-700">
-              {typeof report.details === 'string' ? report.details : JSON.stringify(report.details, null, 2)}
-            </pre>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -107,32 +129,38 @@ export default function CrawlerBlueprintDetailPage({ params }: { params: { code:
 
   if (detail.isError || !detail.data) {
     return (
-      <div className="rounded-xl bg-rose-50 border border-rose-200 p-6">
+      <div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
         <p className="text-rose-800">{(detail.error as Error)?.message ?? '未找到该蓝图'}</p>
       </div>
     );
   }
 
   const blueprint: CrawlerBlueprintDetail = detail.data;
+  const { summary, draftConfig, lastTestReport, recentTasks } = blueprint;
   const isRunning = rerun.isPending || activate.isPending;
+  const prettyConfig = draftConfig ? formatJson(draftConfig) : null;
+  const prettyReport = formatJson(lastTestReport);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold text-gray-900">{blueprint.name}</h1>
-            <Badge tone="muted">{blueprint.code}</Badge>
-            <Badge tone={statusTone(blueprint.lastRunStatus)}>{blueprint.lastRunStatus ?? '无记录'}</Badge>
-            <Badge tone={blueprint.enabled ? 'brand' : 'default'}>{blueprint.enabled ? '已启用' : '已停用'}</Badge>
-          </div>
-          {blueprint.description && <p className="mt-2 text-sm text-gray-600">{blueprint.description}</p>}
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-            <span>创建时间：{formatDateTime(blueprint.createdAt)}</span>
-            <span>更新时间：{formatDateTime(blueprint.updatedAt)}</span>
-            {blueprint.activeTask && (
-              <span className="text-brand-700">运行中任务：{blueprint.activeTask.id}</span>
+            <h1 className="text-2xl font-semibold text-gray-900">{summary.name}</h1>
+            <Badge tone="muted">{summary.code}</Badge>
+            {summary.status && <Badge tone={statusTone(summary.status)}>{summary.status}</Badge>}
+            <Badge tone={summary.enabled ? 'brand' : 'default'}>{summary.enabled ? '已启用' : '已停用'}</Badge>
+            {summary.autoGenerated != null && (
+              <Badge tone={summary.autoGenerated ? 'brand' : 'muted'}>
+                {summary.autoGenerated ? '自动生成' : '手动配置'}
+              </Badge>
             )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+            <span>创建时间：{formatDateTime(summary.createdAt)}</span>
+            <span>更新时间：{formatDateTime(summary.updatedAt)}</span>
+            {summary.generatedAt && <span>最近生成：{formatDateTime(summary.generatedAt)}</span>}
+            {summary.generatedBy && <span>操作人：{summary.generatedBy}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -145,15 +173,15 @@ export default function CrawlerBlueprintDetailPage({ params }: { params: { code:
           <Button
             variant="outline"
             size="sm"
-            onClick={() => activate.mutate({ code: blueprint.code, enabled: !blueprint.enabled })}
+            onClick={() => activate.mutate({ code: summary.code, enabled: !summary.enabled })}
             disabled={isRunning}
           >
-            {blueprint.enabled ? '暂停蓝图' : '启用蓝图'}
+            {summary.enabled ? '暂停蓝图' : '启用蓝图'}
           </Button>
           <Button
             variant="primary"
             size="sm"
-            onClick={() => rerun.mutate({ code: blueprint.code })}
+            onClick={() => rerun.mutate({ code: summary.code })}
             disabled={rerun.isPending}
           >
             触发重跑
@@ -166,75 +194,46 @@ export default function CrawlerBlueprintDetailPage({ params }: { params: { code:
         <dl className="mt-4 grid gap-4 text-sm text-gray-700 md:grid-cols-2">
           <div>
             <dt className="font-medium text-gray-900">入口 URL</dt>
-            <dd className="mt-1 break-all text-gray-700">{blueprint.entryUrl ?? '—'}</dd>
+            <dd className="mt-1 break-all text-gray-700">{summary.entryUrl}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-900">解析模板</dt>
-            <dd className="mt-1 text-gray-700">{blueprint.parserTemplateCode ?? '—'}</dd>
+            <dt className="font-medium text-gray-900">生成方式</dt>
+            <dd className="mt-1 text-gray-700">
+              {summary.autoGenerated == null ? '—' : summary.autoGenerated ? '自动生成' : '手动配置'}
+            </dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-900">并发限制</dt>
-            <dd className="mt-1 text-gray-700">{blueprint.concurrencyLimit ?? '—'}</dd>
+            <dt className="font-medium text-gray-900">最近生成时间</dt>
+            <dd className="mt-1 text-gray-700">{formatDateTime(summary.generatedAt)}</dd>
           </div>
           <div>
-            <dt className="font-medium text-gray-900">最近完成</dt>
-            <dd className="mt-1 text-gray-700">{formatDateTime(blueprint.lastRunFinishedAt)}</dd>
+            <dt className="font-medium text-gray-900">最近生成操作者</dt>
+            <dd className="mt-1 text-gray-700">{summary.generatedBy ?? '—'}</dd>
           </div>
         </dl>
-        {blueprint.metrics && (
-          <div className="mt-6 grid gap-4 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <div className="text-xs text-gray-500">累计运行</div>
-              <div className="mt-2 text-xl font-semibold text-gray-900">{blueprint.metrics.totalRuns ?? '—'}</div>
-            </div>
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <div className="text-xs text-gray-500">平均耗时</div>
-              <div className="mt-2 text-xl font-semibold text-gray-900">
-                {blueprint.metrics.averageDurationMs ? `${Math.round(blueprint.metrics.averageDurationMs / 1000)} 秒` : '—'}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <div className="text-xs text-gray-500">成功率</div>
-              <div className="mt-2 text-xl font-semibold text-gray-900">
-                {blueprint.metrics.successRate != null ? `${(blueprint.metrics.successRate * 100).toFixed(1)}%` : '—'}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-              <div className="text-xs text-gray-500">最近一次耗时</div>
-              <div className="mt-2 text-xl font-semibold text-gray-900">
-                {blueprint.metrics.lastRunDurationMs ? `${Math.round(blueprint.metrics.lastRunDurationMs / 1000)} 秒` : '—'}
-              </div>
-            </div>
-          </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">最新生成配置</h2>
+        {prettyConfig ? (
+          <pre className="mt-4 max-h-96 overflow-auto rounded-xl bg-gray-50 p-4 text-xs text-gray-700 shadow-inner">{prettyConfig}</pre>
+        ) : (
+          <p className="mt-2 text-sm text-gray-600">尚未生成配置。</p>
         )}
       </section>
 
-      {blueprint.flow && blueprint.flow.length > 0 && (
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">执行流程</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {blueprint.flow.map((step) => (
-              <div key={step.step} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900">{step.step}</span>
-                  {step.status && <Badge tone={statusTone(step.status)}>{step.status}</Badge>}
-                </div>
-                {step.description && <p className="mt-2 text-sm text-gray-600">{step.description}</p>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">最近测试报告</h2>
+        {prettyReport ? (
+          <pre className="mt-4 max-h-96 overflow-auto rounded-xl bg-gray-50 p-4 text-xs text-gray-700 shadow-inner">{prettyReport}</pre>
+        ) : (
+          <p className="mt-2 text-sm text-gray-600">暂无测试报告。</p>
+        )}
+      </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">最近运行</h2>
-          <RunsTable runs={blueprint.latestRuns ?? []} />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">测试报告</h2>
-          <TestReports reports={blueprint.testReports ?? []} />
-        </div>
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">最近生成任务</h2>
+        <TasksList tasks={recentTasks ?? []} />
       </section>
     </div>
   );

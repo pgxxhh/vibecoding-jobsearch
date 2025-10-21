@@ -65,11 +65,14 @@ export function useCrawlerBlueprintDetail(code: string | null) {
     queryFn: () => fetchCrawlerBlueprintDetail(code as string),
     enabled: Boolean(code),
     refetchInterval: (data) => {
-      if (!data?.activeTask) {
+      if (!data?.recentTasks || data.recentTasks.length === 0) {
         return false;
       }
-      const status = data.activeTask.status?.toUpperCase?.() ?? data.activeTask.status;
-      return status === 'RUNNING' || status === 'PENDING' ? 5_000 : false;
+      const hasRunningTask = data.recentTasks.some((task) => {
+        const status = typeof task.status === 'string' ? task.status.toUpperCase() : task.status;
+        return status === 'RUNNING' || status === 'PENDING';
+      });
+      return hasRunningTask ? 5_000 : false;
     },
   });
 }
