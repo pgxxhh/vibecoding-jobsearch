@@ -12,6 +12,9 @@ Migrations must reside in `db/migrations` and follow `V<increment>_<description>
 ## Frontend Context Rules
 Respect context boundaries—pages remain in their `(site)` or `(admin)` scopes, while cross-cutting logic belongs in `lib/domain`, `lib/application`, or `lib/infrastructure`. Browser code never targets the Java host directly; route through `app/api/*` and helper clients like `createBackendClient`. UI components use PascalCase, hooks use `useCamelCase`, and shared components depend only on domain types with stateful work handled in hooks.
 
+## Validation Expectations
+Frontends must perform basic request validation (required fields, formats) and surface clear toasts or inline errors. Every corresponding backend entry point needs a matching guard so unvalidated payloads cannot slip through; treat frontend checks as UX and backend checks as enforcement.
+
 ## Testing & Clean Up
 Backend tests sit in `src/test/java` as `*Test`; reuse existing container fixtures and remove temporary files after execution. Frontend tests live beside the subject or in `__tests__`, named `*.test.ts(x)` and driven by Jest + Testing Library. Assert on rendered text or ARIA roles instead of snapshots, and confine React Query logic to application-layer hooks for easy stubbing.
 
