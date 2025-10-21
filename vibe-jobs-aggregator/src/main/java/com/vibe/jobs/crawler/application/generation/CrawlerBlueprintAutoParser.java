@@ -12,6 +12,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.jsoup.select.Selector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,7 +43,8 @@ public class CrawlerBlueprintAutoParser {
         if (listElement == null) {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
-        String listSelector = listElement.cssSelector();
+        String listSelector = safeCssSelector(listElement)
+                .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
 
         Map<String, ParserField> fields = buildFields(listElement, entryUrl);
         if (!fields.containsKey("title")) {
@@ -163,7 +165,12 @@ public class CrawlerBlueprintAutoParser {
                     candidate = candidate.parent();
                     continue;
                 }
-                String selector = candidate.cssSelector();
+                Optional<String> selectorOpt = safeCssSelector(candidate);
+                if (selectorOpt.isEmpty()) {
+                    candidate = candidate.parent();
+                    continue;
+                }
+                String selector = selectorOpt.get();
                 scores.merge(selector, 1, Integer::sum);
                 samples.putIfAbsent(selector, candidate);
                 candidate = candidate.parent();
@@ -222,16 +229,20 @@ public class CrawlerBlueprintAutoParser {
         if (parent == null || target == null) {
             return "";
         }
-        String parentSelector = parent.cssSelector();
-        String childSelector = target.cssSelector();
-        if (childSelector.startsWith(parentSelector)) {
-            String stripped = childSelector.substring(parentSelector.length());
+        Optional<String> parentSelector = safeCssSelector(parent);
+        Optional<String> childSelector = safeCssSelector(target);
+        if (childSelector.isEmpty()) {
+            return "";
+        }
+        String child = childSelector.get();
+        if (parentSelector.isPresent() && child.startsWith(parentSelector.get())) {
+            String stripped = child.substring(parentSelector.get().length());
             if (stripped.startsWith(" > ")) {
                 stripped = stripped.substring(3);
             }
             return stripped.isBlank() ? "." : stripped.trim();
         }
-        return childSelector;
+        return child;
     }
 
     private PagingStrategy detectPagingStrategy(Document document, String entryUrl) {
@@ -311,6 +322,21 @@ public class CrawlerBlueprintAutoParser {
             return base + "/" + relative;
         }
         return base + relative;
+    }
+
+    private Optional<String> safeCssSelector(Element element) {
+        if (element == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.ofNullable(element.cssSelector());
+        } catch (Selector.SelectorParseException e) {
+            log.warn("Failed to build css selector for element: {}", e.getMessage());
+            return Optional.empty();
+        } catch (RuntimeException e) {
+            log.warn("Failed to build css selector due to unexpected error", e);
+            return Optional.empty();
+        }
     }
 
     public record AutoParseResult(ParserProfile profile,
