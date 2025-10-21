@@ -56,7 +56,7 @@ export interface CreateCrawlerBlueprintPayload {
 
 export interface ActivateCrawlerBlueprintPayload {
   code: string;
-  enabled: boolean;
+  enable: boolean;
 }
 
 export interface RerunCrawlerBlueprintPayload {
