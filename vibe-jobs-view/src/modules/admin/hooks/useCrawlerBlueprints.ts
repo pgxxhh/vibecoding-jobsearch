@@ -64,11 +64,12 @@ export function useCrawlerBlueprintDetail(code: string | null) {
     queryKey: ['admin', 'crawler-blueprints', code],
     queryFn: () => fetchCrawlerBlueprintDetail(code as string),
     enabled: Boolean(code),
-    refetchInterval: (data) => {
-      if (!data?.recentTasks || data.recentTasks.length === 0) {
+    refetchInterval: (query) => {
+      const detail = query.state.data;
+      if (!detail?.recentTasks || detail.recentTasks.length === 0) {
         return false;
       }
-      const hasRunningTask = data.recentTasks.some((task) => {
+      const hasRunningTask = detail.recentTasks.some((task) => {
         const status = typeof task.status === 'string' ? task.status.toUpperCase() : task.status;
         return status === 'RUNNING' || status === 'PENDING';
       });
