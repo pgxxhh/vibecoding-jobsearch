@@ -173,7 +173,7 @@ export default function CrawlerBlueprintDetailPage({ params }: { params: { code:
           <Button
             variant="outline"
             size="sm"
-            onClick={() => activate.mutate({ code: summary.code, enabled: !summary.enabled })}
+            onClick={() => activate.mutate({ code: summary.code, enable: !summary.enabled })}
             disabled={isRunning}
           >
             {summary.enabled ? '暂停蓝图' : '启用蓝图'}
