@@ -356,12 +356,23 @@ Example (Apple China):
 
 ### 5.4 Adding a New Crawler Source
 
-1. **Create the blueprint:** insert or update a `crawler_blueprint` row with the desired JSON (entry URL, paging mode, flow, parser, etc.). The admin UI and `crawler_init.sql` provide templates.
+1. **Create the blueprint:** prefer the admin generator (`POST /admin/crawler-blueprints`) which accepts entry URL, optional search keywords, and exclusion selectors. The generation manager runs Playwright to infer selectors, paging, and produces a draft JSON plus validation report. For edge cases you can still seed JSON manually via SQL (`crawler_init.sql`).
 2. **Register the source:** add a `job_data_source` entry with `type = 'crawler'`, `base_options.blueprintCode`, and optional company overrides.
 3. **(Optional) Company overrides:** if the same blueprint serves multiple brands, populate `job_data_source_company` with their slugs and override options (e.g. substitute placeholders in entry URL).
-4. **Validate:** run a manual ingestion (admin portal or `JobIngestionScheduler`), inspect `crawler_run_log` and database output.
+4. **Validate:** trigger a manual ingestion (admin portal `rerun` action or `JobIngestionScheduler`), review the generation report and `crawler_run_log`, and adjust flow/selector overrides if needed before activating in production schedules.
 
 Blueprints can be hot-swapped: updating `config_json` takes effect on the next scheduler run without redeploying the service.
+
+### 5.5 Blueprint Generation Workflow
+
+The automated wizard is backed by several domain services:
+
+1. **Launch** – `AdminCrawlerBlueprintController.create` persists a draft (`crawler_blueprint`) and a pending task (`crawler_blueprint_generation_task`) with sanitized inputs.
+2. **Async execution** – `CrawlerBlueprintGenerationManager` dispatches work to the dedicated executor (`crawler.blueprint.generation.executor.*`). Playwright navigates to the entry URL, optionally submits keywords/exclusions, captures HTML/screenshot snapshots, and passes them to `CrawlerBlueprintAutoParser`/`CrawlerBlueprintValidator`.
+3. **Draft update** – Successful runs populate `draft_config_json` and `last_test_report_json`; failures retain the report with error/snapshot metadata so operators can rerun after tweaking inputs.
+4. **Activation** – `POST /admin/crawler-blueprints/{code}/activate` copies the draft config into `config_json` and upserts a `job_data_source` where `base_options` include `blueprintCode`/`crawlerBlueprintCode`. Audit records are written via `AdminChangeLogService`.
+
+Admin detail endpoints (`GET /admin/crawler-blueprints/{code}`) expose recent tasks, reports, and activation status to support troubleshooting.
 
 ---
 

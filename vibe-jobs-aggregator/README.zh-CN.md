@@ -217,6 +217,7 @@ classDiagram
 | GET | `/admin/data-sources` | 列出所有数据源 |
 | POST | `/admin/data-sources/{code}/companies` | 为数据源新增公司 |
 | DELETE | `/admin/data-sources/{code}/companies/{companyId}` | 删除公司覆盖配置 |
+| POST | `/admin/crawler-blueprints` | 触发 Playwright 自动生成爬虫蓝图草稿 |
 | POST | `/admin/job-details/normalize-content-text` | 重建 `content_text` 字段 |
 
 Next.js 前端通过 `/api/admin/...` 代理上述请求，处理会话与错误。
@@ -224,6 +225,15 @@ Next.js 前端通过 `/api/admin/...` 代理上述请求，处理会话与错误
 ### 6.2 日常公司补全脚本
 
 `scripts/collect_new_companies.py` 会调用 Greenhouse、Lever、SmartRecruiters 等 API，筛选工程/金融岗位，生成 SQL 补丁 `scripts/job_data_source_company_patch.sql`。调度建议与参数详见 [designdocs/daily_company_enrichment.md](designdocs/daily_company_enrichment.md)。
+
+### 6.3 爬虫蓝图自动生成流程
+
+1. **发起向导**：在管理端 “爬虫蓝图” 页面或调用 `POST /admin/crawler-blueprints`，填写 `code`、`name`、`entryUrl`，可选输入搜索关键词与忽略选择器。
+2. **异步执行**：`CrawlerBlueprintGenerationManager` 将任务派发到独立线程池（`crawler.blueprint.generation.executor.*`），使用 Playwright 抓取 HTML/截图后交由自动解析器与校验器生成字段选择器、分页策略与测试报告。
+3. **草稿审阅**：成功时 `crawler_blueprint` 草稿会写入 `draft_config_json` 与 `last_test_report_json`；失败时保存错误与快照，可通过 `POST /admin/crawler-blueprints/{code}/rerun` 调整参数后重试。
+4. **激活上线**：确认草稿状态为 `READY` 后，调用 `POST /admin/crawler-blueprints/{code}/activate` 将配置转正写入 `config_json`，并同步创建/更新 `job_data_source`（`base_options` 会填充 `blueprintCode` 与 `crawlerBlueprintCode`）。
+
+管理端详情接口 (`GET /admin/crawler-blueprints/{code}`) 会展示最近任务、测试报告与激活时间，便于追溯与排障。
 
 ---
 

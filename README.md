@@ -23,6 +23,7 @@ Elaine Jobs is a talent intelligence platform designed for users in Mainland Chi
 
 
 - **Source management** – Toggle ATS connectors or custom crawlers with a single click and monitor their status to ensure feeds stay fresh.
+- **Crawler blueprint autogen** – Paste an entry URL and optional keywords into the admin wizard and let the backend run Playwright to infer selectors, produce a draft configuration, and register the data source after review.
 
 
 <img width="1299" height="850" alt="image" src="https://github.com/user-attachments/assets/886c38ca-d416-4e0d-b824-650dc0a51499" />
@@ -58,6 +59,7 @@ Elaine Jobs is a talent intelligence platform designed for users in Mainland Chi
 1. **Source configuration**
    - Supports major ATS providers such as `ashby`, `greenhouse`, `lever`, `recruitee`, `smartrecruiters`, and `workday`.
    - Admin UI can enable/disable sources, toggle modes (incremental vs. company-specific), adjust pagination, concurrency, and initial delay.
+   - The crawler blueprint generator accepts entry URLs, keywords, and exclusion selectors, then spawns a Playwright run to propose a draft JSON blueprint plus validation report.
 2. **Scheduling**
    - Spring scheduler triggers ingestion jobs based on configuration, supporting both fixed-delay and custom start times.
    - Each run resolves the company list or incremental cursor to avoid redundant fetches.

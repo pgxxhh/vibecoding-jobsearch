@@ -23,6 +23,7 @@ Vibe Jobs View is the Next.js front-end for the Vibe Jobs talent intelligence pl
 - Job seeker experience built with the Next.js App Router, delivering instant filters, infinite scroll, and smart job detail enrichment.
 - Email magic-link authentication flow with challenge verification and cookie-based session handling.
 - Operations console for tuning ingestion cadence, source throttling, and agency/company whitelists.
+- Crawler blueprint wizard that lets operators paste an entry URL, run Playwright-backed inference, and review draft configs before activation.
 - Internationalization (Chinese/English) and mobile-friendly UX, including pull-to-refresh and detail drawer.
 
 ## Tech stack
@@ -137,7 +138,7 @@ Docker deployments commonly set `BACKEND_BASE_URL="http://backend:8080"` so both
 ## Admin console
 - **Ingestion settings** (`src/app/(admin)/admin/ingestion-settings/page.tsx`): adjust delay, concurrency, page size, and JSON-based location/role filters. Saves trigger invalidation via React Query.
 - **Data sources** (`src/app/(admin)/admin/data-sources/page.tsx`): maintain source definitions, category quota definitions, and company overrides; includes JSON editors and bulk upload modals (`src/modules/admin/components/DataSourceBulkUpload`, `CompanyBulkUpload`).
-- **Crawler blueprints** (`src/app/(admin)/admin/crawler-blueprints/page.tsx`): browse blueprint cards, drill into `[code]/page.tsx` for execution logs, trigger reruns/activation, and launch the guided creator (`new/page.tsx`).
+- **Crawler blueprints** (`src/app/(admin)/admin/crawler-blueprints/page.tsx`): browse blueprint cards, inspect `[code]/page.tsx` for generation history, trigger reruns/activation, and open the guided creator (`new/page.tsx`) that kicks off Playwright inference (entry URL, keywords, exclusion selectors) before handing you a draft JSON and validation report.
 - **Dashboard landing** (`src/app/(admin)/admin/page.tsx`): quick links plus operational tips. All admin screens expect an authenticated session.
 
 Admin routes proxy to the backend via `src/app/api/admin/*` for create/update/delete operations and enforce consistent JSON responses.

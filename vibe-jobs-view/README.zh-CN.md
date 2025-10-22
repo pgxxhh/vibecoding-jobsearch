@@ -23,6 +23,7 @@ Vibe Jobs View 是 Vibe Jobs 人才情报平台的 Next.js 前端，提供职位
 - 基于 Next.js App Router 构建的职位搜索体验，支持即时过滤、无限滚动以及 AI 详情增强。
 - 邮件魔法链接登录，包含验证码校验与 Cookie 会话管理。
 - 运营控制台用于调整采集节奏、数据源限流以及公司白名单。
+- 新增爬虫蓝图向导，只需输入入口 URL、关键词或忽略选择器，即可触发 Playwright 自动推断选择器并生成草稿配置。
 - 支持中英文切换与移动端友好交互（下拉刷新、详情抽屉）。
 
 ## 技术栈
@@ -137,6 +138,7 @@ Docker 部署通常设置 `BACKEND_BASE_URL="http://backend:8080"`，保证容�
 ## 管理控制台
 - **Ingestion settings** (`src/app/(admin)/admin/ingestion-settings/page.tsx`): 调整延迟、并发、分页以及 JSON 过滤条件，保存后触发 React Query 失效。
 - **Data sources** (`src/app/(admin)/admin/data-sources/page.tsx`): 维护数据源定义、分类配额与公司覆盖，包含 JSON 编辑器与批量导入弹窗（`src/modules/admin/components/DataSourceBulkUpload`、`CompanyBulkUpload`）。
+- **Crawler blueprints** (`src/app/(admin)/admin/crawler-blueprints`): 查看蓝图卡片、任务历史与测试报告，可通过 `new/page.tsx` 向导输入入口 URL、关键词、排除选择器，由后端 Playwright 自动生成草稿 JSON 并在激活前复核。
 - **Dashboard landing** (`src/app/(admin)/admin/page.tsx`): 提供快速入口与运营提示。所有后台页面都要求已认证会话。
 
 后台路由通过 `src/app/api/admin/*` 与后端交互，统一处理 JSON 响应与错误。
