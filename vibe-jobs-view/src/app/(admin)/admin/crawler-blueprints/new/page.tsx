@@ -11,6 +11,18 @@ const steps = ['基础信息', '高阶选项', '确认创建'] as const;
 
 type Step = 0 | 1 | 2;
 
+const nextStepMap: Record<Step, Step> = {
+  0: 1,
+  1: 2,
+  2: 2,
+};
+
+const prevStepMap: Record<Step, Step> = {
+  0: 0,
+  1: 0,
+  2: 1,
+};
+
 type FormState = {
   code: string;
   name: string;
@@ -73,13 +85,13 @@ export default function CrawlerBlueprintCreatePage() {
       }
     }
     setError(null);
-    setStep((prev) => Math.min(2, (prev + 1) as Step));
+    setStep((prev) => nextStepMap[prev]);
   };
 
   const goPrev = () => {
     setError(null);
     setSuccess(null);
-    setStep((prev) => Math.max(0, (prev - 1) as Step));
+    setStep((prev) => prevStepMap[prev]);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
