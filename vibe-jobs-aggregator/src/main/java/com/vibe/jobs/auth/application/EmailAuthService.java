@@ -101,13 +101,11 @@ public class EmailAuthService {
                 });
 
         Instant resendAvailableAt = challenge.getLastSentAt().plus(properties.getResendCooldown());
-        String debugCode = properties.isExposeCodeInResponse() ? code : null;
         return new ChallengeResult(
                 challenge.getId(),
                 challenge.getEmail().masked(),
                 challenge.getExpiresAt(),
-                resendAvailableAt,
-                debugCode
+                resendAvailableAt
         );
     }
 
@@ -177,8 +175,7 @@ public class EmailAuthService {
     public record ChallengeResult(UUID challengeId,
                                   String maskedEmail,
                                   Instant expiresAt,
-                                  Instant resendAvailableAt,
-                                  String debugCode) {}
+                                  Instant resendAvailableAt) {}
 
     public record VerificationResult(UUID userId,
                                      String email,

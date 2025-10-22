@@ -7,6 +7,5 @@ public record SendCodeResponse(
         UUID challengeId,
         String maskedEmail,
         Instant expiresAt,
-        Instant resendAvailableAt,
-        String debugCode
+        Instant resendAvailableAt
 ) {}

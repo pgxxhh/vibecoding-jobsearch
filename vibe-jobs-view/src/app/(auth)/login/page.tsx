@@ -21,7 +21,6 @@ export default function LoginPage() {
     nextChallengeId: string,
     submittedEmail: string,
     nextResendAvailableAt?: string | null,
-    _devCode?: string | null,
   ) => {
     setChallengeId(nextChallengeId);
     setEmail(submittedEmail);

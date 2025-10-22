@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Input } from '@/shared/ui';
 
 interface Props {
-  onSuccess: (challengeId: string, email: string, resendAvailableAt?: string | null, debugCode?: string | null) => void;
+  onSuccess: (challengeId: string, email: string, resendAvailableAt?: string | null) => void;
   onError: (message: string | null) => void;
 }
 
@@ -32,7 +32,7 @@ export default function LoginStepEmail({ onSuccess, onError }: Props) {
       if (!res.ok) {
         throw new Error(data?.message ?? '发送验证码失败');
       }
-      onSuccess(String(data.challengeId), trimmedEmail, data?.resendAvailableAt, data?.debugCode ?? null);
+      onSuccess(String(data.challengeId), trimmedEmail, data?.resendAvailableAt);
     } catch (error) {
       onError(error instanceof Error ? error.message : '发送验证码失败');
     } finally {

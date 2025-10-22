@@ -31,8 +31,7 @@ public class AuthController {
                 result.challengeId(),
                 result.maskedEmail(),
                 result.expiresAt(),
-                result.resendAvailableAt(),
-                result.debugCode()
+                result.resendAvailableAt()
         );
     }
 
