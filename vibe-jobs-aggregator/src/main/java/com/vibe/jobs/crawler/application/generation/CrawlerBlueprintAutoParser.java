@@ -32,6 +32,18 @@ import java.util.Set;
 public class CrawlerBlueprintAutoParser {
 
     private static final Logger log = LoggerFactory.getLogger(CrawlerBlueprintAutoParser.class);
+    private static final List<String> JOB_KEYWORD_HINTS = List.of(
+            "job",
+            "career",
+            "position",
+            "role",
+            "opening",
+            "vacancy",
+            "opportunity",
+            "职位",
+            "招聘",
+            "机会"
+    );
 
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
@@ -209,7 +221,34 @@ public class CrawlerBlueprintAutoParser {
             return false;
         }
         int anchorCount = element.select("a[href]").size();
-        return anchorCount >= 2;
+        if (anchorCount >= 2) {
+            return true;
+        }
+        if (anchorCount == 0) {
+            return false;
+        }
+        Element anchor = element.selectFirst("a[href]");
+        if (anchor != null) {
+            if (containsJobKeyword(anchor.attr("href"))) {
+                return true;
+            }
+            if (containsJobKeyword(anchor.text())) {
+                return true;
+            }
+            if (containsJobKeyword(anchor.className())) {
+                return true;
+            }
+            if (containsJobKeyword(anchor.id())) {
+                return true;
+            }
+        }
+        if (containsJobKeyword(element.id())) {
+            return true;
+        }
+        if (containsJobKeyword(className)) {
+            return true;
+        }
+        return containsJobKeyword(element.text());
     }
 
     private Element findFirst(Element root, List<String> selectors) {
@@ -337,6 +376,19 @@ public class CrawlerBlueprintAutoParser {
             log.warn("Failed to build css selector due to unexpected error", e);
             return Optional.empty();
         }
+    }
+
+    private boolean containsJobKeyword(String content) {
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+        String normalized = content.toLowerCase(Locale.ROOT);
+        for (String keyword : JOB_KEYWORD_HINTS) {
+            if (normalized.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public record AutoParseResult(ParserProfile profile,
