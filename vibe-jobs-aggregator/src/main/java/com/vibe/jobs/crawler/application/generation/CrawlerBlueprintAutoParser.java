@@ -44,6 +44,16 @@ public class CrawlerBlueprintAutoParser {
             "招聘",
             "机会"
     );
+    private static final List<String> JOB_ATTRIBUTE_NAMES = List.of(
+            "data-automation-id",
+            "data-testid",
+            "data-cy",
+            "data-component",
+            "data-qa",
+            "aria-label",
+            "class"
+    );
+    private static final int MAX_PARENT_DEPTH = 8;
 
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
@@ -172,7 +182,7 @@ public class CrawlerBlueprintAutoParser {
         Map<String, Element> samples = new LinkedHashMap<>();
         for (Element anchor : anchors) {
             Element candidate = anchor;
-            for (int depth = 0; depth < 4 && candidate != null; depth++) {
+            for (int depth = 0; depth < MAX_PARENT_DEPTH && candidate != null; depth++) {
                 if (candidate.tagName().equalsIgnoreCase("a")) {
                     candidate = candidate.parent();
                     continue;
@@ -200,12 +210,53 @@ public class CrawlerBlueprintAutoParser {
             return preferred;
         }
 
+        Element byAttributes = findByJobAttributes(document);
+        if (byAttributes != null) {
+            return byAttributes;
+        }
+
         return scores.entrySet().stream()
                 .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
                 .map(entry -> samples.get(entry.getKey()))
                 .filter(this::isLikelyJobList)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private Element findByJobAttributes(Document document) {
+        for (Element element : document.getAllElements()) {
+            if (!matchesJobAttribute(element)) {
+                continue;
+            }
+            Element candidate = element;
+            if (candidate.tagName().equalsIgnoreCase("a")) {
+                candidate = candidate.parent();
+            }
+            if (candidate == null) {
+                continue;
+            }
+            Element anchor = candidate.selectFirst("a[href]");
+            if (anchor == null) {
+                continue;
+            }
+            Element current = candidate;
+            for (int depth = 0; depth < MAX_PARENT_DEPTH && current != null; depth++) {
+                if (isLikelyJobList(current)) {
+                    return current;
+                }
+                current = current.parent();
+            }
+        }
+        return null;
+    }
+
+    private boolean matchesJobAttribute(Element element) {
+        for (String attr : JOB_ATTRIBUTE_NAMES) {
+            if (containsJobKeyword(element.attr(attr))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isLikelyJobList(Element element) {
