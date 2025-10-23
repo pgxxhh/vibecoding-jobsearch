@@ -50,6 +50,8 @@ public class BrowserSessionManager implements Closeable {
             context.addInitScript("Object.defineProperty(navigator, 'platform', {get: () => 'Win32'});");
             context.addInitScript("Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});");
             try (Page page = context.newPage()) {
+                page.setDefaultNavigationTimeout(90000);
+                page.setDefaultTimeout(60000);
                 return callback.apply(page);
             }
         }

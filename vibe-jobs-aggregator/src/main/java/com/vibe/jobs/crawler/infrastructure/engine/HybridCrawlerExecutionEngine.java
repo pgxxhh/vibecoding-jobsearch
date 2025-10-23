@@ -30,6 +30,9 @@ public class HybridCrawlerExecutionEngine implements CrawlerExecutionEngine {
                 return browserEngine.fetch(session, pagination);
             } catch (Exception ex) {
                 log.warn("Browser engine failed for blueprint {}, falling back to HTTP: {}", blueprint.code(), ex.getMessage());
+                if (blueprint.requiresBrowser()) {
+                    throw ex;
+                }
             }
         }
         log.info("Using HTTP engine for blueprint {}", blueprint.code());
