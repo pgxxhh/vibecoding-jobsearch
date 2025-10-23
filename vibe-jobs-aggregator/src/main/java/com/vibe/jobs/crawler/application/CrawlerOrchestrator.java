@@ -29,18 +29,21 @@ public class CrawlerOrchestrator {
     private final CrawlerParserEngine parserEngine;
     private final Clock clock;
     private final CrawlerRateLimiter rateLimiter;
+    private final CrawlerBlueprintAutoConfigurator autoConfigurator;
 
     public CrawlerOrchestrator(CrawlerBlueprintRepository blueprintRepository,
                                CrawlRunRepository runRepository,
                                HybridCrawlerExecutionEngine executionEngine,
                                CrawlerParserEngine parserEngine,
                                CrawlerRateLimiter rateLimiter,
+                               CrawlerBlueprintAutoConfigurator autoConfigurator,
                                java.util.Optional<Clock> clock) {
         this.blueprintRepository = blueprintRepository;
         this.runRepository = runRepository;
         this.executionEngine = executionEngine;
         this.parserEngine = parserEngine;
         this.rateLimiter = rateLimiter;
+        this.autoConfigurator = autoConfigurator;
         this.clock = clock.orElse(Clock.systemUTC());
     }
 
@@ -66,6 +69,7 @@ public class CrawlerOrchestrator {
             error = ex.getMessage() == null ? ex.toString() : ex.getMessage();
             log.warn("Crawler execution failed for blueprint {} page {}: {}", blueprint.code(), request.pagination().page(), error);
             log.info("Crawler execution error", ex);
+            autoConfigurator.handleHttpFailure(blueprint, ex);
         }
         Instant completed = clock.instant();
         long duration = Math.max(0, completed.toEpochMilli() - started.toEpochMilli());

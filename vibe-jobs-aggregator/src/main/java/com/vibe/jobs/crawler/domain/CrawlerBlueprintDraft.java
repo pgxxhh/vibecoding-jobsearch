@@ -222,6 +222,29 @@ public class CrawlerBlueprintDraft {
         );
     }
 
+    public CrawlerBlueprintDraft requireBrowser(String updatedConfigJson, String operator) {
+        Instant now = Instant.now();
+        Instant created = this.createdAt == null ? now : this.createdAt;
+        String operatorValue = (operator == null || operator.isBlank()) ? generatedBy : operator;
+        return new CrawlerBlueprintDraft(
+                code,
+                name,
+                entryUrl,
+                concurrencyLimit,
+                enabled,
+                parserTemplateCode,
+                updatedConfigJson == null ? "" : updatedConfigJson,
+                draftConfigJson,
+                lastTestReportJson,
+                status,
+                true,
+                operatorValue,
+                now,
+                created,
+                now
+        );
+    }
+
     public CrawlBlueprint toBlueprint(ParserProfile profile,
                                       PagingStrategy paging,
                                       CrawlFlow flow,
