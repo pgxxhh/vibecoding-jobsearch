@@ -9,6 +9,7 @@ import com.vibe.jobs.crawler.domain.CrawlerBlueprintDraftRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
@@ -40,17 +41,11 @@ public class CrawlerBlueprintAutoConfigurator {
         if (blueprint.requiresBrowser()) {
             return;
         }
-        Optional<WebClientResponseException> httpFailure = findHttpException(failure);
-        if (httpFailure.isEmpty()) {
-            return;
-        }
-        WebClientResponseException exception = httpFailure.get();
-        if (!exception.getStatusCode().equals(HttpStatus.FORBIDDEN)) {
-            return;
-        }
-        draftRepository.findByCode(blueprint.code()).ifPresentOrElse(
-                draft -> applyBrowserRequirement(blueprint, draft, "HTTP_FORBIDDEN"),
-                () -> log.info("Skipping auto browser promotion for {} - draft not found", blueprint.code())
+        resolveReason(failure).ifPresent(reason ->
+                draftRepository.findByCode(blueprint.code()).ifPresentOrElse(
+                        draft -> applyBrowserRequirement(blueprint, draft, reason),
+                        () -> log.info("Skipping auto browser promotion for {} - draft not found", blueprint.code())
+                )
         );
     }
 
@@ -63,6 +58,41 @@ public class CrawlerBlueprintAutoConfigurator {
             current = current.getCause();
         }
         return Optional.empty();
+    }
+
+    private Optional<String> resolveReason(Throwable failure) {
+        Optional<WebClientResponseException> httpFailure = findHttpException(failure);
+        if (httpFailure.isPresent()) {
+            HttpStatusCode status = httpFailure.get().getStatusCode();
+            if (status.value() == HttpStatus.FORBIDDEN.value()) {
+                return Optional.of("HTTP_FORBIDDEN");
+            }
+            if (status.is3xxRedirection() || status.value() == HttpStatus.UNAUTHORIZED.value()) {
+                return Optional.of("HTTP_AUTH_REQUIRED");
+            }
+        }
+        if (isTimeoutFailure(failure)) {
+            return Optional.of("HTTP_TIMEOUT");
+        }
+        return Optional.empty();
+    }
+
+    private boolean isTimeoutFailure(Throwable failure) {
+        Throwable current = failure;
+        while (current != null) {
+            if (current instanceof java.util.concurrent.TimeoutException) {
+                return true;
+            }
+            if (current instanceof java.net.SocketTimeoutException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase().contains("timeout")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void applyBrowserRequirement(CrawlBlueprint blueprint,

@@ -94,6 +94,7 @@ class CrawlerBlueprintAutoConfiguratorTest {
         JsonNode updated = objectMapper.readTree(saved.configJson());
         assertThat(updated.path("automation").path("jsEnabled").asBoolean()).isTrue();
         assertThat(updated.path("metadata").path("autoBrowser").asBoolean()).isTrue();
+        assertThat(updated.path("metadata").path("autoBrowserReason").asText()).isEqualTo("HTTP_FORBIDDEN");
     }
 
     @Test
@@ -129,5 +130,60 @@ class CrawlerBlueprintAutoConfiguratorTest {
 
         verify(draftRepository, never()).findByCode(any());
         verify(draftRepository, never()).save(any());
+    }
+
+    @Test
+    void promotesBlueprintToBrowserWhenTimeoutOccurs() throws Exception {
+        CrawlBlueprint blueprint = new CrawlBlueprint(
+                "timeout",
+                "Timeout",
+                true,
+                1,
+                "https://example.com",
+                PagingStrategy.disabled(),
+                CrawlFlow.empty(),
+                ParserProfile.empty(),
+                RateLimit.unlimited(),
+                Map.of(),
+                AutomationSettings.disabled(),
+                CrawlerBlueprintStatus.ACTIVE,
+                "{\"parser\":{\"listSelector\":\".card\",\"fields\":{\"title\":{\"type\":\"TEXT\",\"selector\":\"a\"}}}}",
+                "",
+                false,
+                "",
+                Instant.now()
+        );
+
+        String configJson = "{" +
+                "\"parser\":{\"listSelector\":\".card\",\"fields\":{\"title\":{\"type\":\"TEXT\",\"selector\":\"a\"}}}}";
+        CrawlerBlueprintDraft draft = new CrawlerBlueprintDraft(
+                "timeout",
+                "Timeout",
+                "https://example.com",
+                1,
+                true,
+                "",
+                configJson,
+                configJson,
+                "",
+                CrawlerBlueprintStatus.ACTIVE,
+                false,
+                "",
+                null,
+                Instant.now(),
+                Instant.now()
+        );
+
+        when(draftRepository.findByCode("timeout")).thenReturn(Optional.of(draft));
+        when(draftRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        IllegalStateException timeout = new IllegalStateException("Timeout on blocking read", new java.util.concurrent.TimeoutException());
+        configurator.handleHttpFailure(blueprint, timeout);
+
+        ArgumentCaptor<CrawlerBlueprintDraft> captor = ArgumentCaptor.forClass(CrawlerBlueprintDraft.class);
+        verify(draftRepository).save(captor.capture());
+
+        JsonNode updated = objectMapper.readTree(captor.getValue().configJson());
+        assertThat(updated.path("metadata").path("autoBrowserReason").asText()).isEqualTo("HTTP_TIMEOUT");
     }
 }
