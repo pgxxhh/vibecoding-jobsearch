@@ -1,6 +1,8 @@
 package com.vibe.jobs.crawler.infrastructure.engine;
 
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.Browser.NewContextOptions;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
@@ -11,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 
@@ -18,6 +23,11 @@ import java.util.concurrent.Semaphore;
 public class BrowserSessionManager implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(BrowserSessionManager.class);
+    private static final List<String> USER_AGENTS = List.of(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.113 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
+            "Mozilla/5.0 (X11; Linux x86_64; rv:124.0) Gecko/20100101 Firefox/124.0"
+    );
 
     private final Object lock = new Object();
     private final Semaphore playwrightInit = new Semaphore(1);
@@ -27,9 +37,21 @@ public class BrowserSessionManager implements Closeable {
     public <T> T withPage(PageCallback<T> callback) throws Exception {
         Objects.requireNonNull(callback, "callback");
         Browser activeBrowser = ensureBrowser();
-        try (com.microsoft.playwright.BrowserContext context = activeBrowser.newContext();
-             Page page = context.newPage()) {
-            return callback.apply(page);
+        NewContextOptions options = new NewContextOptions()
+                .setViewportSize(1366, 768)
+                .setUserAgent(randomUserAgent())
+                .setExtraHTTPHeaders(Map.of(
+                        "Accept-Language", "en-US,en;q=0.9",
+                        "Upgrade-Insecure-Requests", "1"
+                ));
+        try (BrowserContext context = activeBrowser.newContext(options)) {
+            context.addInitScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});");
+            context.addInitScript("window.chrome = window.chrome || {runtime: {}};");
+            context.addInitScript("Object.defineProperty(navigator, 'platform', {get: () => 'Win32'});");
+            context.addInitScript("Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});");
+            try (Page page = context.newPage()) {
+                return callback.apply(page);
+            }
         }
     }
 
@@ -80,6 +102,14 @@ public class BrowserSessionManager implements Closeable {
         } finally {
             playwrightInit.release();
         }
+    }
+
+    private String randomUserAgent() {
+        if (USER_AGENTS.isEmpty()) {
+            return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
+        }
+        int index = ThreadLocalRandom.current().nextInt(USER_AGENTS.size());
+        return USER_AGENTS.get(index);
     }
 
     @Override
