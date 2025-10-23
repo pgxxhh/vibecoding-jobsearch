@@ -2,6 +2,7 @@ package com.vibe.jobs.crawler.application.generation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.microsoft.playwright.Frame;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitUntilState;
@@ -39,6 +40,20 @@ public class CrawlerBlueprintGenerationManager {
     private static final String KEY_EXCLUDES = "excludeSelectors";
     private static final String KEY_NAME = "name";
     private static final String KEY_OPERATOR = "operator";
+    private static final List<String> JOB_FRAME_HINTS = List.of(
+            "job",
+            "career",
+            "recruit",
+            "workday",
+            "greenhouse",
+            "lever",
+            "smartrecruiters",
+            "bamboohr",
+            "icims",
+            "jobvite",
+            "successfactors",
+            "myworkdayjobs"
+    );
 
     private final CrawlerBlueprintDraftRepository draftRepository;
     private final CrawlerBlueprintGenerationTaskRepository taskRepository;
@@ -225,11 +240,65 @@ public class CrawlerBlueprintGenerationManager {
                 applySearch(page, keywords);
             }
             waitForSettled(page);
-            snapshot.put("finalUrl", page.url());
+
+            String pageUrl = page.url();
+            snapshot.put("pageUrl", pageUrl);
+
+            PageContext context = resolvePageContext(page);
+            snapshot.put("finalUrl", context.finalUrl());
+            context.frameUrl().ifPresent(url -> snapshot.put("frameUrl", url));
+
             byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setFullPage(true));
             snapshot.put("screenshot", Base64.getEncoder().encodeToString(screenshot));
-            return page.content();
+            return context.html();
         });
+    }
+
+    private PageContext resolvePageContext(Page page) {
+        String html = page.content();
+        String finalUrl = page.url();
+        Frame jobFrame = locateJobFrame(page);
+        if (jobFrame == null) {
+            return new PageContext(html, finalUrl, Optional.empty());
+        }
+        try {
+            page.waitForTimeout(750);
+        } catch (RuntimeException ignored) {
+        }
+        try {
+            String frameHtml = jobFrame.content();
+            if (frameHtml != null && !frameHtml.isBlank()) {
+                String frameUrl = jobFrame.url();
+                if (frameUrl != null && !frameUrl.isBlank()) {
+                    finalUrl = frameUrl;
+                }
+                return new PageContext(frameHtml, finalUrl, Optional.ofNullable(frameUrl));
+            }
+        } catch (RuntimeException ex) {
+            log.debug("Failed to extract iframe content: {}", ex.getMessage());
+        }
+        return new PageContext(html, finalUrl, Optional.ofNullable(jobFrame.url()));
+    }
+
+    private Frame locateJobFrame(Page page) {
+        return page.frames().stream()
+                .filter(frame -> frame != null && frame != page.mainFrame())
+                .filter(frame -> isJobFrame(frame.url()) || isJobFrame(frame.name()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isJobFrame(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = value.toLowerCase(Locale.ROOT);
+        for (String hint : JOB_FRAME_HINTS) {
+            if (normalized.contains(hint)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void applySearch(Page page, String keywords) {
@@ -258,6 +327,9 @@ public class CrawlerBlueprintGenerationManager {
             page.waitForTimeout(1500);
         } catch (Exception ignored) {
         }
+    }
+
+    private record PageContext(String html, String finalUrl, Optional<String> frameUrl) {
     }
 
     private String determineCode(GenerationCommand command) {
