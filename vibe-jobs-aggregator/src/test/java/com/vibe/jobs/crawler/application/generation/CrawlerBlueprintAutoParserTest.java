@@ -65,4 +65,24 @@ class CrawlerBlueprintAutoParserTest {
         assertThat(profile.fields().get("title").selector()).contains("a");
         assertThat(profile.fields().get("url").attribute()).isEqualTo("href");
     }
+
+    @Test
+    void throwsWhenChallengePageDetected() {
+        String html = """
+                <html>
+                  <head>
+                    <title>Just a moment...</title>
+                    <meta http-equiv="refresh" content="0;url=/jobs?__cf_chl=abc" />
+                  </head>
+                  <body>
+                    <form id="challenge-form"></form>
+                  </body>
+                </html>
+                """;
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                parser.parse("https://example.com/jobs", html)
+        ).isInstanceOf(IllegalStateException.class)
+         .hasMessageContaining("challenge page");
+    }
 }

@@ -51,7 +51,9 @@ public class CrawlerBlueprintAutoParser {
             "data-component",
             "data-qa",
             "aria-label",
-            "class"
+            "class",
+            "id",
+            "name"
     );
     private static final int MAX_PARENT_DEPTH = 8;
 
@@ -59,6 +61,10 @@ public class CrawlerBlueprintAutoParser {
         Document document = Jsoup.parse(html == null ? "" : html);
         if (document.body() == null) {
             throw new IllegalArgumentException("Empty HTML document");
+        }
+
+        if (isChallengePage(document)) {
+            throw new IllegalStateException("Encountered challenge page instead of job listings");
         }
 
         Element listElement = findBestListElement(document);
@@ -427,6 +433,17 @@ public class CrawlerBlueprintAutoParser {
             log.warn("Failed to build css selector due to unexpected error", e);
             return Optional.empty();
         }
+    }
+
+    private boolean isChallengePage(Document document) {
+        String title = document.title() == null ? "" : document.title().toLowerCase(Locale.ROOT);
+        if (title.contains("just a moment") || title.contains("attention required")) {
+            return true;
+        }
+        if (document.selectFirst("#challenge-form, #challenge-error-text, script[src*='challenge-platform']") != null) {
+            return true;
+        }
+        return document.selectFirst("meta[http-equiv=refresh][content*='__cf_chl']") != null;
     }
 
     private boolean containsJobKeyword(String content) {
