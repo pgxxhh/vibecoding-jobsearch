@@ -117,8 +117,16 @@ public class ParserField {
                     if (!rawValue.startsWith("http://") && !rawValue.startsWith("https://")) {
                         String resolvedBaseUrl = !baseUrl.isBlank() ? baseUrl : extractBaseUrl(element);
                         if (resolvedBaseUrl != null) {
-                            String separator = resolvedBaseUrl.endsWith("/") || rawValue.startsWith("/") ? "" : "/";
-                            yield resolvedBaseUrl + separator + (rawValue.startsWith("/") ? rawValue.substring(1) : rawValue);
+                            if (rawValue.startsWith("/")) {
+                                if (resolvedBaseUrl.endsWith("/")) {
+                                    yield resolvedBaseUrl + rawValue.substring(1);
+                                } else {
+                                    yield resolvedBaseUrl + rawValue;
+                                }
+                            } else {
+                                String separator = resolvedBaseUrl.endsWith("/") ? "" : "/";
+                                yield resolvedBaseUrl + separator + rawValue;
+                            }
                         }
                     }
                 }

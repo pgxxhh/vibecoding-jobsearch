@@ -74,6 +74,10 @@ public class CrawlerBlueprintAutoParser {
         listElement = normalizeRepeatingElement(listElement);
         String listSelector = safeCssSelector(listElement)
                 .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
+        listSelector = generalizeSelector(listSelector);
+        if (listSelector.isBlank()) {
+            throw new IllegalStateException("Unable to generalize selector for job list element");
+        }
 
         Map<String, ParserField> fields = buildFields(listElement, entryUrl);
         if (!fields.containsKey("title")) {
@@ -202,7 +206,9 @@ public class CrawlerBlueprintAutoParser {
                     candidate = candidate.parent();
                     continue;
                 }
-                if (candidate.tagName().equalsIgnoreCase("body") || candidate.tagName().equalsIgnoreCase("html")) {
+                if (candidate.tagName().equalsIgnoreCase("body")
+                        || candidate.tagName().equalsIgnoreCase("html")
+                        || candidate.tagName().equalsIgnoreCase("#root")) {
                     candidate = candidate.parent();
                     continue;
                 }
@@ -368,9 +374,10 @@ public class CrawlerBlueprintAutoParser {
         if (childSelector.isEmpty()) {
             return "";
         }
-        String child = childSelector.get();
-        if (parentSelector.isPresent() && child.startsWith(parentSelector.get())) {
-            String stripped = child.substring(parentSelector.get().length());
+        String child = generalizeSelector(childSelector.get());
+        String parentPath = parentSelector.map(this::generalizeSelector).orElse("");
+        if (!parentPath.isBlank() && child.startsWith(parentPath)) {
+            String stripped = child.substring(parentPath.length());
             if (stripped.startsWith(" > ")) {
                 stripped = stripped.substring(3);
             }
@@ -503,6 +510,20 @@ public class CrawlerBlueprintAutoParser {
             }
         }
         return element;
+    }
+
+    private String generalizeSelector(String selector) {
+        if (selector == null || selector.isBlank()) {
+            return "";
+        }
+        String normalized = selector;
+        normalized = normalized.replaceAll(
+                ":(nth-of-type|nth-child|nth-last-of-type|nth-last-child)\\((?:\\d+|odd|even)\\)",
+                "");
+        normalized = normalized.replaceAll(":first-child|:last-child|:first-of-type|:last-of-type", "");
+        normalized = normalized.replaceAll("\\s*>\\s*", " > ");
+        normalized = normalized.replaceAll("\\s+", " ");
+        return normalized.trim();
     }
 
     private boolean isChallengePage(Document document) {

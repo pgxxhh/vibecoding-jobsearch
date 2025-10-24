@@ -134,7 +134,15 @@ class CrawlerBlueprintAutoParserTest {
 
         ParserProfile profile = result.profile();
         assertThat(profile.listSelector()).contains("li").contains("rc-accordion-item");
+        assertThat(profile.listSelector()).doesNotContain("nth");
         assertThat(profile.fields().get("title").selector()).contains("a");
         assertThat(profile.fields().get("url").attribute()).isEqualTo("href");
+
+        assertThat(profile.parse(html))
+                .extracting(ParserProfile.ParsedJob::url)
+                .containsExactly(
+                        "https://jobs.apple.com/job/1",
+                        "https://jobs.apple.com/job/2"
+                );
     }
 }
