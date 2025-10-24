@@ -44,6 +44,21 @@ public class CrawlerBlueprintAutoParser {
             "招聘",
             "机会"
     );
+    private static final List<String> JOB_CONTAINER_HINTS = List.of(
+            "job",
+            "jobs",
+            "career",
+            "position",
+            "role",
+            "opening",
+            "vacancy",
+            "opportunity",
+            "listing",
+            "search",
+            "职位",
+            "招聘",
+            "岗位"
+    );
     private static final List<String> JOB_ATTRIBUTE_NAMES = List.of(
             "data-automation-id",
             "data-testid",
@@ -68,6 +83,9 @@ public class CrawlerBlueprintAutoParser {
         }
 
         Element listElement = findBestListElement(document);
+        if (listElement == null || isRootNode(listElement)) {
+            listElement = fallbackJobList(document);
+        }
         if (listElement == null) {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
@@ -217,7 +235,11 @@ public class CrawlerBlueprintAutoParser {
                     candidate = candidate.parent();
                     continue;
                 }
-                String selector = selectorOpt.get();
+                String selector = generalizeSelector(selectorOpt.get());
+                if (selector.isBlank()) {
+                    candidate = candidate.parent();
+                    continue;
+                }
                 scores.merge(selector, 1, Integer::sum);
                 samples.putIfAbsent(selector, candidate);
                 candidate = candidate.parent();
@@ -246,6 +268,31 @@ public class CrawlerBlueprintAutoParser {
                 .filter(this::isLikelyJobList)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private boolean isRootNode(Element element) {
+        if (element == null) {
+            return true;
+        }
+        String tag = element.tagName().toLowerCase(Locale.ROOT);
+        return tag.equals("html") || tag.equals("body") || tag.equals("#root");
+    }
+
+    private Element fallbackJobList(Document document) {
+        Element candidate = document.selectFirst("li[data-core-accordion-item], li[data-job-id]");
+        if (candidate != null) {
+            return candidate;
+        }
+        Element container = document.selectFirst(
+                "ul[id*=job i], ul[class*=job i], div[id*=job i], section[id*=job i]," +
+                        "ul[id*=career i], ul[class*=career i], div[id*=career i], section[id*=career i]");
+        if (container != null) {
+            Element item = container.selectFirst("> li, > div, li, div");
+            if (item != null) {
+                return item;
+            }
+        }
+        return null;
     }
 
     private Element findByJobAttributes(Document document) {
@@ -306,6 +353,9 @@ public class CrawlerBlueprintAutoParser {
         if (anchorCount == 0) {
             return false;
         }
+        if (hasJobContainerHint(element)) {
+            return true;
+        }
         Element anchor = element.selectFirst("a[href]");
         if (anchor != null) {
             if (containsJobKeyword(anchor.attr("href"))) {
@@ -328,6 +378,41 @@ public class CrawlerBlueprintAutoParser {
             return true;
         }
         return containsJobKeyword(element.text());
+    }
+
+    private boolean hasJobContainerHint(Element element) {
+        if (element == null) {
+            return false;
+        }
+        if (containsContainerKeyword(element.id()) || containsContainerKeyword(element.className())) {
+            return true;
+        }
+        if (element.hasAttr("data-core-accordion-item") || element.hasAttr("data-jobid")) {
+            return true;
+        }
+        Element current = element.parent();
+        int depth = 0;
+        while (current != null && depth < 6) {
+            if (containsContainerKeyword(current.id()) || containsContainerKeyword(current.className())) {
+                return true;
+            }
+            current = current.parent();
+            depth++;
+        }
+        return false;
+    }
+
+    private boolean containsContainerKeyword(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = value.toLowerCase(Locale.ROOT);
+        for (String keyword : JOB_CONTAINER_HINTS) {
+            if (normalized.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isWithinNavigation(Element element) {
