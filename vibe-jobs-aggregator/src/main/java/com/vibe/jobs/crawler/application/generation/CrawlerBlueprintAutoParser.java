@@ -84,7 +84,10 @@ public class CrawlerBlueprintAutoParser {
 
         Element listElement = findBestListElement(document);
         if (listElement == null || isRootNode(listElement)) {
-            listElement = fallbackJobList(document);
+            listElement = detectStructuredList(document).orElse(listElement);
+            if (listElement == null || isRootNode(listElement)) {
+                listElement = fallbackJobList(document);
+            }
         }
         if (listElement == null) {
             throw new IllegalStateException("Unable to determine repeating job element");
@@ -276,6 +279,22 @@ public class CrawlerBlueprintAutoParser {
         }
         String tag = element.tagName().toLowerCase(Locale.ROOT);
         return tag.equals("html") || tag.equals("body") || tag.equals("#root");
+    }
+
+    private Optional<Element> detectStructuredList(Document document) {
+        Element appleAccordion = document.selectFirst("li[data-core-accordion-item]");
+        if (appleAccordion != null) {
+            return Optional.of(appleAccordion);
+        }
+        Element dataJob = document.selectFirst("li[data-job-id], li[data-jobid]");
+        if (dataJob != null) {
+            return Optional.of(dataJob);
+        }
+        Element ariaRow = document.selectFirst("[role='row'] a[href]");
+        if (ariaRow != null) {
+            return Optional.of(ariaRow.tagName().equalsIgnoreCase("a") ? ariaRow.parent() : ariaRow);
+        }
+        return Optional.empty();
     }
 
     private Element fallbackJobList(Document document) {
