@@ -4,6 +4,7 @@ import com.vibe.jobs.crawler.domain.ParserProfile;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CrawlerBlueprintAutoParserTest {
 
@@ -84,5 +85,56 @@ class CrawlerBlueprintAutoParserTest {
                 parser.parse("https://example.com/jobs", html)
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("challenge page");
+    }
+
+    @Test
+    void throwsWhenOnlyNavigationAnchorsDetected() {
+        String html = """
+                <html>
+                  <body>
+                    <footer class='global-footer'>
+                      <nav role='navigation'>
+                        <ul>
+                          <li><a href='/zh-cn/jobs'>Apple 职位</a></li>
+                          <li><a href='/zh-cn/careers'>更多职位</a></li>
+                          <li><a href='/zh-cn/opportunities'>探索机会</a></li>
+                        </ul>
+                      </nav>
+                    </footer>
+                  </body>
+                </html>
+                """;
+
+        assertThatThrownBy(() -> parser.parse("https://jobs.apple.com/zh-cn/search", html))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void detectsAppleJobListStructure() {
+        String html = """
+                <html>
+                  <body>
+                    <ul id="search-job-list">
+                      <li class="rc-accordion-item" data-core-accordion-item>
+                        <div>
+                          <h3><a href="/job/1">Store Leader</a></h3>
+                        </div>
+                      </li>
+                      <li class="rc-accordion-item" data-core-accordion-item>
+                        <div>
+                          <h3><a href="/job/2">Senior Manager</a></h3>
+                        </div>
+                      </li>
+                    </ul>
+                  </body>
+                </html>
+                """;
+
+        CrawlerBlueprintAutoParser.AutoParseResult result = parser.parse("https://jobs.apple.com/zh-cn/search", html);
+
+        ParserProfile profile = result.profile();
+        assertThat(profile.listSelector()).contains("li").contains("rc-accordion-item");
+        assertThat(profile.fields().get("title").selector()).contains("a");
+        assertThat(profile.fields().get("url").attribute()).isEqualTo("href");
     }
 }

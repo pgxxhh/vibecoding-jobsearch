@@ -71,6 +71,7 @@ public class CrawlerBlueprintAutoParser {
         if (listElement == null) {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
+        listElement = normalizeRepeatingElement(listElement);
         String listSelector = safeCssSelector(listElement)
                 .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
 
@@ -86,6 +87,14 @@ public class CrawlerBlueprintAutoParser {
                 "",
                 ParserProfile.DetailFetchConfig.disabled()
         );
+
+        try {
+            if (profile.parse(html).isEmpty()) {
+                throw new IllegalStateException("Auto-generated parser returned no job entries");
+            }
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("Failed to evaluate generated parser", ex);
+        }
 
         PagingStrategy paging = detectPagingStrategy(document, entryUrl);
         AutomationSettings automation = AutomationSettings.disabled();
@@ -193,6 +202,10 @@ public class CrawlerBlueprintAutoParser {
                     candidate = candidate.parent();
                     continue;
                 }
+                if (candidate.tagName().equalsIgnoreCase("body") || candidate.tagName().equalsIgnoreCase("html")) {
+                    candidate = candidate.parent();
+                    continue;
+                }
                 Optional<String> selectorOpt = safeCssSelector(candidate);
                 if (selectorOpt.isEmpty()) {
                     candidate = candidate.parent();
@@ -269,6 +282,9 @@ public class CrawlerBlueprintAutoParser {
         if (element == null) {
             return false;
         }
+        if (isWithinNavigation(element)) {
+            return false;
+        }
         String tag = element.tagName();
         if (tag.equalsIgnoreCase("nav") || tag.equalsIgnoreCase("header") || tag.equalsIgnoreCase("footer")) {
             return false;
@@ -306,6 +322,28 @@ public class CrawlerBlueprintAutoParser {
             return true;
         }
         return containsJobKeyword(element.text());
+    }
+
+    private boolean isWithinNavigation(Element element) {
+        Element current = element;
+        int depth = 0;
+        while (current != null && depth < MAX_PARENT_DEPTH + 2) {
+            String tag = current.tagName().toLowerCase(Locale.ROOT);
+            if (tag.equals("header") || tag.equals("footer") || tag.equals("nav")) {
+                return true;
+            }
+            String role = current.attr("role");
+            if (role != null && role.equalsIgnoreCase("navigation")) {
+                return true;
+            }
+            String className = current.className().toLowerCase(Locale.ROOT);
+            if (className.contains("globalnav") || className.contains("globalheader") || className.contains("breadcrumb") || className.contains("footer")) {
+                return true;
+            }
+            current = current.parent();
+            depth++;
+        }
+        return false;
     }
 
     private Element findFirst(Element root, List<String> selectors) {
@@ -433,6 +471,38 @@ public class CrawlerBlueprintAutoParser {
             log.warn("Failed to build css selector due to unexpected error", e);
             return Optional.empty();
         }
+    }
+
+    private Element normalizeRepeatingElement(Element element) {
+        if (element == null) {
+            return null;
+        }
+        if (element.tagName().equalsIgnoreCase("ul") || element.tagName().equalsIgnoreCase("ol")) {
+            Element listItem = element.selectFirst("> li");
+            if (listItem != null) {
+                return listItem;
+            }
+        }
+        if (element.tagName().equalsIgnoreCase("table")) {
+            Element row = element.selectFirst("> tbody > tr, > tr");
+            if (row != null) {
+                return row;
+            }
+        }
+        if (element.tagName().equalsIgnoreCase("tbody")) {
+            Element row = element.selectFirst("> tr");
+            if (row != null) {
+                return row;
+            }
+        }
+        if ((element.tagName().equalsIgnoreCase("div") || element.tagName().equalsIgnoreCase("section"))
+                && element.attr("role").equalsIgnoreCase("list")) {
+            Element item = element.selectFirst("> div, > section, > article, > li");
+            if (item != null) {
+                return item;
+            }
+        }
+        return element;
     }
 
     private boolean isChallengePage(Document document) {

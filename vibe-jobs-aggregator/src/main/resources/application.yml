@@ -98,7 +98,11 @@ crawler:
       Accept-Language: ${CRAWLER_BROWSER_HEADER_ACCEPT_LANGUAGE:en-US,en;q=0.9}
       Upgrade-Insecure-Requests: ${CRAWLER_BROWSER_HEADER_UPGRADE:1}
     init-scripts:
-      - "${CRAWLER_BROWSER_INIT_SCRIPT_WEBDRIVER:Object.defineProperty(navigator, 'webdriver', {get: () => undefined});}"
-      - "${CRAWLER_BROWSER_INIT_SCRIPT_CHROME:window.chrome = window.chrome || {runtime: {}};}"
-      - "${CRAWLER_BROWSER_INIT_SCRIPT_PLATFORM:Object.defineProperty(navigator, 'platform', {get: () => 'Win32'});}"
-      - "${CRAWLER_BROWSER_INIT_SCRIPT_PLUGINS:Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});}"
+      - >-
+        ${CRAWLER_BROWSER_INIT_SCRIPT_WEBDRIVER:Object.defineProperty(navigator, 'webdriver', {get: () => undefined});}
+      - >-
+        ${CRAWLER_BROWSER_INIT_SCRIPT_CHROME:window.chrome = window.chrome || {runtime: {}};}
+      - >-
+        ${CRAWLER_BROWSER_INIT_SCRIPT_PLATFORM:Object.defineProperty(navigator, 'platform', {get: () => 'Win32'});}
+      - >-
+        ${CRAWLER_BROWSER_INIT_SCRIPT_PLUGINS:Object.defineProperty(navigator, 'plugins', {get: () => [1,2,3]});}

@@ -180,6 +180,9 @@ public class CrawlerBlueprintGenerationManager {
 
             CrawlerBlueprintAutoParser.AutoParseResult parsed = autoParser.parse(entryUrl, pageHtml);
             CrawlerBlueprintValidator.ValidationResult validation = validator.validate(parsed.profile(), pageHtml);
+            if (!validation.success()) {
+                throw new IllegalStateException("Generated parser did not produce any job listings");
+            }
 
             String configJson = configFactory.buildConfigJson(
                     entryUrl,
@@ -239,6 +242,8 @@ public class CrawlerBlueprintGenerationManager {
             if (keywords != null && !keywords.isBlank()) {
                 applySearch(page, keywords);
             }
+            waitForSettled(page);
+            waitForJobListings(page);
             waitForSettled(page);
 
             String pageUrl = page.url();
@@ -326,6 +331,48 @@ public class CrawlerBlueprintGenerationManager {
         try {
             page.waitForTimeout(1500);
         } catch (Exception ignored) {
+        }
+    }
+
+    private void waitForJobListings(Page page) {
+        String script = "() => {" +
+                "const keywords = ['job','career','position','role','opening','vacancy','opportunity','职位','招聘','机会'];" +
+                "const anchors = Array.from(document.querySelectorAll('a[href]'))" +
+                ".filter(a => {" +
+                "  const text = (a.textContent || '').toLowerCase();" +
+                "  const href = (a.getAttribute('href') || '').toLowerCase();" +
+                "  return keywords.some(k => text.includes(k) || href.includes(k));" +
+                "});" +
+                "if (anchors.length < 3) { return false; }" +
+                "const containers = anchors.map(a => {" +
+                "  let node = a.parentElement;" +
+                "  let depth = 0;" +
+                "  while (node && depth < 6) {" +
+                "    if (['HEADER','FOOTER','NAV'].includes(node.tagName)) { return null; }" +
+                "    if (node.getAttribute && node.getAttribute('role') === 'navigation') { return null; }" +
+                "    const parentNav = node.closest && node.closest('header, footer, nav, [role=\\'navigation\\']');" +
+                "    if (parentNav) { return null; }" +
+                "    const anchorCount = node.querySelectorAll('a[href]').length;" +
+                "    if (anchorCount >= 1) {" +
+                "      const id = node.id || '';" +
+                "      const classes = node.className || '';" +
+                "      const signature = node.tagName + '|' + id + '|' + classes;" +
+                "      return signature;" +
+                "    }" +
+                "    node = node.parentElement;" +
+                "    depth++;" +
+                "  }" +
+                "  return null;" +
+                "});" +
+                "const valid = containers.filter(Boolean);" +
+                "if (valid.length < 3) { return false; }" +
+                "const counts = valid.reduce((map, key) => { map[key] = (map[key] || 0) + 1; return map; }, {});" +
+                "return Object.values(counts).some(count => count >= 3);" +
+                "}";
+        try {
+            page.waitForFunction(script);
+        } catch (RuntimeException ex) {
+            log.debug("Timed out waiting for job listings to stabilize: {}", ex.getMessage());
         }
     }
 
