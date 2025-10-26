@@ -2,8 +2,6 @@ package com.vibe.jobs.crawler.application.generation;
 
 import com.vibe.jobs.crawler.domain.AutomationSettings;
 import com.vibe.jobs.crawler.domain.CrawlFlow;
-import com.vibe.jobs.crawler.domain.CrawlStep;
-import com.vibe.jobs.crawler.domain.CrawlStepType;
 import com.vibe.jobs.crawler.domain.PagingStrategy;
 import com.vibe.jobs.crawler.domain.ParserField;
 import com.vibe.jobs.crawler.domain.ParserFieldType;
@@ -20,18 +18,21 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Component
 public class CrawlerBlueprintAutoParser {
 
     private static final Logger log = LoggerFactory.getLogger(CrawlerBlueprintAutoParser.class);
+
     private static final List<String> JOB_KEYWORD_HINTS = List.of(
             "job",
             "career",
@@ -41,21 +42,62 @@ public class CrawlerBlueprintAutoParser {
             "vacancy",
             "opportunity",
             "职位",
+            "职位名称",
+            "岗位",
+            "职缺",
             "招聘",
-            "机会"
+            "机会",
+            "工作"
     );
+
     private static final List<String> JOB_ATTRIBUTE_NAMES = List.of(
             "data-automation-id",
             "data-testid",
             "data-cy",
             "data-component",
             "data-qa",
+            "data-ph-at-id",
             "aria-label",
             "class",
             "id",
             "name"
     );
+
+    private static final List<String> TITLE_PRIORITY_SELECTORS = List.of(
+            "a[data-job-id]",
+            "[data-automation-id*=jobtitle i]",
+            "[data-testid*=jobtitle i]",
+            "[data-component*=jobtitle i]",
+            "[data-qa*=jobtitle i]",
+            "[role=link]",
+            "button[role=link]",
+            "button[data-url]",
+            "button[data-href]"
+    );
+
+    private static final List<String> TITLE_FALLBACK_SELECTORS = List.of(
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "span[class*=title i]",
+            "div[class*=title i]",
+            "p[class*=title i]"
+    );
+
+    private static final List<String> URL_ATTRIBUTE_CANDIDATES = List.of(
+            "href",
+            "data-url",
+            "data-href",
+            "data-link",
+            "data-target-url",
+            "data-job-url",
+            "data-apply-url",
+            "data-redirect-url"
+    );
+
     private static final int MAX_PARENT_DEPTH = 8;
+    private static final int MAX_METADATA_CANDIDATES = 20;
 
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
@@ -67,216 +109,568 @@ public class CrawlerBlueprintAutoParser {
             throw new IllegalStateException("Encountered challenge page instead of job listings");
         }
 
-        Element listElement = findBestListElement(document);
-        if (listElement == null || isRootNode(listElement)) {
+        List<CandidateEvaluation> candidates = findCandidateListCandidates(document);
+        if (candidates.isEmpty()) {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
-        listElement = normalizeRepeatingElement(listElement);
-        String listSelector = safeCssSelector(listElement)
-                .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
-        listSelector = generalizeSelector(listSelector);
-        if (listSelector.isBlank()) {
-            throw new IllegalStateException("Unable to generalize selector for job list element");
-        }
 
-        Map<String, ParserField> fields = buildFields(listElement, entryUrl);
-        if (!fields.containsKey("title")) {
-            throw new IllegalStateException("Failed to detect title field in job listing");
-        }
-
-        ParserProfile profile = ParserProfile.of(
-                listSelector,
-                fields,
-                Set.of(),
-                "",
-                ParserProfile.DetailFetchConfig.disabled()
-        );
-
-        try {
-            if (profile.parse(html).isEmpty()) {
-                throw new IllegalStateException("Auto-generated parser returned no job entries");
+        if (log.isDebugEnabled()) {
+            for (CandidateEvaluation candidate : candidates) {
+                log.debug("Detected parser candidate {} with score {} (reasons: {})",
+                        candidate.selector(), candidate.score().totalScore(), candidate.reasons());
             }
-        } catch (RuntimeException ex) {
-            throw new IllegalStateException("Failed to evaluate generated parser", ex);
         }
 
-        PagingStrategy paging = detectPagingStrategy(document, entryUrl);
-        AutomationSettings automation = AutomationSettings.disabled();
-        CrawlFlow flow = CrawlFlow.empty();
-        Map<String, Object> metadata = Map.of();
+        int storedCandidateSummaries = Math.min(MAX_METADATA_CANDIDATES, candidates.size());
+        List<Map<String, Object>> candidateSummaries = new ArrayList<>(storedCandidateSummaries);
+        for (int i = 0; i < storedCandidateSummaries; i++) {
+            CandidateEvaluation candidate = candidates.get(i);
+            Element normalized = candidate.element() == null ? null : normalizeRepeatingElement(candidate.element());
+            candidateSummaries.add(buildCandidateSummary(candidate, normalized));
+        }
+        Map<String, Object> candidateSummaryStats = null;
+        if (candidates.size() > storedCandidateSummaries) {
+            candidateSummaryStats = Map.of(
+                    "totalCandidates", candidates.size(),
+                    "storedCandidates", storedCandidateSummaries
+            );
+        }
+        List<String> attemptErrors = new ArrayList<>();
+        for (CandidateEvaluation candidate : candidates) {
+            Element rawElement = candidate.element();
+            if (rawElement == null) {
+                attemptErrors.add("Candidate %s resolved to null element".formatted(candidate.selector()));
+                continue;
+            }
 
-        return new AutoParseResult(profile, paging, automation, flow, metadata);
+            Element listElement = normalizeRepeatingElement(rawElement);
+            if (listElement == null || isRootNode(listElement)) {
+                attemptErrors.add("Candidate %s normalized to invalid root".formatted(candidate.selector()));
+                continue;
+            }
+
+            if (!isLikelyJobList(listElement)) {
+                attemptErrors.add("Candidate %s rejected by job list heuristics".formatted(candidate.selector()));
+                continue;
+            }
+
+            Optional<String> listSelectorOpt = safeCssSelector(listElement).map(this::generalizeSelector);
+            if (listSelectorOpt.isEmpty() || listSelectorOpt.get().isBlank()) {
+                attemptErrors.add("Candidate %s missing CSS selector".formatted(candidate.selector()));
+                continue;
+            }
+
+            String listSelector = listSelectorOpt.get();
+            FieldBuildResult fieldResult = buildFields(listElement, entryUrl);
+            Map<String, ParserField> fields = fieldResult.fields();
+            if (!fields.containsKey("title")) {
+                attemptErrors.add("Candidate %s missing title field".formatted(candidate.selector()));
+                continue;
+            }
+
+            ParserProfile profile = ParserProfile.of(
+                    listSelector,
+                    fields,
+                    Set.of(),
+                    "",
+                    ParserProfile.DetailFetchConfig.disabled()
+            );
+
+            try {
+                if (profile.parse(html).isEmpty()) {
+                    attemptErrors.add("Selector %s produced no job entries".formatted(listSelector));
+                    continue;
+                }
+            } catch (RuntimeException ex) {
+                attemptErrors.add("Selector %s failed: %s".formatted(listSelector, ex.getMessage()));
+                continue;
+            }
+
+            PagingStrategy paging = detectPagingStrategy(document, entryUrl);
+            AutomationSettings automation = AutomationSettings.disabled();
+            CrawlFlow flow = CrawlFlow.empty();
+
+            Map<String, Object> metadata = new LinkedHashMap<>();
+            metadata.put("selectedCandidate", buildCandidateSummary(candidate, listElement));
+            metadata.put("candidateSummaries", candidateSummaries);
+            if (candidateSummaryStats != null) {
+                metadata.put("candidateSummaryStats", candidateSummaryStats);
+            }
+            metadata.put("fieldSources", fieldResult.fieldSources());
+            metadata.put("listSelector", listSelector);
+
+            return new AutoParseResult(
+                    profile,
+                    paging,
+                    automation,
+                    flow,
+                    Map.copyOf(metadata)
+            );
+        }
+
+        String message = attemptErrors.isEmpty()
+                ? "Unable to determine repeating job element"
+                : "Unable to build parser from detected candidates: " + attemptErrors.stream()
+                .limit(5)
+                .collect(Collectors.joining("; "));
+        throw new IllegalStateException(message);
     }
 
-    private Map<String, ParserField> buildFields(Element listElement, String entryUrl) {
+    private FieldBuildResult buildFields(Element listElement, String entryUrl) {
         Map<String, ParserField> fields = new LinkedHashMap<>();
-        Element anchor = listElement.selectFirst("a[href]");
-        if (anchor != null) {
-            String relativeAnchor = relativeSelector(listElement, anchor);
-            fields.put("title", new ParserField(
-                    "title",
-                    ParserFieldType.TEXT,
-                    relativeAnchor,
-                    null,
-                    null,
-                    null,
-                    ",",
-                    true,
-                    null
-            ));
-            fields.put("url", new ParserField(
-                    "url",
-                    ParserFieldType.ATTRIBUTE,
-                    relativeAnchor,
-                    "href",
-                    null,
-                    null,
-                    ",",
-                    true,
-                    baseUrl(entryUrl)
-            ));
+        List<Map<String, Object>> fieldSources = new ArrayList<>();
+
+        TitleDetection titleDetection = detectTitle(listElement, entryUrl);
+        if (titleDetection != null) {
+            fields.put("title", titleDetection.titleField());
+            fieldSources.add(buildFieldSource("title", titleDetection.titleField(), titleDetection.titleReason()));
+            if (titleDetection.urlField() != null) {
+                fields.put("url", titleDetection.urlField());
+                fieldSources.add(buildFieldSource("url", titleDetection.urlField(), titleDetection.urlReason()));
+            }
+        }
+
+        if (!fields.containsKey("url")) {
+            UrlDetection fallbackUrl = detectUrl(listElement, listElement, entryUrl);
+            if (fallbackUrl.field() != null) {
+                fields.put("url", fallbackUrl.field());
+                fieldSources.add(buildFieldSource(
+                        "url",
+                        fallbackUrl.field(),
+                        fallbackUrl.reason() == null ? "fallback-url-search" : fallbackUrl.reason()
+                ));
+            }
         }
 
         Element company = findFirst(listElement, List.of(
                 "[class*=company]",
                 "[class*=employer]",
                 "[data-company]",
-                "span:matches((?i)company)",
-                "p:matches((?i)company)",
-                "div:matches((?i)company)"));
-        if (company != null) {
-            fields.put("company", new ParserField(
-                    "company",
-                    ParserFieldType.TEXT,
-                    relativeSelector(listElement, company),
-                    null,
-                    null,
-                    null,
-                    ",",
-                    false,
-                    null
-            ));
+                "[data-testid*=company i]",
+                "[data-automation-id*=company i]",
+                "[aria-label*=company i]",
+                "span:matches((?i)company|employer|公司|企业)",
+                "p:matches((?i)company|employer|公司|企业)",
+                "div:matches((?i)company|employer|公司|企业)"
+        ));
+        if (company != null && !fields.containsKey("company")) {
+            ParserField field = textField("company", listElement, company, false);
+            fields.put("company", field);
+            fieldSources.add(buildFieldSource("company", field, "company-selector-match"));
         }
 
         Element location = findFirst(listElement, List.of(
                 "[class*=location]",
                 "[class*=city]",
-                "span:matches((?i)location)",
-                "p:matches((?i)location)",
-                "div:matches((?i)location)"));
-        if (location != null) {
-            fields.put("location", new ParserField(
-                    "location",
-                    ParserFieldType.TEXT,
-                    relativeSelector(listElement, location),
-                    null,
-                    null,
-                    null,
-                    ",",
-                    false,
-                    null
-            ));
+                "[data-testid*=location i]",
+                "[data-automation-id*=location i]",
+                "[aria-label*=location i]",
+                "span:matches((?i)location|city|地点|城市)",
+                "p:matches((?i)location|city|地点|城市)",
+                "div:matches((?i)location|city|地点|城市)"
+        ));
+        if (location != null && !fields.containsKey("location")) {
+            ParserField field = textField("location", listElement, location, false);
+            fields.put("location", field);
+            fieldSources.add(buildFieldSource("location", field, "location-selector-match"));
         }
 
-        if (!fields.containsKey("url") && anchor != null) {
-            fields.put("url", new ParserField(
-                    "url",
-                    ParserFieldType.ATTRIBUTE,
-                    relativeSelector(listElement, anchor),
-                    "href",
-                    null,
-                    null,
-                    ",",
-                    true,
-                    baseUrl(entryUrl)
-            ));
-        }
-
-        return fields;
+        return new FieldBuildResult(Map.copyOf(fields), List.copyOf(fieldSources));
     }
 
-    private Element findBestListElement(Document document) {
+    private Map<String, Object> buildFieldSource(String name, ParserField field, String reason) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("name", name);
+        source.put("selector", field.selector());
+        source.put("attribute", field.attribute());
+        source.put("type", field.type().name());
+        if (reason != null && !reason.isBlank()) {
+            source.put("reason", reason);
+        }
+        return source;
+    }
+
+    private ParserField textField(String name, Element parent, Element target, boolean required) {
+        String selector = relativeSelector(parent, target);
+        return new ParserField(
+                name,
+                ParserFieldType.TEXT,
+                selector,
+                null,
+                null,
+                null,
+                ",",
+                required,
+                null
+        );
+    }
+
+    private ParserField createUrlField(Element parent, Element target, String attribute, String entryUrl) {
+        String selector = relativeSelector(parent, target);
+        String base = "href".equalsIgnoreCase(attribute) ? baseUrl(entryUrl) : "";
+        return new ParserField(
+                "url",
+                ParserFieldType.ATTRIBUTE,
+                selector,
+                attribute,
+                null,
+                null,
+                ",",
+                true,
+                base
+        );
+    }
+    private TitleDetection detectTitle(Element listElement, String entryUrl) {
+        if (listElement == null) {
+            return null;
+        }
+        Element anchor = listElement.selectFirst("a[href]");
+        if (anchor != null && isMeaningfulTitleElement(anchor)) {
+            ParserField titleField = textField("title", listElement, anchor, true);
+            UrlDetection url = detectUrl(listElement, anchor, entryUrl);
+            return new TitleDetection(titleField, url.field(), "anchor[href]", url.reason());
+        }
+
+        for (String selector : TITLE_PRIORITY_SELECTORS) {
+            Element candidate = listElement.selectFirst(selector);
+            if (candidate == null || candidate == listElement) {
+                continue;
+            }
+            if (!isMeaningfulTitleElement(candidate)) {
+                continue;
+            }
+            ParserField titleField = textField("title", listElement, candidate, true);
+            UrlDetection url = detectUrl(listElement, candidate, entryUrl);
+            return new TitleDetection(titleField, url.field(), "selector:" + selector, url.reason());
+        }
+
+        for (String selector : TITLE_FALLBACK_SELECTORS) {
+            Element candidate = listElement.selectFirst(selector);
+            if (candidate == null || candidate == listElement) {
+                continue;
+            }
+            if (!isMeaningfulTitleElement(candidate)) {
+                continue;
+            }
+            ParserField titleField = textField("title", listElement, candidate, true);
+            UrlDetection url = detectUrl(listElement, candidate, entryUrl);
+            return new TitleDetection(titleField, url.field(), "selector:" + selector, url.reason());
+        }
+
+        Element fallback = findFallbackTitleCandidate(listElement);
+        if (fallback != null) {
+            ParserField titleField = textField("title", listElement, fallback, true);
+            UrlDetection url = detectUrl(listElement, fallback, entryUrl);
+            return new TitleDetection(titleField, url.field(), "fallback-text", url.reason());
+        }
+
+        return null;
+    }
+
+    private Element findFallbackTitleCandidate(Element listElement) {
+        if (listElement == null) {
+            return null;
+        }
+        for (Element element : listElement.getAllElements()) {
+            if (element == listElement) {
+                continue;
+            }
+            if (!isMeaningfulTitleElement(element)) {
+                continue;
+            }
+            if (containsJobKeyword(element.className()) || containsJobKeyword(element.id())) {
+                return element;
+            }
+        }
+        for (Element element : listElement.getAllElements()) {
+            if (element == listElement) {
+                continue;
+            }
+            if (isMeaningfulTitleElement(element)) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    private boolean isMeaningfulTitleElement(Element element) {
+        if (element == null) {
+            return false;
+        }
+        if (element == element.ownerDocument().body()) {
+            return false;
+        }
+        return isMeaningfulTitleText(element.text());
+    }
+
+    private boolean isMeaningfulTitleText(String text) {
+        if (text == null) {
+            return false;
+        }
+        String normalized = text.trim();
+        if (normalized.isBlank()) {
+            return false;
+        }
+        if (normalized.length() < 3 || normalized.length() > 160) {
+            return false;
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (lower.contains("apply") || lower.contains("申请") || lower.contains("提交") || lower.contains("投递")) {
+            return false;
+        }
+        return true;
+    }
+
+    private UrlDetection detectUrl(Element listElement, Element candidate, String entryUrl) {
+        if (listElement == null) {
+            return UrlDetection.empty();
+        }
+        if (candidate != null) {
+            for (String attr : URL_ATTRIBUTE_CANDIDATES) {
+                if (!candidate.hasAttr(attr)) {
+                    continue;
+                }
+                String value = candidate.attr(attr);
+                if (value != null && !value.isBlank()) {
+                    return new UrlDetection(createUrlField(listElement, candidate, attr, entryUrl), attr + "-candidate");
+                }
+            }
+            Element descendantAnchor = candidate.selectFirst("a[href]");
+            if (descendantAnchor != null) {
+                return new UrlDetection(createUrlField(listElement, descendantAnchor, "href", entryUrl), "descendant-anchor");
+            }
+            Element ancestor = candidate.parent();
+            int depth = 0;
+            while (ancestor != null && depth < MAX_PARENT_DEPTH) {
+                for (String attr : URL_ATTRIBUTE_CANDIDATES) {
+                    if (ancestor.hasAttr(attr) && !ancestor.attr(attr).isBlank()) {
+                        return new UrlDetection(createUrlField(listElement, ancestor, attr, entryUrl), "ancestor-" + attr);
+                    }
+                }
+                ancestor = ancestor.parent();
+                depth++;
+            }
+        }
+
+        Element anchor = listElement.selectFirst("a[href]");
+        if (anchor != null) {
+            return new UrlDetection(createUrlField(listElement, anchor, "href", entryUrl), "fallback-anchor");
+        }
+
+        Element dataUrl = findFirst(listElement, List.of(
+                "[data-url]",
+                "[data-href]",
+                "[data-link]",
+                "[data-target-url]",
+                "[data-job-url]",
+                "[data-apply-url]",
+                "[data-redirect-url]"
+        ));
+        if (dataUrl != null) {
+            for (String attr : URL_ATTRIBUTE_CANDIDATES) {
+                if (dataUrl.hasAttr(attr) && !dataUrl.attr(attr).isBlank()) {
+                    return new UrlDetection(createUrlField(listElement, dataUrl, attr, entryUrl), "fallback-" + attr);
+                }
+            }
+        }
+
+        return UrlDetection.empty();
+    }
+    private List<CandidateEvaluation> findCandidateListCandidates(Document document) {
+        Map<String, CandidateScore> scores = new LinkedHashMap<>();
+        Map<String, Element> samples = new LinkedHashMap<>();
+        Map<String, List<String>> reasons = new LinkedHashMap<>();
+
         Element jobListContainer = document.selectFirst(
                 "ul#search-job-list, ul[id*=search-job-list i], ul[class*=rc-accordion], ul[data-automation-id=jobResults]"
         );
         if (jobListContainer != null) {
-            Element candidateItem = jobListContainer.selectFirst(
+            Element item = jobListContainer.selectFirst(
                     "li[data-core-accordion-item], li[data-job-id], li[data-jobid], li, div[data-job-id], div[data-jobid]"
             );
-            if (candidateItem != null && candidateItem.selectFirst("a[href]") != null) {
-                return candidateItem;
+            if (item != null) {
+                registerCandidate(item, scores, samples, reasons, 6, "structured-container", CandidateScore::addAnchorHit);
             }
         }
 
         Element structured = document.selectFirst(
-                "li[data-core-accordion-item], li[data-job-id], li[data-jobid], li[data-automation-id=jobListItem]");
+                "li[data-core-accordion-item], li[data-job-id], li[data-jobid], li[data-automation-id=jobListItem]"
+        );
         if (structured != null) {
-            return structured;
+            registerCandidate(structured, scores, samples, reasons, 4, "structured-element", CandidateScore::addAnchorHit);
         }
+
         Element structuredContainer = document.selectFirst(
-                "ul[id*=search-job-list i], ul[class*=rc-accordion], ul[data-automation-id=jobResults]," +
-                        "section[id*=search-results i], div[id*=search-results i]");
+                "ul[id*=search-job-list i], ul[class*=rc-accordion], ul[data-automation-id=jobResults],"
+                        + "section[id*=search-results i], div[id*=search-results i]"
+        );
         if (structuredContainer != null) {
-            Element firstItem = structuredContainer.selectFirst("li[data-core-accordion-item], li, div[data-job-id], div[data-jobid]");
+            Element firstItem = structuredContainer.selectFirst(
+                    "li[data-core-accordion-item], li[data-job-id], li[data-jobid], li, div[data-job-id], div[data-jobid]"
+            );
             if (firstItem != null) {
-                return firstItem;
+                registerCandidate(firstItem, scores, samples, reasons, 5, "structured-container-child", CandidateScore::addAnchorHit);
             }
         }
 
-        Elements anchors = document.select("a[href]");
-        Map<String, Integer> scores = new LinkedHashMap<>();
-        Map<String, Element> samples = new LinkedHashMap<>();
-        for (Element anchor : anchors) {
-            Element candidate = anchor;
+        Elements interactiveElements = document.select("a[href], button[role=link], [role=link]");
+        for (Element interactive : interactiveElements) {
+            Element candidate = interactive;
             for (int depth = 0; depth < MAX_PARENT_DEPTH && candidate != null; depth++) {
                 if (candidate.tagName().equalsIgnoreCase("a")) {
                     candidate = candidate.parent();
                     continue;
                 }
-                if (candidate.tagName().equalsIgnoreCase("body")
-                        || candidate.tagName().equalsIgnoreCase("html")
-                        || candidate.tagName().equalsIgnoreCase("#root")) {
-                    candidate = candidate.parent();
-                    continue;
-                }
-                Optional<String> selectorOpt = safeCssSelector(candidate);
-                if (selectorOpt.isEmpty()) {
-                    candidate = candidate.parent();
-                    continue;
-                }
-                String selector = generalizeSelector(selectorOpt.get());
-                if (selector.isBlank()) {
-                    candidate = candidate.parent();
-                    continue;
-                }
-                scores.merge(selector, 1, Integer::sum);
-                samples.putIfAbsent(selector, candidate);
+                registerCandidate(candidate, scores, samples, reasons, 1, "interactive-parent", CandidateScore::addAnchorHit);
                 candidate = candidate.parent();
             }
         }
 
-        Element preferred = scores.entrySet().stream()
-                .filter(entry -> entry.getValue() >= 3)
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .map(entry -> samples.get(entry.getKey()))
-                .filter(this::isLikelyJobList)
-                .findFirst()
-                .orElse(null);
-        if (preferred != null) {
-            return preferred;
+        for (Element element : document.getAllElements()) {
+            if (!matchesJobAttribute(element)) {
+                continue;
+            }
+            Element candidate = element.tagName().equalsIgnoreCase("a") ? element.parent() : element;
+            registerCandidate(candidate, scores, samples, reasons, 2, "job-attribute", null);
         }
 
-        Element byAttributes = findByJobAttributes(document);
-        if (byAttributes != null) {
-            return byAttributes;
+        Elements listRoleElements = document.select("[role=listitem]");
+        for (Element listRole : listRoleElements) {
+            registerCandidate(listRole, scores, samples, reasons, 1, "role=listitem", null);
         }
 
         return scores.entrySet().stream()
-                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
-                .map(entry -> samples.get(entry.getKey()))
-                .filter(this::isLikelyJobList)
-                .findFirst()
-                .orElse(null);
+                .map(entry -> new CandidateEvaluation(
+                        samples.get(entry.getKey()),
+                        entry.getKey(),
+                        entry.getValue(),
+                        List.copyOf(reasons.getOrDefault(entry.getKey(), List.of()))
+                ))
+                .filter(candidate -> candidate.element() != null && !isRootNode(candidate.element()))
+                .sorted(Comparator.comparingInt((CandidateEvaluation eval) -> eval.score().totalScore()).reversed())
+                .toList();
+    }
+
+    private void registerCandidate(Element element,
+                                   Map<String, CandidateScore> scores,
+                                   Map<String, Element> samples,
+                                   Map<String, List<String>> reasons,
+                                   int baseBoost,
+                                   String reason,
+                                   Consumer<CandidateScore> extraScore) {
+        if (element == null || isRootNode(element) || isWithinNavigation(element)) {
+            return;
+        }
+        Optional<String> selectorOpt = safeCssSelector(element);
+        if (selectorOpt.isEmpty()) {
+            return;
+        }
+        String selector = generalizeSelector(selectorOpt.get());
+        if (selector.isBlank()) {
+            return;
+        }
+
+        samples.putIfAbsent(selector, element);
+        CandidateScore score = scores.computeIfAbsent(selector, key -> new CandidateScore());
+        if (baseBoost != 0) {
+            score.addBase(baseBoost);
+        }
+
+        List<String> reasonList = reasons.computeIfAbsent(selector, key -> new ArrayList<>());
+        if (reason != null && !reason.isBlank() && !reasonList.contains(reason)) {
+            reasonList.add(reason);
+        }
+
+        applySemanticHints(element, score, reasonList);
+        if (extraScore != null) {
+            extraScore.accept(score);
+        }
+    }
+
+    private void applySemanticHints(Element element, CandidateScore score, List<String> reasons) {
+        if (element == null) {
+            return;
+        }
+        String role = element.attr("role");
+        if (role != null && role.equalsIgnoreCase("listitem")) {
+            if (score.markListRole() && !reasons.contains("role=listitem")) {
+                reasons.add("role=listitem");
+            }
+        }
+        for (String attr : JOB_ATTRIBUTE_NAMES) {
+            String value = element.attr(attr);
+            if (value != null && !value.isBlank() && containsJobKeyword(value)) {
+                score.addKeywordHit();
+                String attrReason = "attribute:" + attr;
+                if (!reasons.contains(attrReason)) {
+                    reasons.add(attrReason);
+                }
+            }
+        }
+        String idAndClass = (element.id() + " " + element.className()).trim();
+        if (!idAndClass.isBlank() && containsJobKeyword(idAndClass)) {
+            score.addKeywordHit();
+            if (!reasons.contains("id/class keyword")) {
+                reasons.add("id/class keyword");
+            }
+        }
+        if (containsJobKeyword(element.text())) {
+            if (score.markKeywordText() && !reasons.contains("text keyword")) {
+                reasons.add("text keyword");
+            }
+        }
+    }
+    private Map<String, Object> buildCandidateSummary(CandidateEvaluation candidate, Element normalizedElement) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("selector", candidate.selector());
+        summary.put("score", candidate.score().totalScore());
+        summary.put("metrics", candidate.score().asMetrics());
+        summary.put("reasons", candidate.reasons());
+        summary.put("sampleText", snippet(candidate.element()));
+        safeCssSelector(candidate.element())
+                .map(this::generalizeSelector)
+                .ifPresent(sel -> summary.put("rawSelector", sel));
+        if (normalizedElement != null) {
+            safeCssSelector(normalizedElement)
+                    .map(this::generalizeSelector)
+                    .ifPresent(sel -> summary.put("normalizedSelector", sel));
+        }
+        if (candidate.element() != null) {
+            String role = candidate.element().attr("role");
+            if (role != null && !role.isBlank()) {
+                summary.put("role", role);
+            }
+        }
+        return summary;
+    }
+
+    private String snippet(Element element) {
+        if (element == null) {
+            return "";
+        }
+        String text = element.text();
+        if (text == null) {
+            return "";
+        }
+        String normalized = text.trim().replaceAll("\\s+", " ");
+        if (normalized.length() > 160) {
+            return normalized.substring(0, 157) + "...";
+        }
+        return normalized;
+    }
+
+    private boolean matchesJobAttribute(Element element) {
+        if (element == null) {
+            return false;
+        }
+        for (String attr : JOB_ATTRIBUTE_NAMES) {
+            String value = element.attr(attr);
+            if (value != null && !value.isBlank() && containsJobKeyword(value)) {
+                return true;
+            }
+        }
+        String role = element.attr("role");
+        return role != null && role.equalsIgnoreCase("listitem");
     }
 
     private boolean isRootNode(Element element) {
@@ -287,40 +681,66 @@ public class CrawlerBlueprintAutoParser {
         return tag.equals("html") || tag.equals("body") || tag.equals("#root");
     }
 
-    private Element findByJobAttributes(Document document) {
-        for (Element element : document.getAllElements()) {
-            if (!matchesJobAttribute(element)) {
-                continue;
-            }
-            Element candidate = element;
-            if (candidate.tagName().equalsIgnoreCase("a")) {
-                candidate = candidate.parent();
-            }
-            if (candidate == null) {
-                continue;
-            }
-            Element anchor = candidate.selectFirst("a[href]");
-            if (anchor == null) {
-                continue;
-            }
-            Element current = candidate;
-            for (int depth = 0; depth < MAX_PARENT_DEPTH && current != null; depth++) {
-                if (isLikelyJobList(current)) {
-                    return current;
-                }
-                current = current.parent();
+    private Element normalizeRepeatingElement(Element element) {
+        if (element == null) {
+            return null;
+        }
+        if (element.tagName().equalsIgnoreCase("ul") || element.tagName().equalsIgnoreCase("ol")) {
+            Element listItem = element.selectFirst("> li");
+            if (listItem != null) {
+                return listItem;
             }
         }
-        return null;
+        if (element.tagName().equalsIgnoreCase("table")) {
+            Element row = element.selectFirst("> tbody > tr, > tr");
+            if (row != null) {
+                return row;
+            }
+        }
+        if (element.tagName().equalsIgnoreCase("tbody")) {
+            Element row = element.selectFirst("> tr");
+            if (row != null) {
+                return row;
+            }
+        }
+        if ((element.tagName().equalsIgnoreCase("div") || element.tagName().equalsIgnoreCase("section"))
+                && element.attr("role").equalsIgnoreCase("list")) {
+            Element item = element.selectFirst("> div, > section, > article, > li");
+            if (item != null) {
+                return item;
+            }
+        }
+        return element;
     }
 
-    private boolean matchesJobAttribute(Element element) {
-        for (String attr : JOB_ATTRIBUTE_NAMES) {
-            if (containsJobKeyword(element.attr(attr))) {
-                return true;
-            }
+    private Optional<String> safeCssSelector(Element element) {
+        if (element == null) {
+            return Optional.empty();
         }
-        return false;
+        try {
+            return Optional.ofNullable(element.cssSelector());
+        } catch (Selector.SelectorParseException e) {
+            log.warn("Failed to build css selector for element: {}", e.getMessage());
+            return Optional.empty();
+        } catch (RuntimeException e) {
+            log.warn("Failed to build css selector due to unexpected error", e);
+            return Optional.empty();
+        }
+    }
+
+    private String generalizeSelector(String selector) {
+        if (selector == null || selector.isBlank()) {
+            return "";
+        }
+        String normalized = selector;
+        normalized = normalized.replaceAll(
+                ":(nth-of-type|nth-child|nth-last-of-type|nth-last-child)\\((?:\\d+|odd|even)\\)",
+                ""
+        );
+        normalized = normalized.replaceAll(":first-child|:last-child|:first-of-type|:last-of-type", "");
+        normalized = normalized.replaceAll("\\s*>\\s*", " > ");
+        normalized = normalized.replaceAll("\\s+", " ");
+        return normalized.trim();
     }
 
     private boolean isLikelyJobList(Element element) {
@@ -330,40 +750,27 @@ public class CrawlerBlueprintAutoParser {
         if (isWithinNavigation(element)) {
             return false;
         }
-        String tag = element.tagName();
-        if (tag.equalsIgnoreCase("nav") || tag.equalsIgnoreCase("header") || tag.equalsIgnoreCase("footer")) {
-            return false;
-        }
-        String className = element.className().toLowerCase(Locale.ROOT);
-        if (className.contains("breadcrumb") || className.contains("header") || className.contains("footer")) {
-            return false;
-        }
-        int anchorCount = element.select("a[href]").size();
-        if (anchorCount >= 2) {
+        String role = element.attr("role");
+        if (role != null && role.equalsIgnoreCase("listitem")) {
             return true;
         }
-        if (anchorCount == 0) {
+        String tag = element.tagName().toLowerCase(Locale.ROOT);
+        if (tag.equals("nav") || tag.equals("header") || tag.equals("footer")) {
             return false;
         }
-        Element anchor = element.selectFirst("a[href]");
-        if (anchor != null) {
-            if (containsJobKeyword(anchor.attr("href"))) {
-                return true;
-            }
-            if (containsJobKeyword(anchor.text())) {
-                return true;
-            }
-            if (containsJobKeyword(anchor.className())) {
-                return true;
-            }
-            if (containsJobKeyword(anchor.id())) {
-                return true;
-            }
-        }
-        if (containsJobKeyword(element.id())) {
+        int interactiveCount = element.select("a[href], button[role=link], [role=link]").size();
+        if (interactiveCount >= 2) {
             return true;
         }
-        if (containsJobKeyword(className)) {
+        if (interactiveCount == 1) {
+            Element interactive = element.selectFirst("a[href], button[role=link], [role=link]");
+            if (interactive != null) {
+                if (containsJobKeyword(interactive.text()) || containsJobKeyword(interactive.attr("href"))) {
+                    return true;
+                }
+            }
+        }
+        if (containsJobKeyword(element.id()) || containsJobKeyword(element.className())) {
             return true;
         }
         return containsJobKeyword(element.text());
@@ -382,7 +789,8 @@ public class CrawlerBlueprintAutoParser {
                 return true;
             }
             String className = current.className().toLowerCase(Locale.ROOT);
-            if (className.contains("globalnav") || className.contains("globalheader") || className.contains("breadcrumb") || className.contains("footer")) {
+            if (className.contains("globalnav") || className.contains("globalheader")
+                    || className.contains("breadcrumb") || className.contains("footer")) {
                 return true;
             }
             current = current.parent();
@@ -504,67 +912,6 @@ public class CrawlerBlueprintAutoParser {
         return base + relative;
     }
 
-    private Optional<String> safeCssSelector(Element element) {
-        if (element == null) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.ofNullable(element.cssSelector());
-        } catch (Selector.SelectorParseException e) {
-            log.warn("Failed to build css selector for element: {}", e.getMessage());
-            return Optional.empty();
-        } catch (RuntimeException e) {
-            log.warn("Failed to build css selector due to unexpected error", e);
-            return Optional.empty();
-        }
-    }
-
-    private Element normalizeRepeatingElement(Element element) {
-        if (element == null) {
-            return null;
-        }
-        if (element.tagName().equalsIgnoreCase("ul") || element.tagName().equalsIgnoreCase("ol")) {
-            Element listItem = element.selectFirst("> li");
-            if (listItem != null) {
-                return listItem;
-            }
-        }
-        if (element.tagName().equalsIgnoreCase("table")) {
-            Element row = element.selectFirst("> tbody > tr, > tr");
-            if (row != null) {
-                return row;
-            }
-        }
-        if (element.tagName().equalsIgnoreCase("tbody")) {
-            Element row = element.selectFirst("> tr");
-            if (row != null) {
-                return row;
-            }
-        }
-        if ((element.tagName().equalsIgnoreCase("div") || element.tagName().equalsIgnoreCase("section"))
-                && element.attr("role").equalsIgnoreCase("list")) {
-            Element item = element.selectFirst("> div, > section, > article, > li");
-            if (item != null) {
-                return item;
-            }
-        }
-        return element;
-    }
-
-    private String generalizeSelector(String selector) {
-        if (selector == null || selector.isBlank()) {
-            return "";
-        }
-        String normalized = selector;
-        normalized = normalized.replaceAll(
-                ":(nth-of-type|nth-child|nth-last-of-type|nth-last-child)\\((?:\\d+|odd|even)\\)",
-                "");
-        normalized = normalized.replaceAll(":first-child|:last-child|:first-of-type|:last-of-type", "");
-        normalized = normalized.replaceAll("\\s*>\\s*", " > ");
-        normalized = normalized.replaceAll("\\s+", " ");
-        return normalized.trim();
-    }
-
     private boolean isChallengePage(Document document) {
         String title = document.title() == null ? "" : document.title().toLowerCase(Locale.ROOT);
         if (title.contains("just a moment") || title.contains("attention required")) {
@@ -587,6 +934,83 @@ public class CrawlerBlueprintAutoParser {
             }
         }
         return false;
+    }
+
+    private record CandidateEvaluation(Element element,
+                                       String selector,
+                                       CandidateScore score,
+                                       List<String> reasons) {
+    }
+
+    private static final class CandidateScore {
+        private int baseScore;
+        private int anchorHits;
+        private int keywordHits;
+        private int semanticBoost;
+        private boolean listRole;
+        private boolean keywordText;
+
+        void addBase(int value) {
+            baseScore += value;
+        }
+
+        void addAnchorHit() {
+            anchorHits++;
+        }
+
+        void addKeywordHit() {
+            keywordHits++;
+        }
+
+        boolean markListRole() {
+            if (!listRole) {
+                listRole = true;
+                semanticBoost += 2;
+                return true;
+            }
+            return false;
+        }
+
+        boolean markKeywordText() {
+            if (!keywordText) {
+                keywordText = true;
+                semanticBoost += 1;
+                return true;
+            }
+            return false;
+        }
+
+        int totalScore() {
+            return baseScore + anchorHits + keywordHits + semanticBoost;
+        }
+
+        Map<String, Object> asMetrics() {
+            Map<String, Object> metrics = new LinkedHashMap<>();
+            metrics.put("baseScore", baseScore);
+            metrics.put("anchorHits", anchorHits);
+            metrics.put("keywordHits", keywordHits);
+            metrics.put("semanticBoost", semanticBoost);
+            metrics.put("listRole", listRole);
+            metrics.put("keywordText", keywordText);
+            metrics.put("total", totalScore());
+            return metrics;
+        }
+    }
+
+    private record FieldBuildResult(Map<String, ParserField> fields,
+                                    List<Map<String, Object>> fieldSources) {
+    }
+
+    private record TitleDetection(ParserField titleField,
+                                  ParserField urlField,
+                                  String titleReason,
+                                  String urlReason) {
+    }
+
+    private record UrlDetection(ParserField field, String reason) {
+        static UrlDetection empty() {
+            return new UrlDetection(null, null);
+        }
     }
 
     public record AutoParseResult(ParserProfile profile,
