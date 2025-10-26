@@ -480,7 +480,9 @@ public class CrawlerBlueprintGenerationManager {
         }
         if (!submitted) {
             try {
-                Boolean formSubmitted = activeInput.evaluate("(el) => { if (el && el.form) { el.form.requestSubmit(); return true; } const button = el.closest('form')?.querySelector('button[type=submit],input[type=submit]'); if (button) { button.click(); return true; } return false; }");
+                Boolean formSubmitted = (Boolean) activeInput.evaluate(
+                    "(el) => { if (el && el.form) { el.form.requestSubmit(); return true; } const button = el.closest('form')?.querySelector('button[type=submit],input[type=submit]'); if (button) { button.click(); return true; } return false; }"
+                );
                 if (Boolean.TRUE.equals(formSubmitted)) {
                     submitted = true;
                     submitSelector = "form.requestSubmit";
