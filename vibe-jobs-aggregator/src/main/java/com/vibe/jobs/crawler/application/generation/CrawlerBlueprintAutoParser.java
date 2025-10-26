@@ -121,19 +121,10 @@ public class CrawlerBlueprintAutoParser {
             }
         }
 
-        int storedCandidateSummaries = Math.min(MAX_METADATA_CANDIDATES, candidates.size());
-        List<Map<String, Object>> candidateSummaries = new ArrayList<>(storedCandidateSummaries);
-        for (int i = 0; i < storedCandidateSummaries; i++) {
-            CandidateEvaluation candidate = candidates.get(i);
+        List<Map<String, Object>> candidateSummaries = new ArrayList<>();
+        for (CandidateEvaluation candidate : candidates) {
             Element normalized = candidate.element() == null ? null : normalizeRepeatingElement(candidate.element());
             candidateSummaries.add(buildCandidateSummary(candidate, normalized));
-        }
-        Map<String, Object> candidateSummaryStats = null;
-        if (candidates.size() > storedCandidateSummaries) {
-            candidateSummaryStats = Map.of(
-                    "totalCandidates", candidates.size(),
-                    "storedCandidates", storedCandidateSummaries
-            );
         }
         List<String> attemptErrors = new ArrayList<>();
         for (CandidateEvaluation candidate : candidates) {
@@ -193,9 +184,6 @@ public class CrawlerBlueprintAutoParser {
             Map<String, Object> metadata = new LinkedHashMap<>();
             metadata.put("selectedCandidate", buildCandidateSummary(candidate, listElement));
             metadata.put("candidateSummaries", candidateSummaries);
-            if (candidateSummaryStats != null) {
-                metadata.put("candidateSummaryStats", candidateSummaryStats);
-            }
             metadata.put("fieldSources", fieldResult.fieldSources());
             metadata.put("listSelector", listSelector);
 
