@@ -97,6 +97,7 @@ public class CrawlerBlueprintAutoParser {
     );
 
     private static final int MAX_PARENT_DEPTH = 8;
+    private static final int MAX_METADATA_CANDIDATES = 20;
 
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
