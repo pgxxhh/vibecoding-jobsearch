@@ -96,7 +96,7 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 - **前端**：Next.js (App Router) · TypeScript · React · TailwindCSS · Zustand · SWR。
 - **后端**：Spring Boot 3 · Java 17 · Spring WebFlux & WebMVC · Spring Data JPA · Flyway · Jackson · Jsoup · Playwright。
 - **基础设施**：Docker · Docker Compose · Caddy · AWS EC2 · Amazon Aurora (MySQL 8.0)。
-- **辅助工具**：Maven Wrapper · PNPM · GitHub Actions（可选 CI/CD）。
+- **辅助工具**：Maven 3.9+ · PNPM · GitHub Actions（可选 CI/CD）。
 
 ## 部署与运维
 - **CI/CD 自动化**：前后端均采用 GitHub Actions 实现持续集成与持续部署。每次提交或合并 PR 后，自动触发构建、测试及部署流程。相关配置文件见 [.github/workflows/](./.github/workflows/) 目录。
@@ -109,7 +109,7 @@ Elaine Jobs 是一个面向国内用户的外企职位情报系统，通过统�
 ### 后端
 ```bash
 cd vibe-jobs-aggregator
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 需准备 MySQL 8.0（或使用 H2）并配置环境变量：
 - `SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/elaine_jobs?useSSL=false&serverTimezone=UTC`
@@ -134,7 +134,7 @@ NEXT_PUBLIC_BACKEND_BASE=http://localhost:8080 pnpm dev
 │   ├── pom.xml
 │   └── src/...
 └── vibe-jobs-view/              # 前端：Next.js (App Router)
-    └── app/page.tsx
+    └── src/app/(site)/page.tsx
 ```
 
 ## 路线图
