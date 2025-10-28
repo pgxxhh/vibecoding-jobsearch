@@ -393,15 +393,26 @@ Admin detail endpoints (`GET /admin/crawler-blueprints/{code}`) expose recent ta
 | GET | `/admin/ingestion-settings` | Inspect global scheduler config |
 | PUT | `/admin/ingestion-settings` | Update cadence & filters |
 | GET | `/admin/data-sources` | List providers |
+| GET | `/admin/data-sources/{code}` | Fetch provider by code |
+| GET | `/admin/data-sources/by-id/{id}` | Fetch provider by primary key |
+| GET | `/admin/data-sources/{code}/paged` | Retrieve provider with paginated companies |
+| POST | `/admin/data-sources` | Create provider |
+| PUT | `/admin/data-sources/{id}` | Update provider |
+| DELETE | `/admin/data-sources/{id}` | Delete provider |
+| POST | `/admin/data-sources/bulk` | Bulk create providers from JSON payload |
 | POST | `/admin/data-sources/{code}/companies` | Add company slug to provider |
-| DELETE | `/admin/data-sources/{code}/companies/{companyId}` | Remove company |
+| POST | `/admin/data-sources/{code}/companies/bulk` | Bulk add company overrides |
+| PUT | `/admin/data-sources/{code}/companies/{companyId}` | Update company override |
+| DELETE | `/admin/data-sources/{code}/companies/{companyId}` | Remove company override |
+| POST | `/admin/data-sources/{id}/cleanup-duplicates` | Remove duplicate companies for provider |
+| POST | `/admin/crawler-blueprints` | Trigger Playwright blueprint generation |
 | POST | `/admin/job-details/normalize-content-text` | Rebuild `content_text` field |
 
 The Next.js frontend forwards requests through `/api/admin/...`, handling session cookies and error propagation.
 
 ### 7.2 Daily company enrichment script
 
-`scripts/collect_new_companies.py` checks vendor APIs (Greenhouse, Lever, SmartRecruiters) for engineering & finance roles and outputs a SQL patch under `scripts/job_data_source_company_patch.sql`. Scheduling guidance and configuration details live in [designdocs/daily_company_enrichment.md](designdocs/daily_company_enrichment.md).
+Daily enrichment utilities live under [`scripts/companies/`](scripts/companies/). Use `validate_ats_sources.py` to probe vendor APIs (Greenhouse, Lever, SmartRecruiters, etc.), curate candidate YAML (`company_candidates.yml`), and regenerate `job_data_source_company_patch.sql`. Scheduling guidance and configuration details live in [`docs/design-docs/daily_company_enrichment.md`](docs/design-docs/daily_company_enrichment.md).
 
 ---
 
@@ -447,8 +458,9 @@ To use the embedded H2 profile: `SPRING_PROFILES_ACTIVE=h2 mvn spring-boot:run`.
 ## 10. References
 
 - [DATA-SOURCES.md](DATA-SOURCES.md) — provider-specific configuration
-- `designdocs/` — design notes (crawler architecture, daily enrichment automation, etc.)
-- `scripts/` — seed SQL (`crawler_init.sql`) and operational scripts (`collect_new_companies.py`)
+- [`docs/design-docs/daily_company_enrichment.md`](docs/design-docs/daily_company_enrichment.md) — enrichment automation design
+- [`scripts/crawler_init.sql`](scripts/crawler_init.sql) — seed SQL for crawler blueprints
+- [`scripts/companies/`](scripts/companies/) — company enrichment YAML, validators, and SQL patch outputs
 
 ---
 

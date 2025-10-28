@@ -92,7 +92,7 @@ Elaine Jobs is a talent intelligence platform designed for users in Mainland Chi
 - **Front-end**: Next.js (App Router), TypeScript, React, Tailwind CSS, Zustand, SWR.
 - **Back-end**: Spring Boot 3, Java 17, Spring WebFlux/WebMVC, Spring Data JPA, Flyway, Jackson, Jsoup, Playwright.
 - **Infrastructure**: Docker, Docker Compose, Caddy, AWS EC2, Amazon Aurora (MySQL 8.0).
-- **Tooling**: Maven Wrapper, PNPM, GitHub Actions (optional CI/CD).
+- **Tooling**: Maven 3.9+, PNPM, GitHub Actions (optional CI/CD).
 
 ## Deployment & operations
 - **CI/CD**: GitHub Actions pipelines build, test, and deploy both front-end and back-end on each push/PR. See [.github/workflows/](./.github/workflows/).
@@ -105,7 +105,7 @@ Elaine Jobs is a talent intelligence platform designed for users in Mainland Chi
 ### Back-end
 ```bash
 cd vibe-jobs-aggregator
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 Configure MySQL 8.0 (or H2) with environment variables:
 - `SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/elaine_jobs?useSSL=false&serverTimezone=UTC`
@@ -130,7 +130,7 @@ NEXT_PUBLIC_BACKEND_BASE=http://localhost:8080 pnpm dev
 │   ├── pom.xml
 │   └── src/...
 └── vibe-jobs-view/              # Front-end: Next.js (App Router)
-    └── app/page.tsx
+    └── src/app/(site)/page.tsx
 ```
 
 ## Roadmap
