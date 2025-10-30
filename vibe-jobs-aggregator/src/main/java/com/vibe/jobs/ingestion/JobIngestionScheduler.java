@@ -22,13 +22,20 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -137,7 +144,21 @@ public class JobIngestionScheduler {
                 .toArray(CompletableFuture[]::new);
 
         if (tasks.length > 0) {
-            CompletableFuture.allOf(tasks).join();
+            CompletableFuture<Void> combined = CompletableFuture.allOf(tasks);
+            long timeoutMs = Math.max(1_000L, ingestionProperties.getConcurrentSourceTimeoutMs());
+            try {
+                combined.get(timeoutMs, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException ex) {
+                log.error("Timed out waiting for {} concurrent ingestion tasks after {} ms; cancelling remaining tasks", tasks.length, timeoutMs);
+                for (CompletableFuture<?> task : tasks) {
+                    task.cancel(true);
+                }
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while waiting for concurrent ingestion tasks", ex);
+            } catch (ExecutionException ex) {
+                throw new RuntimeException("Concurrent ingestion task failed", ex.getCause());
+            }
         }
 
         for (SourceRegistry.ConfiguredSource source : limited) {
@@ -177,6 +198,7 @@ public class JobIngestionScheduler {
         IngestionCursorKey cursorKey = buildCursorKey(configuredSource, null);
         IngestionCursor cursor = ingestionCursorService.find(cursorKey).orElse(null);
         int page = 1;
+        Set<String> seenPageSignatures = new HashSet<>();
         while (true) {
             List<FetchedJob> items = sourceClient.fetchPage(page, pageSize);
             if (items == null || items.isEmpty()) {
@@ -186,9 +208,14 @@ public class JobIngestionScheduler {
             List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            String pageSignature = computePageSignature(roleFiltered);
             List<FetchedJob> cursorFiltered = filterByCursor(roleFiltered, cursor);
             if (cursorFiltered.isEmpty()) {
                 log.info("No new jobs beyond cursor for source {} ({}) on page {}", sourceName, companyName, page);
+                break;
+            }
+            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
+                log.warn("Detected repeated page signature for source {} ({}) on page {} - stopping to prevent infinite loop", sourceName, companyName, page);
                 break;
             }
             JobIngestionResult result = storeJobs(cursorFiltered);
@@ -233,6 +260,7 @@ public class JobIngestionScheduler {
         String sourceName = client.sourceName();
         String companyName = configuredSource.company();
         int page = 1;
+        Set<String> seenPageSignatures = new HashSet<>();
         while (!allQuotasMet(remaining)) {
             List<FetchedJob> items = client.fetchPage(page, pageSize);
             if (items == null || items.isEmpty()) {
@@ -242,9 +270,14 @@ public class JobIngestionScheduler {
             List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            String pageSignature = computePageSignature(roleFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, null, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
                 log.info("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
+            }
+            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
+                log.warn("Detected repeated page signature for source {} ({}) on page {} - stopping to prevent infinite loop", sourceName, companyName, page);
+                break;
             }
             if (!result.advanced()) {
                 break;
@@ -262,6 +295,7 @@ public class JobIngestionScheduler {
         String sourceName = client.sourceName();
         String companyName = configuredSource.company();
         int page = 1;
+        Set<String> seenPageSignatures = new HashSet<>();
         while (remaining.getOrDefault(category, 0) > 0) {
             List<FetchedJob> items = client.fetchPage(page, pageSize, category.facets());
             if (items == null || items.isEmpty()) {
@@ -271,9 +305,14 @@ public class JobIngestionScheduler {
             List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
             List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
             List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+            String pageSignature = computePageSignature(roleFiltered);
             JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, category, page, cursorCache);
             if (roleFiltered.isEmpty() || result.persisted() == 0) {
                 log.info("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
+            }
+            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
+                log.warn("Detected repeated page signature for category {} from source {} ({}) on page {} - stopping to prevent infinite loop", category.name(), sourceName, companyName, page);
+                break;
             }
             if (allQuotasMet(remaining)) {
                 return;
@@ -369,6 +408,28 @@ public class JobIngestionScheduler {
             }
         }
         return new JobIngestionResult(totalPersisted, lastJob, advanced);
+    }
+
+    private String computePageSignature(List<FetchedJob> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return "";
+        }
+        return jobs.stream()
+                .map(fetched -> {
+                    Job job = fetched.job();
+                    if (job == null) {
+                        return "";
+                    }
+                    String externalId = job.getExternalId();
+                    String url = job.getUrl();
+                    String title = job.getTitle();
+                    return (externalId == null ? "" : externalId.trim())
+                            + "|" + (url == null ? "" : url.trim())
+                            + "|" + (title == null ? "" : title.trim().toLowerCase(Locale.ROOT));
+                })
+                .collect(Collectors.toCollection(TreeSet::new))
+                .stream()
+                .collect(Collectors.joining(";"));
     }
 
     private SourceRegistry.CategoryQuota matchCategory(Job job, List<SourceRegistry.CategoryQuota> categories) {
