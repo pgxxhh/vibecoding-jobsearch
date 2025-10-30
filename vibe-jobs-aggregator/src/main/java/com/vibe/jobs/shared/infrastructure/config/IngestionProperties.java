@@ -15,6 +15,7 @@ public class IngestionProperties {
     private int pageSize = 100;
     private int recentDays = 7;
     private int concurrency = 4;
+    private long concurrentSourceTimeoutMs = 300_000L;
     private Map<String, CompanyOverride> companyOverrides = new HashMap<>();
     private LocationFilter locationFilter = new LocationFilter();
     private RoleFilter roleFilter = new RoleFilter();
@@ -64,6 +65,14 @@ public class IngestionProperties {
 
     public void setConcurrency(int concurrency) {
         this.concurrency = Math.max(concurrency, 1);
+    }
+
+    public long getConcurrentSourceTimeoutMs() {
+        return concurrentSourceTimeoutMs;
+    }
+
+    public void setConcurrentSourceTimeoutMs(long concurrentSourceTimeoutMs) {
+        this.concurrentSourceTimeoutMs = Math.max(concurrentSourceTimeoutMs, 1_000L);
     }
 
     public LocationFilter getLocationFilter() {
