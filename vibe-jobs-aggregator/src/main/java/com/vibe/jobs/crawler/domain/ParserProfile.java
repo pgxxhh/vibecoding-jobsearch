@@ -57,6 +57,14 @@ public class ParserProfile {
         return fields;
     }
 
+    public Set<String> tagFields() {
+        return tagFields;
+    }
+
+    public String descriptionField() {
+        return descriptionField;
+    }
+
     public DetailFetchConfig getDetailFetchConfig() {
         return detailFetchConfig;
     }

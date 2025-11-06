@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitUntilState;
+import com.vibe.jobs.crawler.domain.CrawlBlueprint;
 import com.vibe.jobs.crawler.domain.CrawlerBlueprintDraft;
 import com.vibe.jobs.crawler.domain.CrawlerBlueprintDraftRepository;
 import com.vibe.jobs.crawler.domain.CrawlerBlueprintGenerationTask;
@@ -32,6 +33,8 @@ import java.util.concurrent.Executor;
 public class CrawlerBlueprintGenerationManager {
 
     private static final Logger log = LoggerFactory.getLogger(CrawlerBlueprintGenerationManager.class);
+
+    private static final CrawlBlueprint.RateLimit DEFAULT_RATE_LIMIT = CrawlBlueprint.RateLimit.of(10, 1);
 
     private static final String KEY_ENTRY_URL = "entryUrl";
     private static final String KEY_SEARCH_KEYWORDS = "searchKeywords";
@@ -172,7 +175,8 @@ public class CrawlerBlueprintGenerationManager {
                     parsed.pagingStrategy(),
                     parsed.automation(),
                     parsed.flow(),
-                    parsed.metadata()
+                    parsed.metadata(),
+                    DEFAULT_RATE_LIMIT
             );
 
             Map<String, Object> report = new LinkedHashMap<>();
