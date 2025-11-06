@@ -39,10 +39,20 @@ public class CrawlerBlueprintAutoParser {
             throw new IllegalArgumentException("Empty HTML document");
         }
 
+        // 检测网站类型和是否需要浏览器引擎
+        SiteAnalysis siteAnalysis = analyzeSite(document, entryUrl);
+        
         Element listElement = findBestListElement(document);
+        if (listElement == null && siteAnalysis.requiresBrowser()) {
+            // 对于SPA网站，可能需要JavaScript渲染后才能找到职位列表
+            log.info("No job list found in initial HTML for {}, generating browser-enabled config", entryUrl);
+            return generateBrowserConfig(entryUrl, siteAnalysis);
+        }
+        
         if (listElement == null) {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
+        
         String listSelector = safeCssSelector(listElement)
                 .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
 
@@ -60,9 +70,11 @@ public class CrawlerBlueprintAutoParser {
         );
 
         PagingStrategy paging = detectPagingStrategy(document, entryUrl);
-        AutomationSettings automation = AutomationSettings.disabled();
-        CrawlFlow flow = CrawlFlow.empty();
-        Map<String, Object> metadata = Map.of();
+        AutomationSettings automation = siteAnalysis.requiresBrowser() ? 
+            generateAutomationSettings(siteAnalysis) : AutomationSettings.disabled();
+        CrawlFlow flow = siteAnalysis.requiresBrowser() ? 
+            generateBrowserFlow(siteAnalysis) : CrawlFlow.empty();
+        Map<String, Object> metadata = Map.of("siteType", siteAnalysis.siteType());
 
         return new AutoParseResult(profile, paging, automation, flow, metadata);
     }
@@ -338,6 +350,223 @@ public class CrawlerBlueprintAutoParser {
             return Optional.empty();
         }
     }
+
+    private SiteAnalysis analyzeSite(Document document, String entryUrl) {
+        // 检测是否为SPA应用
+        boolean hasSpaIndicators = hasSpaFramework(document);
+        boolean hasMinimalContent = hasMinimalJobContent(document);
+        boolean needsBrowser = hasSpaIndicators || hasMinimalContent;
+        
+        String siteType = determineSiteType(document, entryUrl);
+        
+        return new SiteAnalysis(siteType, needsBrowser, hasSpaIndicators);
+    }
+    
+    private boolean hasSpaFramework(Document document) {
+        // 检测常见的SPA框架标识
+        String html = document.html().toLowerCase(Locale.ROOT);
+        return html.contains("ng-app") ||              // Angular
+               html.contains("data-reactroot") ||      // React  
+               html.contains("__vue") ||               // Vue
+               html.contains("ember-") ||              // Ember
+               html.contains("backbone") ||            // Backbone
+               document.select("script[src*=angular]").size() > 0 ||
+               document.select("script[src*=react]").size() > 0 ||
+               document.select("script[src*=vue]").size() > 0;
+    }
+    
+    private boolean hasMinimalJobContent(Document document) {
+        // 检查是否已有足够的职位内容
+        Elements jobLinks = document.select("a[href*=job], a[href*=position], a[href*=career]");
+        Elements jobElements = document.select("[class*=job], [class*=position], [class*=career]");
+        
+        // 如果找到的职位相关元素很少，可能需要JavaScript加载
+        return jobLinks.size() < 3 && jobElements.size() < 5;
+    }
+    
+    private String determineSiteType(Document document, String entryUrl) {
+        if (entryUrl == null) return "unknown";
+        
+        String host = "";
+        try {
+            URI uri = new URI(entryUrl);
+            host = Optional.ofNullable(uri.getHost()).orElse("").toLowerCase(Locale.ROOT);
+        } catch (URISyntaxException ignored) {}
+        
+        // 根据域名和内容特征判断网站类型
+        if (host.contains("workday")) return "workday";
+        if (host.contains("greenhouse")) return "greenhouse";
+        if (host.contains("lever")) return "lever";
+        if (host.contains("bamboohr")) return "bamboohr";
+        if (host.contains("smartrecruiters")) return "smartrecruiters";
+        if (host.contains("icims")) return "icims";
+        if (host.contains("jobvite")) return "jobvite";
+        
+        // 检测常见的职位网站模式
+        if (hasSpaFramework(document)) return "spa";
+        if (document.select("table tr").size() > 10) return "table-based";
+        
+        return "standard";
+    }
+    
+    private AutoParseResult generateBrowserConfig(String entryUrl, SiteAnalysis analysis) {
+        // 为SPA网站生成适合的配置
+        String listSelector = generateSpaJobSelector(analysis.siteType());
+        
+        Map<String, ParserField> fields = generateSpaFields(entryUrl, analysis.siteType());
+        
+        ParserProfile profile = ParserProfile.of(
+                listSelector,
+                fields,
+                Set.of(),
+                "",
+                ParserProfile.DetailFetchConfig.disabled()
+        );
+        
+        PagingStrategy paging = PagingStrategy.disabled(); // SPA通常用无限滚动
+        AutomationSettings automation = generateAutomationSettings(analysis);
+        CrawlFlow flow = generateBrowserFlow(analysis);
+        Map<String, Object> metadata = Map.of("siteType", analysis.siteType());
+        
+        return new AutoParseResult(profile, paging, automation, flow, metadata);
+    }
+    
+    private String generateSpaJobSelector(String siteType) {
+        return switch (siteType) {
+            case "workday" -> "a[href*='/job/'], .css-19uc56f, .css-1psffb1";
+            case "greenhouse" -> "a[data-mapped='true'], .opening";
+            case "lever" -> "a[href*='/jobs/'], .posting";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable a, .job-link";
+            case "spa" -> "a[href*='/job'], a[href*='/position'], .job-item, .position-item, .career-item";
+            default -> "a[href*='/job'], a[href*='/position'], a[href*='/career'], .job, .position, .opening";
+        };
+    }
+    
+    private Map<String, ParserField> generateSpaFields(String entryUrl, String siteType) {
+        Map<String, ParserField> fields = new LinkedHashMap<>();
+        
+        // URL字段
+        String urlSelector = switch (siteType) {
+            case "workday" -> "a[href*='/job/']";
+            case "greenhouse" -> "a[data-mapped='true']";
+            case "lever" -> "a[href*='/jobs/']";
+            case "icims" -> "a[href*='/job/']";
+            default -> "a[href*='/job'], a[href*='/position'], a[href*='/career']";
+        };
+        
+        fields.put("url", new ParserField(
+                "url",
+                ParserFieldType.ATTRIBUTE,
+                urlSelector,
+                "href",
+                null,
+                null,
+                ",",
+                true,
+                baseUrl(entryUrl)
+        ));
+        
+        // 标题字段 - 使用多个备选选择器
+        String titleSelector = switch (siteType) {
+            case "workday" -> "h3, .css-19uc56f h3, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening a, h4 a, .job-title";
+            case "lever" -> ".posting-name, h5 a, .posting-title";
+            case "icims" -> ".iCIMS_JobsTable a, .job-title, h3 a";
+            default -> "h1, h2, h3, h4, .job-title, .position-title, .title, a";
+        };
+        
+        fields.put("title", new ParserField(
+                "title",
+                ParserFieldType.TEXT,
+                titleSelector,
+                null,
+                null,
+                null,
+                ",",
+                true,
+                null
+        ));
+        
+        // 位置字段
+        fields.put("location", new ParserField(
+                "location",
+                ParserFieldType.TEXT,
+                ".location, [class*=location], [class*=city], .office, [data-automation-id='jobLocation']",
+                null,
+                null,
+                null,
+                ",",
+                false,
+                null
+        ));
+        
+        return fields;
+    }
+    
+    private AutomationSettings generateAutomationSettings(SiteAnalysis analysis) {
+        if (!analysis.requiresBrowser()) {
+            return AutomationSettings.disabled();
+        }
+        
+        // 为不同类型的网站生成合适的等待时间和选择器
+        int waitTime = analysis.siteType().equals("spa") ? 8000 : 5000;
+        String waitSelector = switch (analysis.siteType()) {
+            case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening, .opening-list";
+            case "lever" -> ".posting, .postings-group";
+            case "icims" -> ".iCIMS_JobsTable, .job-results";
+            default -> ".job, .position, .career, .job-list, .position-list, .careers-list";
+        };
+        
+        return new AutomationSettings(
+                true,
+                true,
+                waitSelector,
+                waitTime,
+                null  // 不设置搜索功能，简化配置
+        );
+    }
+    
+    private CrawlFlow generateBrowserFlow(SiteAnalysis analysis) {
+        if (!analysis.requiresBrowser()) {
+            return CrawlFlow.empty();
+        }
+        
+        List<CrawlStep> steps = new ArrayList<>();
+        
+        // 等待页面加载
+        Map<String, Object> waitOptions = new LinkedHashMap<>();
+        String waitSelector = switch (analysis.siteType()) {
+            case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening, .opening-list";
+            case "lever" -> ".posting, .postings-group";
+            case "icims" -> ".iCIMS_JobsTable, .job-results";
+            default -> ".job, .position, .career, .job-list, .position-list";
+        };
+        
+        waitOptions.put("selector", waitSelector);
+        waitOptions.put("durationMs", 10000);
+        steps.add(new CrawlStep(CrawlStepType.WAIT, waitOptions));
+        
+        // 对于某些SPA，尝试滚动加载更多内容
+        if (analysis.siteType().equals("spa") || analysis.siteType().equals("workday")) {
+            Map<String, Object> scrollOptions = new LinkedHashMap<>();
+            scrollOptions.put("to", "bottom");
+            steps.add(new CrawlStep(CrawlStepType.SCROLL, scrollOptions));
+            
+            // 滚动后再等待
+            Map<String, Object> waitAfterScroll = new LinkedHashMap<>();
+            waitAfterScroll.put("durationMs", 3000);
+            steps.add(new CrawlStep(CrawlStepType.WAIT, waitAfterScroll));
+        }
+        
+        // 提取列表
+        steps.add(new CrawlStep(CrawlStepType.EXTRACT_LIST, Map.of()));
+        
+        return CrawlFlow.of(steps);
+    }
+
+    private record SiteAnalysis(String siteType, boolean requiresBrowser, boolean hasSpaFramework) {}
 
     public record AutoParseResult(ParserProfile profile,
                                   PagingStrategy pagingStrategy,

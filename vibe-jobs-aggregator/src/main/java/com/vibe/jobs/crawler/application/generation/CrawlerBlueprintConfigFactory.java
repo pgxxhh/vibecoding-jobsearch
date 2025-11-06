@@ -59,9 +59,13 @@ public class CrawlerBlueprintConfigFactory {
     }
 
     private List<Map<String, Object>> buildFlow(CrawlFlow flow) {
-        CrawlFlow effective = flow == null || flow.isEmpty() ? defaultFlow() : flow;
+        // 只有当明确提供了flow时才使用，否则返回空flow（避免不必要的浏览器使用）
+        if (flow == null || flow.isEmpty()) {
+            return List.of();
+        }
+        
         List<Map<String, Object>> steps = new ArrayList<>();
-        for (CrawlStep step : effective.steps()) {
+        for (CrawlStep step : flow.steps()) {
             Map<String, Object> stepJson = new LinkedHashMap<>();
             stepJson.put("type", step.type().name());
             Map<String, Object> options = step.options() == null || step.options().isEmpty()
@@ -191,15 +195,6 @@ public class CrawlerBlueprintConfigFactory {
         result.put("burst", effective.burst());
         result.put("requestsPerMinute", effective.requestsPerMinute());
         return result;
-    }
-
-    private CrawlFlow defaultFlow() {
-        List<CrawlStep> steps = new ArrayList<>();
-        Map<String, Object> waitOptions = new LinkedHashMap<>();
-        waitOptions.put("durationMs", DEFAULT_WAIT_STEP_MS);
-        steps.add(new CrawlStep(CrawlStepType.WAIT, waitOptions));
-        steps.add(new CrawlStep(CrawlStepType.EXTRACT_LIST, Map.of()));
-        return CrawlFlow.of(steps);
     }
 
     private void putIfHasText(Map<String, Object> target, String key, String value) {

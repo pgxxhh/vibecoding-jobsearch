@@ -183,10 +183,21 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
     private void handleWait(Page page, Map<String, Object> options) {
         String selector = asString(options.get("selector"));
         int duration = asInteger(options.get("durationMs"), 0);
+        
         if (!selector.isBlank()) {
-            page.waitForSelector(selector, new WaitForSelectorOptions().setTimeout(duration > 0 ? duration : 30000));
+            // 增加超时时间，特别是对于SPA网站
+            int timeout = duration > 0 ? Math.min(duration, 60000) : 45000; // 最长45秒
+            try {
+                page.waitForSelector(selector, new WaitForSelectorOptions().setTimeout(timeout));
+            } catch (RuntimeException ex) {
+                log.info("Wait for selector '{}' timed out after {}ms: {}", selector, timeout, ex.getMessage());
+                // 即使选择器等待失败，也尝试等待固定时间以防页面仍在加载
+                if (duration > 0) {
+                    page.waitForTimeout(Math.min(duration, 10000));
+                }
+            }
         } else if (duration > 0) {
-            page.waitForTimeout(duration);
+            page.waitForTimeout(Math.min(duration, 30000)); // 最长30秒固定等待
         }
     }
 

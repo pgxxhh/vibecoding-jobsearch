@@ -125,28 +125,33 @@ class CrawlerBlueprintConfigFactoryTest {
 
         JsonNode actual = objectMapper.readTree(json);
         JsonNode expected = objectMapper.readTree("""
-                {"flow": [{"type": "WAIT", "options": {"durationMs": 5000}}, {"type": "EXTRACT_LIST", "options": {}}],
-                 "paging": {"mode": "QUERY", "step": 1, "start": 1, "parameter": "_paged", "sizeParameter": ""},
-                 "parser": {"listSelector": "a[href*=\"/positions/\"]",
-                             "baseUrl": "https://careers.airbnb.com",
-                             "fields": {
-                                 "url": {"type": "ATTRIBUTE", "selector": ".", "attribute": "href", "required": true, "baseUrl": "https://careers.airbnb.com"},
-                                 "title": {"type": "TEXT", "selector": ".", "required": true},
-                                 "company": {"type": "CONSTANT", "constant": "Airbnb"},
-                                 "location": {"type": "TEXT", "selector": ".location"},
-                                 "externalId": {"type": "ATTRIBUTE", "selector": ".", "attribute": "href", "required": true}
-                             },
-                             "tagFields": [],
-                             "descriptionField": "",
-                             "detailFetch": {"enabled": true,
-                                              "baseUrl": "https://careers.airbnb.com",
-                                              "urlField": "url",
-                                              "contentSelectors": [".job-description", ".entry-content", "main .content", "article", ".position-description"],
-                                              "delayMs": 3000}
-                 },
-                 "entryUrl": "https://careers.airbnb.com/positions/?_offices=china&_locations=china",
-                 "rateLimit": {"burst": 1, "requestsPerMinute": 10},
-                 "automation": {"enabled": true, "jsEnabled": false, "waitForMilliseconds": 3000}}
+                {
+                  "flow": [{"type": "WAIT", "options": {"durationMs": 5000}}, {"type": "EXTRACT_LIST", "options": {}}],
+                  "paging": {"mode": "QUERY", "step": 1, "start": 1, "parameter": "_paged", "sizeParameter": ""},
+                  "parser": {
+                    "listSelector": "a[href*=\\"/positions/\\\"]",
+                    "baseUrl": "https://careers.airbnb.com",
+                    "fields": {
+                      "company": {"type": "CONSTANT", "constant": "Airbnb"},
+                      "url": {"type": "ATTRIBUTE", "selector": ".", "attribute": "href", "required": true, "baseUrl": "https://careers.airbnb.com"},
+                      "location": {"type": "TEXT", "selector": ".location"},
+                      "title": {"type": "TEXT", "selector": ".", "required": true},
+                      "externalId": {"type": "ATTRIBUTE", "selector": ".", "attribute": "href", "required": true}
+                    },
+                    "tagFields": [],
+                    "descriptionField": "",
+                    "detailFetch": {
+                      "enabled": true,
+                      "baseUrl": "https://careers.airbnb.com",
+                      "urlField": "url",
+                      "contentSelectors": [".job-description", ".entry-content", "main .content", "article", ".position-description"],
+                      "delayMs": 3000
+                    }
+                  },
+                  "entryUrl": "https://careers.airbnb.com/positions/?_offices=china&_locations=china",
+                  "rateLimit": {"burst": 1, "requestsPerMinute": 10},
+                  "automation": {"enabled": true, "jsEnabled": false, "waitForMilliseconds": 3000}
+                }
                 """);
 
         assertThat(actual).isEqualTo(expected);
