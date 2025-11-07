@@ -50,7 +50,9 @@ public class CrawlerBlueprintAutoParser {
         }
         
         if (listElement == null) {
-            throw new IllegalStateException("Unable to determine repeating job element");
+            log.error("Unable to determine repeating job element for URL: {}. " +
+                     "This may be a landing page rather than a job search page.", entryUrl);
+            throw new IllegalStateException("Unable to determine repeating job element. This may be a landing page rather than a job search page.");
         }
         
         String listSelector = safeCssSelector(listElement)
@@ -357,9 +359,54 @@ public class CrawlerBlueprintAutoParser {
         boolean hasMinimalContent = hasMinimalJobContent(document);
         boolean needsBrowser = hasSpaIndicators || hasMinimalContent;
         
+        // 检查是否为着陆页（不需要浏览器自动化）
+        if (needsBrowser && isLandingPageNotJobSearch(document, entryUrl)) {
+            log.warn("URL {} appears to be a landing page rather than job search page, disabling browser automation", entryUrl);
+            needsBrowser = false;
+        }
+        
         String siteType = determineSiteType(document, entryUrl);
         
         return new SiteAnalysis(siteType, needsBrowser, hasSpaIndicators);
+    }
+    
+    private boolean isLandingPageNotJobSearch(Document document, String entryUrl) {
+        if (entryUrl == null) return false;
+        
+        // 通用着陆页检测特征
+        Elements marketingElements = document.select("[class*=hero], [class*=banner], [class*=landing], [class*=marketing], [class*=cta]");
+        Elements jobElements = document.select("a[href*=job], [class*=job], [class*=position], [class*=career]");
+        Elements actualJobLinks = document.select("a[href*='/job/']");
+        Elements searchElements = document.select("form, input[type=search], .search, [class*=search]");
+        
+        String title = document.title().toLowerCase(Locale.ROOT);
+        String bodyText = document.body().text().toLowerCase(Locale.ROOT);
+        
+        // 检测着陆页的特征组合
+        boolean hasMarketingFeatures = marketingElements.size() > 5;
+        boolean hasMinimalJobContent = jobElements.size() < 3;
+        boolean hasNoActualJobs = actualJobLinks.size() == 0;
+        boolean hasMinimalSearch = searchElements.size() < 2;
+        
+        // 检查是否包含典型的着陆页关键词但缺乏实际功能
+        boolean hasLandingKeywords = bodyText.contains("join us") || bodyText.contains("work with us") || 
+                                    bodyText.contains("career opportunities") || bodyText.contains("see all jobs") ||
+                                    bodyText.contains("explore opportunities") || bodyText.contains("find your role");
+        
+        // 检查页面是否主要是导航和营销内容
+        Elements navigationElements = document.select("nav, .nav, .header, .menu");
+        boolean isPrimarilyNavigation = navigationElements.size() > jobElements.size();
+        
+        // 综合判断：如果页面主要包含营销和导航内容，但缺乏实际的职位功能，则为着陆页
+        boolean isLandingPage = hasMarketingFeatures && hasMinimalJobContent && hasNoActualJobs && 
+                               hasMinimalSearch && hasLandingKeywords && isPrimarilyNavigation;
+        
+        if (isLandingPage) {
+            log.info("Landing page detected for URL: {}. Marketing elements: {}, Job elements: {}, Actual job links: {}, Search elements: {}", 
+                    entryUrl, marketingElements.size(), jobElements.size(), actualJobLinks.size(), searchElements.size());
+        }
+        
+        return isLandingPage;
     }
     
     private boolean hasSpaFramework(Document document) {
