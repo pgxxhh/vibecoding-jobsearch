@@ -393,13 +393,19 @@ public class CrawlerBlueprintAutoParser {
             host = Optional.ofNullable(uri.getHost()).orElse("").toLowerCase(Locale.ROOT);
         } catch (URISyntaxException ignored) {}
         
+        String html = document.html().toLowerCase(Locale.ROOT);
+        
+        // 检测 iCIMS 系统的特征
+        if (html.contains("icims.com") || html.contains("data-jibe") || host.contains("icims")) {
+            return "icims";
+        }
+        
         // 根据域名和内容特征判断网站类型
         if (host.contains("workday")) return "workday";
         if (host.contains("greenhouse")) return "greenhouse";
         if (host.contains("lever")) return "lever";
         if (host.contains("bamboohr")) return "bamboohr";
         if (host.contains("smartrecruiters")) return "smartrecruiters";
-        if (host.contains("icims")) return "icims";
         if (host.contains("jobvite")) return "jobvite";
         
         // 检测常见的职位网站模式
@@ -436,7 +442,7 @@ public class CrawlerBlueprintAutoParser {
             case "workday" -> "a[href*='/job/'], .css-19uc56f, .css-1psffb1";
             case "greenhouse" -> "a[data-mapped='true'], .opening";
             case "lever" -> "a[href*='/jobs/'], .posting";
-            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable a, .job-link";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable a, .job-link, .jobs-list a, [data-automation-id*='job'], .iCIMS_JobsButton a";
             case "spa" -> "a[href*='/job'], a[href*='/position'], .job-item, .position-item, .career-item";
             default -> "a[href*='/job'], a[href*='/position'], a[href*='/career'], .job, .position, .opening";
         };
@@ -509,12 +515,14 @@ public class CrawlerBlueprintAutoParser {
         }
         
         // 为不同类型的网站生成合适的等待时间和选择器
-        int waitTime = analysis.siteType().equals("spa") ? 8000 : 5000;
+        int waitTime = analysis.siteType().equals("icims") ? 15000 : 
+                      (analysis.siteType().equals("spa") ? 8000 : 5000);
+        
         String waitSelector = switch (analysis.siteType()) {
             case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
             case "greenhouse" -> ".opening, .opening-list";
             case "lever" -> ".posting, .postings-group";
-            case "icims" -> ".iCIMS_JobsTable, .job-results";
+            case "icims" -> ".iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container";
             default -> ".job, .position, .career, .job-list, .position-list, .careers-list";
         };
         
@@ -540,23 +548,23 @@ public class CrawlerBlueprintAutoParser {
             case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
             case "greenhouse" -> ".opening, .opening-list";
             case "lever" -> ".posting, .postings-group";
-            case "icims" -> ".iCIMS_JobsTable, .job-results";
+            case "icims" -> ".iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container";
             default -> ".job, .position, .career, .job-list, .position-list";
         };
         
         waitOptions.put("selector", waitSelector);
-        waitOptions.put("durationMs", 10000);
+        waitOptions.put("durationMs", analysis.siteType().equals("icims") ? 20000 : 10000);
         steps.add(new CrawlStep(CrawlStepType.WAIT, waitOptions));
         
         // 对于某些SPA，尝试滚动加载更多内容
-        if (analysis.siteType().equals("spa") || analysis.siteType().equals("workday")) {
+        if (analysis.siteType().equals("spa") || analysis.siteType().equals("workday") || analysis.siteType().equals("icims")) {
             Map<String, Object> scrollOptions = new LinkedHashMap<>();
             scrollOptions.put("to", "bottom");
             steps.add(new CrawlStep(CrawlStepType.SCROLL, scrollOptions));
             
             // 滚动后再等待
             Map<String, Object> waitAfterScroll = new LinkedHashMap<>();
-            waitAfterScroll.put("durationMs", 3000);
+            waitAfterScroll.put("durationMs", 5000);
             steps.add(new CrawlStep(CrawlStepType.WAIT, waitAfterScroll));
         }
         
