@@ -186,14 +186,30 @@ public class BrowserCrawlerExecutionEngine implements CrawlerExecutionEngine {
         
         if (!selector.isBlank()) {
             // 增加超时时间，特别是对于SPA网站
-            int timeout = duration > 0 ? Math.min(duration, 60000) : 45000; // 最长45秒
-            try {
-                page.waitForSelector(selector, new WaitForSelectorOptions().setTimeout(timeout));
-            } catch (RuntimeException ex) {
-                log.info("Wait for selector '{}' timed out after {}ms: {}", selector, timeout, ex.getMessage());
+            int timeout = duration > 0 ? Math.min(duration, 60000) : 45000; // 最长60秒
+            
+            // 对于多个选择器，逐一尝试
+            String[] selectors = selector.split(",\\s*");
+            boolean found = false;
+            
+            for (String singleSelector : selectors) {
+                if (singleSelector.trim().isEmpty()) continue;
+                try {
+                    page.waitForSelector(singleSelector.trim(), new WaitForSelectorOptions().setTimeout(Math.min(timeout / selectors.length, 15000)));
+                    log.debug("Successfully waited for selector: {}", singleSelector.trim());
+                    found = true;
+                    break;
+                } catch (RuntimeException ex) {
+                    log.debug("Selector '{}' not found: {}", singleSelector.trim(), ex.getMessage());
+                    // 继续尝试下一个选择器
+                }
+            }
+            
+            if (!found) {
+                log.info("None of the selectors found '{}', falling back to fixed wait", selector);
                 // 即使选择器等待失败，也尝试等待固定时间以防页面仍在加载
                 if (duration > 0) {
-                    page.waitForTimeout(Math.min(duration, 10000));
+                    page.waitForTimeout(Math.min(duration / 2, 15000)); // 等待一半时间
                 }
             }
         } else if (duration > 0) {

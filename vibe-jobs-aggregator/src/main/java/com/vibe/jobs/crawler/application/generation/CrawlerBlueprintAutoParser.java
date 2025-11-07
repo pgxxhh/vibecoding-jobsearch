@@ -380,6 +380,16 @@ public class CrawlerBlueprintAutoParser {
         Elements jobLinks = document.select("a[href*=job], a[href*=position], a[href*=career]");
         Elements jobElements = document.select("[class*=job], [class*=position], [class*=career]");
         
+        // 对于 iCIMS 系统，初始HTML通常只有框架，职位内容需要JavaScript加载
+        String html = document.html().toLowerCase(Locale.ROOT);
+        if (html.contains("icims") || html.contains("data-jibe") || html.contains("ng-app")) {
+            // 检查是否为空的Angular应用框架
+            Elements contentElements = document.select("div.main-content, div.job-list, div.search-results, #job-results");
+            if (contentElements.isEmpty()) {
+                return true; // 需要JavaScript加载内容
+            }
+        }
+        
         // 如果找到的职位相关元素很少，可能需要JavaScript加载
         return jobLinks.size() < 3 && jobElements.size() < 5;
     }
@@ -515,14 +525,14 @@ public class CrawlerBlueprintAutoParser {
         }
         
         // 为不同类型的网站生成合适的等待时间和选择器
-        int waitTime = analysis.siteType().equals("icims") ? 15000 : 
+        int waitTime = analysis.siteType().equals("icims") ? 20000 : 
                       (analysis.siteType().equals("spa") ? 8000 : 5000);
         
         String waitSelector = switch (analysis.siteType()) {
             case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
             case "greenhouse" -> ".opening, .opening-list";
             case "lever" -> ".posting, .postings-group";
-            case "icims" -> ".iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container, div[ng-controller], .ng-scope a";
             default -> ".job, .position, .career, .job-list, .position-list, .careers-list";
         };
         
@@ -548,12 +558,12 @@ public class CrawlerBlueprintAutoParser {
             case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
             case "greenhouse" -> ".opening, .opening-list";
             case "lever" -> ".posting, .postings-group";
-            case "icims" -> ".iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container, div[ng-controller], .ng-scope a";
             default -> ".job, .position, .career, .job-list, .position-list";
         };
         
         waitOptions.put("selector", waitSelector);
-        waitOptions.put("durationMs", analysis.siteType().equals("icims") ? 20000 : 10000);
+        waitOptions.put("durationMs", analysis.siteType().equals("icims") ? 30000 : 10000);
         steps.add(new CrawlStep(CrawlStepType.WAIT, waitOptions));
         
         // 对于某些SPA，尝试滚动加载更多内容
