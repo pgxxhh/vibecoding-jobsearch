@@ -391,15 +391,23 @@ public class CrawlerBlueprintAutoParser {
         // 检查是否包含典型的着陆页关键词但缺乏实际功能
         boolean hasLandingKeywords = bodyText.contains("join us") || bodyText.contains("work with us") || 
                                     bodyText.contains("career opportunities") || bodyText.contains("see all jobs") ||
-                                    bodyText.contains("explore opportunities") || bodyText.contains("find your role");
+                                    bodyText.contains("explore opportunities") || bodyText.contains("find your role") ||
+                                    bodyText.contains("find your job match") || bodyText.contains("join our talent");
+        
+        // 特别检查iCIMS Job Matching页面特征
+        boolean isJobMatchingLanding = bodyText.contains("find your job match") || 
+                                      bodyText.contains("job matching") ||
+                                      bodyText.contains("talent network") ||
+                                      (title.contains("careers") && bodyText.contains("upload your resume"));
         
         // 检查页面是否主要是导航和营销内容
         Elements navigationElements = document.select("nav, .nav, .header, .menu");
         boolean isPrimarilyNavigation = navigationElements.size() > jobElements.size();
         
         // 综合判断：如果页面主要包含营销和导航内容，但缺乏实际的职位功能，则为着陆页
-        boolean isLandingPage = hasMarketingFeatures && hasMinimalJobContent && hasNoActualJobs && 
-                               hasMinimalSearch && hasLandingKeywords && isPrimarilyNavigation;
+        boolean isLandingPage = (hasMarketingFeatures && hasMinimalJobContent && hasNoActualJobs && 
+                               hasMinimalSearch && hasLandingKeywords && isPrimarilyNavigation) ||
+                               isJobMatchingLanding;
         
         if (isLandingPage) {
             log.info("Landing page detected for URL: {}. Marketing elements: {}, Job elements: {}, Actual job links: {}, Search elements: {}", 
