@@ -39,10 +39,22 @@ public class CrawlerBlueprintAutoParser {
             throw new IllegalArgumentException("Empty HTML document");
         }
 
+        // 检测网站类型和是否需要浏览器引擎
+        SiteAnalysis siteAnalysis = analyzeSite(document, entryUrl);
+        
         Element listElement = findBestListElement(document);
-        if (listElement == null) {
-            throw new IllegalStateException("Unable to determine repeating job element");
+        if (listElement == null && siteAnalysis.requiresBrowser()) {
+            // 对于SPA网站，可能需要JavaScript渲染后才能找到职位列表
+            log.info("No job list found in initial HTML for {}, generating browser-enabled config", entryUrl);
+            return generateBrowserConfig(entryUrl, siteAnalysis);
         }
+        
+        if (listElement == null) {
+            log.error("Unable to determine repeating job element for URL: {}. " +
+                     "This may be a landing page rather than a job search page.", entryUrl);
+            throw new IllegalStateException("Unable to determine repeating job element. This may be a landing page rather than a job search page.");
+        }
+        
         String listSelector = safeCssSelector(listElement)
                 .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
 
@@ -60,9 +72,11 @@ public class CrawlerBlueprintAutoParser {
         );
 
         PagingStrategy paging = detectPagingStrategy(document, entryUrl);
-        AutomationSettings automation = AutomationSettings.disabled();
-        CrawlFlow flow = CrawlFlow.empty();
-        Map<String, Object> metadata = Map.of();
+        AutomationSettings automation = siteAnalysis.requiresBrowser() ? 
+            generateAutomationSettings(siteAnalysis) : AutomationSettings.disabled();
+        CrawlFlow flow = siteAnalysis.requiresBrowser() ? 
+            generateBrowserFlow(siteAnalysis) : CrawlFlow.empty();
+        Map<String, Object> metadata = Map.of("siteType", siteAnalysis.siteType());
 
         return new AutoParseResult(profile, paging, automation, flow, metadata);
     }
@@ -338,6 +352,294 @@ public class CrawlerBlueprintAutoParser {
             return Optional.empty();
         }
     }
+
+    private SiteAnalysis analyzeSite(Document document, String entryUrl) {
+        // 检测是否为SPA应用
+        boolean hasSpaIndicators = hasSpaFramework(document);
+        boolean hasMinimalContent = hasMinimalJobContent(document);
+        boolean needsBrowser = hasSpaIndicators || hasMinimalContent;
+        
+        // 检查是否为着陆页（不需要浏览器自动化）
+        if (needsBrowser && isLandingPageNotJobSearch(document, entryUrl)) {
+            log.warn("URL {} appears to be a landing page rather than job search page, disabling browser automation", entryUrl);
+            needsBrowser = false;
+        }
+        
+        String siteType = determineSiteType(document, entryUrl);
+        
+        return new SiteAnalysis(siteType, needsBrowser, hasSpaIndicators);
+    }
+    
+    private boolean isLandingPageNotJobSearch(Document document, String entryUrl) {
+        if (entryUrl == null) return false;
+        
+        // 通用着陆页检测特征
+        Elements marketingElements = document.select("[class*=hero], [class*=banner], [class*=landing], [class*=marketing], [class*=cta]");
+        Elements jobElements = document.select("a[href*=job], [class*=job], [class*=position], [class*=career]");
+        Elements actualJobLinks = document.select("a[href*='/job/']");
+        Elements searchElements = document.select("form, input[type=search], .search, [class*=search]");
+        
+        String title = document.title().toLowerCase(Locale.ROOT);
+        String bodyText = document.body().text().toLowerCase(Locale.ROOT);
+        
+        // 检测着陆页的特征组合
+        boolean hasMarketingFeatures = marketingElements.size() > 5;
+        boolean hasMinimalJobContent = jobElements.size() < 3;
+        boolean hasNoActualJobs = actualJobLinks.size() == 0;
+        boolean hasMinimalSearch = searchElements.size() < 2;
+        
+        // 检查是否包含典型的着陆页关键词但缺乏实际功能
+        boolean hasLandingKeywords = bodyText.contains("join us") || bodyText.contains("work with us") || 
+                                    bodyText.contains("career opportunities") || bodyText.contains("see all jobs") ||
+                                    bodyText.contains("explore opportunities") || bodyText.contains("find your role") ||
+                                    bodyText.contains("find your job match") || bodyText.contains("join our talent");
+        
+        // 特别检查iCIMS Job Matching页面特征
+        boolean isJobMatchingLanding = bodyText.contains("find your job match") || 
+                                      bodyText.contains("job matching") ||
+                                      bodyText.contains("talent network") ||
+                                      (title.contains("careers") && bodyText.contains("upload your resume"));
+        
+        // 检查页面是否主要是导航和营销内容
+        Elements navigationElements = document.select("nav, .nav, .header, .menu");
+        boolean isPrimarilyNavigation = navigationElements.size() > jobElements.size();
+        
+        // 综合判断：如果页面主要包含营销和导航内容，但缺乏实际的职位功能，则为着陆页
+        boolean isLandingPage = (hasMarketingFeatures && hasMinimalJobContent && hasNoActualJobs && 
+                               hasMinimalSearch && hasLandingKeywords && isPrimarilyNavigation) ||
+                               isJobMatchingLanding;
+        
+        if (isLandingPage) {
+            log.info("Landing page detected for URL: {}. Marketing elements: {}, Job elements: {}, Actual job links: {}, Search elements: {}", 
+                    entryUrl, marketingElements.size(), jobElements.size(), actualJobLinks.size(), searchElements.size());
+        }
+        
+        return isLandingPage;
+    }
+    
+    private boolean hasSpaFramework(Document document) {
+        // 检测常见的SPA框架标识
+        String html = document.html().toLowerCase(Locale.ROOT);
+        return html.contains("ng-app") ||              // Angular
+               html.contains("data-reactroot") ||      // React  
+               html.contains("__vue") ||               // Vue
+               html.contains("ember-") ||              // Ember
+               html.contains("backbone") ||            // Backbone
+               document.select("script[src*=angular]").size() > 0 ||
+               document.select("script[src*=react]").size() > 0 ||
+               document.select("script[src*=vue]").size() > 0;
+    }
+    
+    private boolean hasMinimalJobContent(Document document) {
+        // 检查是否已有足够的职位内容
+        Elements jobLinks = document.select("a[href*=job], a[href*=position], a[href*=career]");
+        Elements jobElements = document.select("[class*=job], [class*=position], [class*=career]");
+        
+        // 对于 iCIMS 系统，初始HTML通常只有框架，职位内容需要JavaScript加载
+        String html = document.html().toLowerCase(Locale.ROOT);
+        if (html.contains("icims") || html.contains("data-jibe") || html.contains("ng-app")) {
+            // 检查是否为空的Angular应用框架
+            Elements contentElements = document.select("div.main-content, div.job-list, div.search-results, #job-results");
+            if (contentElements.isEmpty()) {
+                return true; // 需要JavaScript加载内容
+            }
+        }
+        
+        // 如果找到的职位相关元素很少，可能需要JavaScript加载
+        return jobLinks.size() < 3 && jobElements.size() < 5;
+    }
+    
+    private String determineSiteType(Document document, String entryUrl) {
+        if (entryUrl == null) return "unknown";
+        
+        String host = "";
+        try {
+            URI uri = new URI(entryUrl);
+            host = Optional.ofNullable(uri.getHost()).orElse("").toLowerCase(Locale.ROOT);
+        } catch (URISyntaxException ignored) {}
+        
+        String html = document.html().toLowerCase(Locale.ROOT);
+        
+        // 检测 iCIMS 系统的特征
+        if (html.contains("icims.com") || html.contains("data-jibe") || host.contains("icims")) {
+            return "icims";
+        }
+        
+        // 根据域名和内容特征判断网站类型
+        if (host.contains("workday")) return "workday";
+        if (host.contains("greenhouse")) return "greenhouse";
+        if (host.contains("lever")) return "lever";
+        if (host.contains("bamboohr")) return "bamboohr";
+        if (host.contains("smartrecruiters")) return "smartrecruiters";
+        if (host.contains("jobvite")) return "jobvite";
+        
+        // 检测常见的职位网站模式
+        if (hasSpaFramework(document)) return "spa";
+        if (document.select("table tr").size() > 10) return "table-based";
+        
+        return "standard";
+    }
+    
+    private AutoParseResult generateBrowserConfig(String entryUrl, SiteAnalysis analysis) {
+        // 为SPA网站生成适合的配置
+        String listSelector = generateSpaJobSelector(analysis.siteType());
+        
+        Map<String, ParserField> fields = generateSpaFields(entryUrl, analysis.siteType());
+        
+        ParserProfile profile = ParserProfile.of(
+                listSelector,
+                fields,
+                Set.of(),
+                "",
+                ParserProfile.DetailFetchConfig.disabled()
+        );
+        
+        PagingStrategy paging = PagingStrategy.disabled(); // SPA通常用无限滚动
+        AutomationSettings automation = generateAutomationSettings(analysis);
+        CrawlFlow flow = generateBrowserFlow(analysis);
+        Map<String, Object> metadata = Map.of("siteType", analysis.siteType());
+        
+        return new AutoParseResult(profile, paging, automation, flow, metadata);
+    }
+    
+    private String generateSpaJobSelector(String siteType) {
+        return switch (siteType) {
+            case "workday" -> "a[href*='/job/'], .css-19uc56f, .css-1psffb1";
+            case "greenhouse" -> "a[data-mapped='true'], .opening";
+            case "lever" -> "a[href*='/jobs/'], .posting";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable a, .job-link, .jobs-list a, [data-automation-id*='job'], .iCIMS_JobsButton a";
+            case "spa" -> "a[href*='/job'], a[href*='/position'], .job-item, .position-item, .career-item";
+            default -> "a[href*='/job'], a[href*='/position'], a[href*='/career'], .job, .position, .opening";
+        };
+    }
+    
+    private Map<String, ParserField> generateSpaFields(String entryUrl, String siteType) {
+        Map<String, ParserField> fields = new LinkedHashMap<>();
+        
+        // URL字段
+        String urlSelector = switch (siteType) {
+            case "workday" -> "a[href*='/job/']";
+            case "greenhouse" -> "a[data-mapped='true']";
+            case "lever" -> "a[href*='/jobs/']";
+            case "icims" -> "a[href*='/job/']";
+            default -> "a[href*='/job'], a[href*='/position'], a[href*='/career']";
+        };
+        
+        fields.put("url", new ParserField(
+                "url",
+                ParserFieldType.ATTRIBUTE,
+                urlSelector,
+                "href",
+                null,
+                null,
+                ",",
+                true,
+                baseUrl(entryUrl)
+        ));
+        
+        // 标题字段 - 使用多个备选选择器
+        String titleSelector = switch (siteType) {
+            case "workday" -> "h3, .css-19uc56f h3, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening a, h4 a, .job-title";
+            case "lever" -> ".posting-name, h5 a, .posting-title";
+            case "icims" -> ".iCIMS_JobsTable a, .job-title, h3 a";
+            default -> "h1, h2, h3, h4, .job-title, .position-title, .title, a";
+        };
+        
+        fields.put("title", new ParserField(
+                "title",
+                ParserFieldType.TEXT,
+                titleSelector,
+                null,
+                null,
+                null,
+                ",",
+                true,
+                null
+        ));
+        
+        // 位置字段
+        fields.put("location", new ParserField(
+                "location",
+                ParserFieldType.TEXT,
+                ".location, [class*=location], [class*=city], .office, [data-automation-id='jobLocation']",
+                null,
+                null,
+                null,
+                ",",
+                false,
+                null
+        ));
+        
+        return fields;
+    }
+    
+    private AutomationSettings generateAutomationSettings(SiteAnalysis analysis) {
+        if (!analysis.requiresBrowser()) {
+            return AutomationSettings.disabled();
+        }
+        
+        // 为不同类型的网站生成合适的等待时间和选择器
+        int waitTime = analysis.siteType().equals("icims") ? 20000 : 
+                      (analysis.siteType().equals("spa") ? 8000 : 5000);
+        
+        String waitSelector = switch (analysis.siteType()) {
+            case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening, .opening-list";
+            case "lever" -> ".posting, .postings-group";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container, div[ng-controller], .ng-scope a";
+            default -> ".job, .position, .career, .job-list, .position-list, .careers-list";
+        };
+        
+        return new AutomationSettings(
+                true,
+                true,
+                waitSelector,
+                waitTime,
+                null  // 不设置搜索功能，简化配置
+        );
+    }
+    
+    private CrawlFlow generateBrowserFlow(SiteAnalysis analysis) {
+        if (!analysis.requiresBrowser()) {
+            return CrawlFlow.empty();
+        }
+        
+        List<CrawlStep> steps = new ArrayList<>();
+        
+        // 等待页面加载
+        Map<String, Object> waitOptions = new LinkedHashMap<>();
+        String waitSelector = switch (analysis.siteType()) {
+            case "workday" -> ".css-19uc56f, [data-automation-id='jobTitle']";
+            case "greenhouse" -> ".opening, .opening-list";
+            case "lever" -> ".posting, .postings-group";
+            case "icims" -> "a[href*='/job/'], .iCIMS_JobsTable, .job-results, .jobs-list, [data-automation-id*='job'], .iCIMS_JobsButton, #icims_content, .iCIMS_Container, div[ng-controller], .ng-scope a";
+            default -> ".job, .position, .career, .job-list, .position-list";
+        };
+        
+        waitOptions.put("selector", waitSelector);
+        waitOptions.put("durationMs", analysis.siteType().equals("icims") ? 30000 : 10000);
+        steps.add(new CrawlStep(CrawlStepType.WAIT, waitOptions));
+        
+        // 对于某些SPA，尝试滚动加载更多内容
+        if (analysis.siteType().equals("spa") || analysis.siteType().equals("workday") || analysis.siteType().equals("icims")) {
+            Map<String, Object> scrollOptions = new LinkedHashMap<>();
+            scrollOptions.put("to", "bottom");
+            steps.add(new CrawlStep(CrawlStepType.SCROLL, scrollOptions));
+            
+            // 滚动后再等待
+            Map<String, Object> waitAfterScroll = new LinkedHashMap<>();
+            waitAfterScroll.put("durationMs", 5000);
+            steps.add(new CrawlStep(CrawlStepType.WAIT, waitAfterScroll));
+        }
+        
+        // 提取列表
+        steps.add(new CrawlStep(CrawlStepType.EXTRACT_LIST, Map.of()));
+        
+        return CrawlFlow.of(steps);
+    }
+
+    private record SiteAnalysis(String siteType, boolean requiresBrowser, boolean hasSpaFramework) {}
 
     public record AutoParseResult(ParserProfile profile,
                                   PagingStrategy pagingStrategy,
