@@ -29,28 +29,32 @@ function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
-      <Card className="relative w-full max-w-lg border-white/60 bg-white/95 p-8 shadow-brand-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-4">
+      <Card className="relative w-full max-w-lg border-slate-100 bg-white/98 p-8 shadow-glass-lg animate-scale-in">
         <button
-          className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
+          className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
           onClick={onCancel}
           aria-label={t('actions.cancel')}
         >
-          ×
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold text-slate-900">{t('subscription.title')}</h2>
-            <p className="text-sm text-gray-600">{t('subscription.description')}</p>
+            <h2 className="text-2xl font-bold text-slate-900">{t('subscription.title')}</h2>
+            <p className="text-sm text-slate-500">{t('subscription.description')}</p>
           </div>
-          <div className="rounded-2xl border border-black/5 bg-gray-50/80 p-5 text-sm leading-relaxed text-gray-700">
-            <div className="font-medium text-gray-900">{t('subscription.conditionsLabel')}</div>
-            <div>{t('subscription.keyword', { value: formatValue(params.q ?? '') })}</div>
-            <div>{t('subscription.company', { value: formatValue(params.company ?? '') })}</div>
-            <div>{t('subscription.location', { value: formatValue(params.location ?? '') })}</div>
-            <div>{t('subscription.level', { value: formatValue(params.level ?? '') })}</div>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm leading-relaxed text-slate-600">
+            <div className="font-semibold text-slate-800 mb-2">{t('subscription.conditionsLabel')}</div>
+            <div className="space-y-1">
+              <div>{t('subscription.keyword', { value: formatValue(params.q ?? '') })}</div>
+              <div>{t('subscription.company', { value: formatValue(params.company ?? '') })}</div>
+              <div>{t('subscription.location', { value: formatValue(params.location ?? '') })}</div>
+              <div>{t('subscription.level', { value: formatValue(params.level ?? '') })}</div>
+            </div>
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2.5">
             <Button variant="ghost" onClick={onCancel}>
               {t('actions.cancel')}
             </Button>
@@ -78,19 +82,21 @@ function FilterDrawer({
   const { t } = useI18n();
   if (!visible) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 backdrop-blur-sm px-4">
-      <Card className="relative w-full max-w-md border-white/60 bg-white/95 p-6 shadow-brand-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md px-4">
+      <Card className="relative w-full max-w-md border-slate-100 bg-white/98 p-6 shadow-glass-lg animate-scale-in">
         <button
-          className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
+          className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
           onClick={onClose}
           aria-label={t('filters.cancel')}
         >
-          ×
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
-        <h2 className="mb-5 text-lg font-semibold text-slate-900">{t('filters.title')}</h2>
+        <h2 className="mb-6 text-xl font-bold text-slate-900">{t('filters.title')}</h2>
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-600">{t('filters.company')}</label>
+            <label className="text-sm font-medium text-slate-700">{t('filters.company')}</label>
             <Input
               value={filters.company}
               onChange={(event) => setFilters({ ...filters, company: event.target.value })}
@@ -98,7 +104,7 @@ function FilterDrawer({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-600">{t('filters.datePosted')}</label>
+            <label className="text-sm font-medium text-slate-700">{t('filters.datePosted')}</label>
             <Select
               value={filters.datePosted}
               onChange={(event) => setFilters({ ...filters, datePosted: event.target.value })}
@@ -111,7 +117,7 @@ function FilterDrawer({
             </Select>
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-8 flex justify-end gap-2.5">
           <Button variant="ghost" onClick={onClose}>
             {t('filters.cancel')}
           </Button>
@@ -146,46 +152,67 @@ function HeroSection({
   const { t } = useI18n();
 
   return (
-    <section className="relative overflow-hidden rounded-[2.75rem] border border-white/50 bg-white/80 p-8 shadow-brand-lg backdrop-blur">
-      <img src="/assets/orb-rose.svg" alt="" className="pointer-events-none absolute -left-20 top-[-40%] h-96 w-96 opacity-40" />
-      <img src="/assets/orb-purple.svg" alt="" className="pointer-events-none absolute -right-16 bottom-[-30%] h-96 w-96 opacity-30" />
-      <div className="relative grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
-          <Badge tone="brand" className="w-fit">
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/70 p-8 shadow-glass-lg backdrop-blur-xl lg:p-10">
+      <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full bg-gradient-to-br from-brand-300/30 to-purple-300/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 -bottom-24 h-72 w-72 rounded-full bg-gradient-to-tl from-brand-200/25 to-pink-200/15 blur-3xl" />
+      <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
+        <div className="space-y-6">
+          <Badge tone="brand" className="w-fit animate-fade-in">
+            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-brand-500 animate-pulse" />
             {t('hero.badge')}
           </Badge>
           <div className="space-y-4">
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            <h1 className="max-w-xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
               {t('hero.title')}
             </h1>
-            <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
+            <p className="max-w-xl text-base text-slate-600 sm:text-lg">{t('hero.subtitle')}</p>
           </div>
         </div>
-        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">
+        <Card className="border-slate-100/80 bg-white/90 p-6 shadow-glass-lg backdrop-blur-sm">
           <form className="flex flex-col gap-4" onSubmit={onSearch}>
-            <div className="grid gap-3">
-              <Input
-                placeholder={t('search.keywordPlaceholder')}
-                value={q}
-                onChange={(event) => setQ(event.target.value)}
-              />
-              <Input
-                placeholder={t('search.locationPlaceholder')}
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-              />
+            <div className="grid gap-3.5">
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+                <Input
+                  placeholder={t('search.keywordPlaceholder')}
+                  value={q}
+                  onChange={(event) => setQ(event.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </span>
+                <Input
+                  placeholder={t('search.locationPlaceholder')}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={isSearching}>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button type="submit" disabled={isSearching} className="flex-1 sm:flex-none">
                 {isSearching ? t('search.loading') : t('actions.search')}
               </Button>
               <Button variant="outline" type="button" onClick={onReset}>
                 {t('actions.reset')}
               </Button>
               <Button variant="ghost" type="button" onClick={onShowFilter} className="flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
                 {t('filters.open')}
                 {activeFilterCount > 0 && (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-[10px] font-semibold text-white">
                     {activeFilterCount}
                   </span>
                 )}
@@ -487,15 +514,11 @@ export default function Page() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
-          <div className="flex items-center justify-between gap-3">
-            {/* 已移除列表结果数量显示 */}
-          </div>
-          
+        <Card className="border-slate-100/80 bg-white/90 p-5 shadow-glass-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
           {/* 下拉刷新指示器 */}
           {(pullDistance > 0 || isRefreshing) && (
             <div 
-              className="absolute top-0 left-0 right-0 flex items-center justify-center bg-brand-50 border-b border-brand-100 transition-all duration-200"
+              className="absolute top-0 left-0 right-0 flex items-center justify-center bg-brand-50/80 border-b border-brand-100/50 transition-all duration-200 backdrop-blur-sm rounded-t-3xl"
               style={{ 
                 height: `${Math.max(pullDistance, isRefreshing ? 60 : 0)}px`,
                 transform: `translateY(-${Math.max(pullDistance, isRefreshing ? 60 : 0)}px)`
@@ -504,41 +527,41 @@ export default function Page() {
               <div className="flex items-center gap-2 text-brand-600">
                 {isRefreshing ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-600 border-t-transparent"></div>
-                    <span className="text-sm">正在刷新...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand-500 border-t-transparent"></div>
+                    <span className="text-sm font-medium">正在刷新...</span>
                   </>
                 ) : pullDistance > 50 ? (
-                  <span className="text-sm">松开刷新</span>
+                  <span className="text-sm font-medium">松开刷新</span>
                 ) : (
-                  <span className="text-sm">下拉刷新</span>
+                  <span className="text-sm font-medium">下拉刷新</span>
                 )}
               </div>
             </div>
           )}
           
           <div
-            className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]"
+            className="space-y-3 overflow-y-auto pr-1 lg:max-h-[60vh]"
             ref={listRef}
             onScroll={debouncedHandleScroll}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             style={{ 
-              WebkitOverflowScrolling: 'touch', // iOS 平滑滚动
-              overscrollBehavior: 'contain', // 防止过度滚动
-              transform: `translateY(${pullDistance}px)`, // 下拉时移动列表
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+              transform: `translateY(${pullDistance}px)`,
               transition: pullDistance === 0 ? 'transform 0.2s ease-out' : 'none'
             }}
           >
             {isInitialLoading &&
               skeletonPlaceholders.map((_, index) => (
-                <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white/70 p-4">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="mt-3 h-3 w-1/2" />
+                <Card key={`skeleton-${index}`} className="border-dashed border-slate-100 bg-white/80 p-4 animate-pulse">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="mt-3 h-4 w-1/2" />
                   <div className="mt-4 flex gap-2">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-14 rounded-full" />
                   </div>
                 </Card>
               ))}
@@ -547,7 +570,7 @@ export default function Page() {
               return (
                 <div
                   key={job.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer transition-transform duration-200 hover:scale-[1.01]"
                   onClick={() => {
                     setSelectedJob(job);
                     if (isMobile) {
@@ -557,31 +580,37 @@ export default function Page() {
                 >
                   <JobCardNew
                     job={job}
-                    className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
+                    className={active ? 'border-brand-400 shadow-brand-md ring-2 ring-brand-100' : 'hover:border-slate-200 hover:shadow-md'}
                   />
                 </div>
               );
             })}
             {!isInitialLoading && jobs.length === 0 && (
-              <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-black/10 bg-white/70 text-sm text-gray-400">
-                {t('search.results', { count: 0 })}
+              <div className="flex h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 text-center">
+                <svg className="h-10 w-10 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <p className="text-sm text-slate-400">{t('search.results', { count: 0 })}</p>
               </div>
             )}
             {/* 加载更多指示器和观察器元素 */}
             {isListLoading && jobs.length > 0 && (
-              <div className="flex justify-center mt-6">
-                <Skeleton className="h-8 w-32" />
+              <div className="flex justify-center py-4">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-500"></div>
+                  <span>加载中...</span>
+                </div>
               </div>
             )}
             {!hasMore && jobs.length > 0 && (
-              <div className="text-center text-gray-400 mt-4">没有更多数据了</div>
+              <div className="text-center text-sm text-slate-400 py-4">没有更多数据了</div>
             )}
             {/* Intersection Observer 目标元素 */}
             <div ref={loadMoreRef} className="h-1 w-full" />
           </div>
         </Card>
 
-        <Card className="hidden border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
+        <Card className="hidden border-slate-100/80 bg-white/95 p-6 shadow-glass-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
           <JobDetail
             job={combinedSelectedJob}
             isLoading={isDetailLoading}
@@ -594,11 +623,11 @@ export default function Page() {
       </div>
 
       {isMobile && isMobileDetailOpen && selectedJob && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white">
-          <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white/98 backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5 bg-white/90">
             <div className="min-w-0 flex-1 pr-3">
-              <p className="truncate text-sm font-medium text-gray-600">{selectedJob.title}</p>
-              <p className="truncate text-xs text-gray-400">
+              <p className="truncate text-sm font-semibold text-slate-800">{selectedJob.title}</p>
+              <p className="truncate text-xs text-slate-500">
                 {selectedJob.company} · {selectedJob.location}
               </p>
             </div>

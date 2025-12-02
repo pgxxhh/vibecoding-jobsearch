@@ -47,7 +47,7 @@ export default function LoginStepEmail({ onSuccess, onError }: Props) {
         <p className="text-sm text-slate-500">Use your email to continue</p>
       </div>
       <div className="space-y-2 text-left">
-        <label className="text-sm font-medium text-slate-600">Email address</label>
+        <label className="text-sm font-medium text-slate-700">Email address</label>
         <Input
           type="email"
           placeholder="you@example.com"
@@ -59,9 +59,8 @@ export default function LoginStepEmail({ onSuccess, onError }: Props) {
       </div>
       <Button
         type="submit"
-        variant="ghost"
         disabled={loading}
-        className="h-12 w-full bg-gradient-to-r from-pink-500 to-purple-500 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:from-pink-400 hover:to-purple-400"
+        className="h-12 w-full text-base"
       >
         {loading ? '发送中…' : 'Send Verification Code'}
       </Button>

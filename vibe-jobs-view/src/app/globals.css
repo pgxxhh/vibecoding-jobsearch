@@ -3,12 +3,86 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; }
+:root { 
+  color-scheme: light;
+  --gradient-angle: 135deg;
+}
 
-html, body { min-height: 100%; }
+html, body { 
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
 
 body {
-  @apply text-slate-900 bg-transparent;
+  @apply text-slate-900 bg-transparent antialiased;
 }
 
 .container { @apply mx-auto w-full max-w-7xl px-6; }
+
+/* Modern glassmorphism utilities */
+.glass {
+  @apply bg-white/70 backdrop-blur-xl border border-white/40;
+}
+
+.glass-hover {
+  @apply transition-all duration-300 hover:bg-white/85 hover:shadow-lg;
+}
+
+/* Gradient text utility */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-600 via-purple-500 to-brand-500;
+}
+
+/* Modern card hover effect */
+.card-hover {
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-hover:hover {
+  @apply -translate-y-1 shadow-xl;
+}
+
+/* Subtle shine animation for badges */
+@keyframes shine {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.badge-shine {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shine 3s ease-in-out infinite;
+}
+
+/* Modern scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-300;
+}
+
+/* Focus visible ring for accessibility */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+}
+
+/* Selection styling */
+::selection {
+  @apply bg-brand-100 text-brand-900;
+}

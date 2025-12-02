@@ -19,27 +19,38 @@ function normalizeStringList(values?: string[] | null): string[] {
 }
 
 export default function JobCardNew({ job, className }: { job: Job; className?: string }) {
-  const normalizedTags = normalizeStringList(job.tags).slice(0, 8);
+  const normalizedTags = normalizeStringList(job.tags).slice(0, 6);
 
   return (
-    <Card className={cn('p-4 transition will-change-transform hover:shadow-brand-lg', className)}>
+    <Card className={cn('p-4 transition-all duration-200 hover:shadow-glass-lg', className)}>
       <div className="flex items-start justify-between gap-4">
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold leading-tight text-slate-900">
-              <Link href={job.url} target="_blank" className="hover:underline decoration-brand-600 underline-offset-4">
+        <div className="min-w-0 flex-1 space-y-2.5">
+          <div className="space-y-1.5">
+            <h3 className="text-[15px] font-semibold leading-snug text-slate-900 line-clamp-2">
+              <Link 
+                href={job.url} 
+                target="_blank" 
+                className="hover:text-brand-600 transition-colors duration-200"
+              >
                 {job.title}
               </Link>
             </h3>
-            <p className="text-sm text-gray-600">
-              {job.company} · {job.location}
-              {job.level ? ` · ${job.level}` : ''}
+            <p className="text-sm text-slate-500 flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-slate-700">{job.company}</span>
+              <span className="text-slate-300">·</span>
+              <span>{job.location}</span>
+              {job.level && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span>{job.level}</span>
+                </>
+              )}
             </p>
           </div>
           {normalizedTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {normalizedTags.map((tag) => (
-                <Badge key={tag} tone="muted">
+                <Badge key={tag} tone="muted" className="text-[11px]">
                   {tag}
                 </Badge>
               ))}
@@ -48,7 +59,7 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
         </div>
         <RelativeTime
           utcTime={job.postedAt}
-          className="mt-1 shrink-0 text-xs text-gray-500"
+          className="mt-0.5 shrink-0 text-xs text-slate-400 font-medium"
         />
       </div>
     </Card>

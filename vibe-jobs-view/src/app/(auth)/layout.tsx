@@ -1,13 +1,13 @@
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#ffe6f1] via-[#ffeef7] to-white">
-      <div className="pointer-events-none absolute -top-32 right-14 h-72 w-72 rounded-full bg-pink-300/30 blur-3xl" aria-hidden />
-      <div className="pointer-events-none absolute -bottom-24 left-10 h-96 w-96 rounded-full bg-fuchsia-300/30 blur-3xl" aria-hidden />
-      <header className="relative z-10 flex items-center gap-3 px-8 pt-10">
-        <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-brand-50/30 to-white">
+      <div className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-brand-200/40 via-purple-200/30 to-transparent blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -bottom-32 -left-20 h-[400px] w-[400px] rounded-full bg-gradient-to-tr from-brand-100/30 via-pink-100/20 to-transparent blur-3xl" aria-hidden />
+      <header className="relative z-10 flex items-center gap-3 px-8 pt-8">
+        <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-9 w-auto" />
         <div className="flex flex-col">
-          <span className="text-xl font-semibold text-pink-600">Elaine Jobs</span>
-          <span className="text-xs text-pink-500">build for my bb</span>
+          <span className="text-lg font-bold text-slate-800">Elaine Jobs</span>
+          <span className="text-xs text-slate-500">build for my bb</span>
         </div>
       </header>
       <main className="relative z-10 flex min-h-[calc(100vh-6rem)] items-center justify-center px-4 py-12">

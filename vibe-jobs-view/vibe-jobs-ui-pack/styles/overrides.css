@@ -1,18 +1,58 @@
 :root{
-  --bg: 340 100% 99%; /* 粉色背景 */
-  --card: 340 100% 98%; /* 粉色卡片 */
-  --text: 340 60% 30%; /* 粉色文字 */
+  --bg: 340 100% 99.5%;
+  --card: 0 0% 100%;
+  --text: 220 25% 20%;
+  --muted: 220 15% 50%;
 }
+
 html,body{height:100%}
+
 body{
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(245,77,146,.18), transparent 60%),
-    radial-gradient(900px 500px at -10% 10%, rgba(245,77,146,.10), transparent 60%),
+    radial-gradient(ellipse 1400px 700px at 75% -5%, rgba(245,77,146,.12), transparent 55%),
+    radial-gradient(ellipse 1000px 600px at -15% 15%, rgba(168,85,247,.08), transparent 50%),
+    radial-gradient(ellipse 800px 400px at 50% 100%, rgba(245,77,146,.04), transparent 40%),
     hsl(var(--bg));
   color:hsl(var(--text));
 }
-.vj-container{max-width:1120px;margin:0 auto;padding:0 1rem;}
-.vj-card{background:hsl(var(--card));border:1px solid rgba(245,77,146,.06);border-radius:20px;box-shadow:0 10px 40px rgba(245,77,146,.08);}
-.vj-hr{height:1px;background:linear-gradient(90deg,transparent,rgba(245,77,146,.06),transparent)}
-.vj-badge{display:inline-flex;align-items:center;gap:.375rem;padding:.125rem .5rem;border-radius:999px;border:1px solid rgba(245,77,146,.08);background:#fff0f6;font-size:.75rem}
-.vj-muted{color:#e13b7c}
+
+.vj-container{max-width:1180px;margin:0 auto;padding:0 1.25rem;}
+
+.vj-card{
+  background:hsl(var(--card));
+  border:1px solid rgba(0,0,0,.04);
+  border-radius:24px;
+  box-shadow:0 4px 24px rgba(0,0,0,.03), 0 1px 3px rgba(0,0,0,.02);
+  transition: all 0.3s ease;
+}
+
+.vj-card:hover {
+  box-shadow: 0 8px 40px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.03);
+}
+
+.vj-hr{
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.06) 20%,rgba(0,0,0,.06) 80%,transparent);
+}
+
+.vj-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:.375rem;
+  padding:.25rem .625rem;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.06);
+  background:linear-gradient(to bottom, #fff, #fafafa);
+  font-size:.75rem;
+  font-weight:500;
+  color:hsl(var(--muted));
+  transition: all 0.2s ease;
+}
+
+.vj-badge:hover {
+  border-color: rgba(245,77,146,.15);
+  background: linear-gradient(to bottom, #fff5f8, #fff);
+  color: #e13b7c;
+}
+
+.vj-muted{color:hsl(var(--muted))}

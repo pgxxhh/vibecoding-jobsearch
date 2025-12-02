@@ -52,7 +52,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl bg-white/95 p-8 shadow-2xl shadow-pink-100">
+    <div className="w-full max-w-md rounded-3xl border border-slate-100 bg-white/95 p-8 shadow-glass-lg backdrop-blur-sm">
       {step === 'email' ? (
         <LoginStepEmail onSuccess={handleEmailSubmitted} onError={setError} />
       ) : (
@@ -66,7 +66,7 @@ export default function LoginPage() {
           onChallengeUpdate={handleChallengeUpdate}
         />
       )}
-      {error && <p className="mt-2 text-center text-sm text-red-500">{error}</p>}
+      {error && <p className="mt-4 text-center text-sm text-red-500 bg-red-50/80 rounded-xl py-2 px-3">{error}</p>}
     </div>
   );
 }

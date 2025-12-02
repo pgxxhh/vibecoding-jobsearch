@@ -7,13 +7,13 @@ type Props = React.HTMLAttributes<HTMLSpanElement> & {
 
 export default function Badge({ tone = 'default', className, children, ...rest }: Props) {
   const tones = {
-    default: 'border-black/10 bg-white text-gray-700',
-    brand: 'border-brand-200/70 bg-brand-50 text-brand-700',
-    muted: 'border-black/5 bg-gray-50 text-gray-600',
+    default: 'border-slate-200/80 bg-white text-slate-600',
+    brand: 'border-brand-200/60 bg-gradient-to-r from-brand-50 to-brand-100/50 text-brand-700',
+    muted: 'border-slate-100 bg-slate-50/80 text-slate-500',
   }[tone];
 
   return (
-    <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-xs', tones, className)} {...rest}>
+    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-200', tones, className)} {...rest}>
       {children}
     </span>
   );

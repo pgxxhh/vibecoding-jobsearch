@@ -101,9 +101,13 @@ export function resolveEnrichmentStatus(job: Job | null): Record<string, unknown
 export default function JobDetail({ job, isLoading, isError, isRefreshing, onRetry, labels }: Props) {
   if (!job) {
     return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center">
-        <img src="/assets/orb-purple.svg" alt="" className="h-16 w-16 opacity-30" />
-        <p className="max-w-xs text-sm text-gray-400">{labels.empty}</p>
+      <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 text-center">
+        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
+          <svg className="h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <p className="max-w-xs text-sm text-slate-400">{labels.empty}</p>
       </div>
     );
   }
@@ -130,68 +134,98 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold text-slate-900">{job.title}</h2>
-        <div className="text-sm text-gray-600">
-          {job.company} · {job.location}
-          {job.level ? ` · ${job.level}` : ''}
+      <div className="space-y-3">
+        <h2 className="text-2xl font-bold text-slate-900 leading-tight">{job.title}</h2>
+        <div className="flex items-center gap-2 text-sm text-slate-600 flex-wrap">
+          <span className="font-medium text-slate-800">{job.company}</span>
+          <span className="text-slate-300">·</span>
+          <span>{job.location}</span>
+          {job.level && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span>{job.level}</span>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
           <TimeDisplay utcTime={job.postedAt} format="DATETIME" placeholder="--" />
-          {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
+          {isRefreshing && !isLoading && (
+            <span className="flex items-center gap-1.5 text-brand-500">
+              <div className="h-3 w-3 animate-spin rounded-full border border-brand-500 border-t-transparent"></div>
+              {labels.refreshing}
+            </span>
+          )}
         </div>
       </div>
+
       {(shouldShowEnrichment || isLoading) && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">{labels.summary}</h3>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg className="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {labels.summary}
+          </h3>
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-3 w-5/6" />
-              <Skeleton className="h-3 w-3/4" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-3/4" />
             </div>
           ) : summary ? (
-            <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
+            <p className="text-sm leading-relaxed text-slate-700 bg-slate-50/80 rounded-xl p-4 border border-slate-100">{summary}</p>
           ) : (
-            <p className="text-xs italic text-gray-400">{labels.summaryPlaceholder}</p>
+            <p className="text-xs italic text-slate-400">{labels.summaryPlaceholder}</p>
           )}
         </div>
       )}
+
       {(shouldShowEnrichment || isLoading) && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">{labels.skills}</h3>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg className="h-4 w-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            {labels.skills}
+          </h3>
           {isLoading ? (
             <div className="flex flex-wrap gap-2">
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <Skeleton className="h-6 w-16 rounded-full" />
-              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-7 w-20 rounded-full" />
+              <Skeleton className="h-7 w-16 rounded-full" />
+              <Skeleton className="h-7 w-24 rounded-full" />
             </div>
           ) : skillBadges.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {skillBadges.map((skill) => (
-                <Badge key={skill} tone="muted">
+                <Badge key={skill} tone="brand">
                   {skill}
                 </Badge>
               ))}
             </div>
           ) : (
-            <p className="text-xs italic text-gray-400">{labels.skillsPlaceholder}</p>
+            <p className="text-xs italic text-slate-400">{labels.skillsPlaceholder}</p>
           )}
         </div>
       )}
+
       {shouldShowHighlightsSection && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">{labels.highlights}</h3>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {labels.highlights}
+          </h3>
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-3 w-3/4" />
-              <Skeleton className="h-3 w-2/3" />
-              <Skeleton className="h-3 w-4/5" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-4/5" />
             </div>
           ) : (
-            <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
+            <ul className="space-y-2 text-sm leading-relaxed text-slate-700">
               {highlights.map((highlight) => (
-                <li key={highlight} className="flex items-start gap-2">
-                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                <li key={highlight} className="flex items-start gap-3">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gradient-to-r from-brand-500 to-purple-500" aria-hidden />
                   <span className="flex-1">{highlight}</span>
                 </li>
               ))}
@@ -199,8 +233,14 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           )}
         </div>
       )}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-gray-700">{labels.description}</h3>
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {labels.description}
+        </h3>
         {isError ? (
           <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
             <p>{labels.error}</p>
@@ -210,28 +250,35 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           </div>
         ) : isLoading ? (
           <div className="space-y-2">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-            <Skeleton className="h-3 w-3/5" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-4 w-3/5" />
           </div>
         ) : (
-          <div className="mt-1 text-sm leading-relaxed text-black">
+          <div className="text-sm leading-relaxed text-slate-700 prose prose-sm prose-slate max-w-none prose-headings:text-slate-900 prose-a:text-brand-600 prose-a:no-underline hover:prose-a:underline">
             {hasDescription ? (
               <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
             ) : (
-              labels.noDescription
+              <p className="text-slate-400 italic">{labels.noDescription}</p>
             )}
           </div>
         )}
       </div>
-      <Button
-        variant="outline"
-        onClick={() => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer')}
-        className="shadow-none"
-        disabled={!job.url}
-      >
-        {labels.viewOriginal}
-      </Button>
+
+      <div className="pt-2">
+        <Button
+          variant="outline"
+          onClick={() => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer')}
+          disabled={!job.url}
+          rightIcon={
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          }
+        >
+          {labels.viewOriginal}
+        </Button>
+      </div>
     </div>
   );
 }

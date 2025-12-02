@@ -6,7 +6,9 @@ export default function Input(props: React.InputHTMLAttributes<HTMLInputElement>
   return (
     <input
       className={cn(
-        'h-10 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15',
+        'h-11 w-full rounded-xl border border-slate-200 bg-white/80 px-4 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200',
+        'hover:border-slate-300 hover:bg-white',
+        'focus:outline-none focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-500/10',
         className,
       )}
       {...rest}

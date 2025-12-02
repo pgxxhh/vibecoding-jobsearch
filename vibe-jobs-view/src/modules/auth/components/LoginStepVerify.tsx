@@ -158,7 +158,7 @@ export default function LoginStepVerify({
       <div className="text-center">
         <h1 className="text-2xl font-bold text-slate-900">Verify your Email</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Enter the 6-digit code we sent to <span className="font-medium text-slate-600">{email}</span>
+          Enter the 6-digit code we sent to <span className="font-medium text-slate-700">{email}</span>
         </p>
       </div>
       <div className="flex justify-between gap-2">
@@ -174,15 +174,14 @@ export default function LoginStepVerify({
             type="text"
             inputMode="numeric"
             maxLength={1}
-            className="h-12 w-12 rounded-xl border border-slate-200 text-center text-lg font-semibold text-slate-800 shadow-sm focus:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-200"
+            className="h-12 w-12 rounded-xl border border-slate-200 bg-white text-center text-lg font-semibold text-slate-800 transition-all duration-200 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/10"
           />
         ))}
       </div>
       <Button
         type="submit"
-        variant="ghost"
         disabled={loading || code.length !== CODE_LENGTH}
-        className="h-12 w-full bg-gradient-to-r from-pink-500 to-purple-500 text-base font-semibold text-white shadow-lg shadow-pink-200 transition hover:from-pink-400 hover:to-purple-400 disabled:cursor-not-allowed disabled:opacity-60"
+        className="h-12 w-full text-base"
       >
         {loading ? '验证中…' : 'Verify'}
       </Button>
@@ -193,14 +192,14 @@ export default function LoginStepVerify({
           <button
             type="button"
             onClick={resend}
-            className="font-medium text-pink-500 underline-offset-2 hover:underline"
+            className="font-medium text-brand-600 underline-offset-2 hover:underline transition-colors"
             disabled={loading}
           >
             Resend code
           </button>
         )}
       </div>
-      <button type="button" onClick={onBack} className="text-center text-xs text-slate-400 underline-offset-2 hover:underline">
+      <button type="button" onClick={onBack} className="w-full text-center text-xs text-slate-400 underline-offset-2 hover:underline hover:text-slate-600 transition-colors">
         返回修改邮箱
       </button>
     </form>
