@@ -1,0 +1,28 @@
+CREATE TABLE IF NOT EXISTS resume (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    file_path VARCHAR(512) NOT NULL,
+    language VARCHAR(32) NULL,
+    parsed_json LONGTEXT NULL,
+    parse_status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT(1) NOT NULL DEFAULT 0,
+    CONSTRAINT pk_resume PRIMARY KEY (id),
+    INDEX idx_resume_user_id (user_id),
+    INDEX idx_resume_status (parse_status)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
+
+CREATE TABLE IF NOT EXISTS resume_feedback (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    resume_id BIGINT NOT NULL,
+    job_id BIGINT NOT NULL,
+    feedback VARCHAR(16) NOT NULL,
+    comment TEXT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT(1) NOT NULL DEFAULT 0,
+    CONSTRAINT pk_resume_feedback PRIMARY KEY (id),
+    CONSTRAINT fk_resume_feedback_resume FOREIGN KEY (resume_id) REFERENCES resume (id)
+) ENGINE=InnoDB DEFAULT CHARSET = utf8mb4;
