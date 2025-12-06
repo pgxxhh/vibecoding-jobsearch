@@ -6,6 +6,7 @@ import { useJobList, type JobListFilters } from '@/modules/job-search/hooks/useJ
 import type { Job } from '@/modules/job-search/types';
 import { useI18n } from '@/shared/lib/i18n';
 import { Badge, Button, Card, Input, Select, Skeleton } from '@/shared/ui';
+import Link from 'next/link';
 import {
   useCallback,
   useEffect,
@@ -159,6 +160,15 @@ function HeroSection({
               {t('hero.title')}
             </h1>
             <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
+            <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+              <Link
+                href="/resume"
+                className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-white/90 px-4 py-2 font-semibold text-pink-600 shadow-brand-sm shadow-pink-100 transition hover:border-pink-300 hover:bg-white"
+              >
+                上传简历获取职位匹配
+              </Link>
+              <span>AI 分析技能，获取解释型岗位推荐</span>
+            </div>
           </div>
         </div>
         <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">

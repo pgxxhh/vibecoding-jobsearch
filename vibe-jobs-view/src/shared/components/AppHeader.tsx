@@ -32,11 +32,30 @@ export default function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/30 bg-white/75 backdrop-blur transition">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
-          <div className="hidden sm:flex sm:flex-col" aria-hidden="true" />
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3">
+            <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
+            <div className="hidden sm:flex sm:flex-col" aria-hidden="true" />
+          </div>
+          <nav className="hidden items-center gap-5 text-sm font-medium text-gray-600 md:flex" aria-label="站点导航">
+            <Link href="/" className="transition hover:text-gray-900">
+              职位搜索
+            </Link>
+            <Link
+              href="/resume"
+              className="text-pink-600 transition hover:text-pink-500"
+            >
+              简历推荐
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/resume"
+            className="inline-flex h-9 items-center justify-center rounded-full border border-pink-200 px-4 text-sm font-semibold text-pink-600 transition hover:border-pink-300 hover:bg-pink-50 md:hidden"
+          >
+            上传简历
+          </Link>
           {loading ? (
             // Loading state
             <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
