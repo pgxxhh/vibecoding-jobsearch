@@ -46,6 +46,15 @@ security:
   rate-limiter:
     enabled: false
 
+resume:
+  storage:
+    backend: ${RESUME_STORAGE_BACKEND:local}
+    local-directory: ${RESUME_STORAGE_LOCAL_DIR:./uploads/resumes}
+    bucket: ${RESUME_STORAGE_BUCKET:}
+    prefix: ${RESUME_STORAGE_PREFIX:resumes}
+    max-file-size-bytes: ${RESUME_STORAGE_MAX_BYTES:5242880}
+    allowed-content-types: ${RESUME_ALLOWED_TYPES:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain}
+
 # 职位详情增强功能配置（定时任务相关，当前功能已集成到爬虫中）
 jobs:
   detail-enhancement:
