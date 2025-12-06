@@ -25,7 +25,14 @@ public class ResumeParsingService {
             log.warn("Received empty resume content for parsing");
             return ResumeProfile.builder().build();
         }
-        String text = new String(content, detectEncoding(content));
+        String text;
+        try {
+            org.apache.tika.Tika tika = new org.apache.tika.Tika();
+            text = tika.parseToString(new java.io.ByteArrayInputStream(content));
+        } catch (Exception ex) {
+            log.warn("Tika failed to parse content, fallback to UTF-8 raw bytes", ex);
+            text = new String(content, detectEncoding(content));
+        }
         String normalized = normalizeWhitespace(text);
         List<String> tokens = tokenize(normalized);
         Map<String, Long> freq = tokens.stream()

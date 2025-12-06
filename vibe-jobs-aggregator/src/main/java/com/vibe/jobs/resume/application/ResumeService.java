@@ -44,6 +44,12 @@ public class ResumeService {
                 .build();
         Resume saved = resumeRepositoryPort.save(resume);
         try {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.toLowerCase().startsWith("text")) {
+                log.warn("Skip parsing for resume {} due to non-text contentType={} (expect text/*)", saved.getId(), contentType);
+                saved.setParseStatus(ResumeParseStatus.FAILED);
+                return resumeRepositoryPort.save(saved);
+            }
             ResumeProfile profile = parsingService.parse(file.getBytes());
             String profileJson = objectMapper.writeValueAsString(profile);
             saved.setParsedJson(profileJson);
