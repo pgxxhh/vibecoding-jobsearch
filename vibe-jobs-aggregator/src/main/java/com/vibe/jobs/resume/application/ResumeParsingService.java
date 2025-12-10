@@ -19,6 +19,11 @@ import java.util.stream.Collectors;
 public class ResumeParsingService {
 
     private static final Logger log = LoggerFactory.getLogger(ResumeParsingService.class);
+    private final com.vibe.jobs.resume.config.ResumeParsingProperties props;
+
+    public ResumeParsingService(com.vibe.jobs.resume.config.ResumeParsingProperties props) {
+        this.props = props;
+    }
 
     public ResumeProfile parse(byte[] content) {
         if (content == null || content.length == 0) {
@@ -34,18 +39,26 @@ public class ResumeParsingService {
             text = new String(content, detectEncoding(content));
         }
         String normalized = normalizeWhitespace(text);
-        List<String> tokens = tokenize(normalized);
-        Map<String, Long> freq = tokens.stream()
-                .filter(token -> token.length() > 2)
-                .collect(Collectors.groupingBy(token -> token, Collectors.counting()));
-        List<String> skills = freq.entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
-                .limit(12)
-                .map(Map.Entry::getKey)
-                .toList();
 
-        List<String> experiences = extractLines(normalized, 6);
-        String summary = normalized.length() > 240 ? normalized.substring(0, 240) : normalized;
+        String skillsSection = extractSection(normalized, props.getSkillSectionHeaders());
+        List<String> skills = (skillsSection != null && !skillsSection.isBlank())
+                ? splitSkills(skillsSection)
+                : (props.isEnableFrequencyFallback() ? topFrequentTokens(normalized, props.getTopTokenLimit()) : new ArrayList<>());
+
+        if (skills.isEmpty() && props.isEnableFrequencyFallback()) {
+            skills = topFrequentTokens(normalized, props.getTopTokenLimit());
+        }
+
+        String expSection = extractSection(normalized, props.getExperienceSectionHeaders());
+        List<String> experiences = (expSection != null && !expSection.isBlank())
+                ? extractBullets(expSection, props.getExperiencesMaxLines())
+                : extractLines(normalized, props.getExperiencesMaxLines());
+
+        String summarySection = extractSection(normalized, props.getSummarySectionHeaders());
+        String baseSummary = (summarySection != null && !summarySection.isBlank()) ? summarySection : normalized;
+        int maxChars = props.getSummaryMaxChars() > 0 ? props.getSummaryMaxChars() : baseSummary.length();
+        String summary = baseSummary.length() > maxChars ? baseSummary.substring(0, maxChars) : baseSummary;
+
         return ResumeProfile.builder()
                 .rawText(normalized)
                 .skills(new ArrayList<>(skills))
@@ -71,8 +84,74 @@ public class ResumeParsingService {
         return StandardCharsets.UTF_8;
     }
 
+    private String extractSection(String text, List<String> headers) {
+        if (headers == null || headers.isEmpty() || text == null || text.isBlank()) {
+            return null;
+        }
+        // Build a simple regex to capture content after a header until the next header or end
+        String alternation = headers.stream()
+                .filter(h -> h != null && !h.isBlank())
+                .map(java.util.regex.Pattern::quote)
+                .collect(Collectors.joining("|"));
+        if (alternation.isBlank()) return null;
+        String pattern = "(?ims)^(?:" + alternation + ")\\b[\\s:：-]*\\n?(.*?)(?=^(?:" + alternation + ")\\b|\\z)";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(pattern).matcher(text);
+        if (m.find()) {
+            return m.group(1).trim();
+        }
+        return null;
+    }
+
+    private List<String> splitSkills(String section) {
+        String sep = props.getSkillsSeparatorRegex();
+        if (sep == null || sep.isBlank()) return List.of(section.trim());
+        return java.util.Arrays.stream(section.split(sep))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .toList();
+    }
+
+    private List<String> extractBullets(String section, int maxLines) {
+        List<String> bullets = new ArrayList<>();
+        List<String> prefixes = props.getBulletPrefixes();
+        for (String line : section.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+            boolean isBullet = false;
+            if (prefixes != null && !prefixes.isEmpty()) {
+                for (String p : prefixes) {
+                    if (p != null && !p.isEmpty() && trimmed.startsWith(p + " ")) { isBullet = true; break; }
+                }
+            }
+            if (isBullet || !trimmed.isEmpty()) {
+                bullets.add(trimmed);
+            }
+            if (maxLines > 0 && bullets.size() >= maxLines) break;
+        }
+        return bullets;
+    }
+
+    private List<String> topFrequentTokens(String text, int limit) {
+        List<String> tokens = tokenize(text);
+        java.util.Set<String> stop = new java.util.HashSet<>(props.getStopWords() == null ? List.of() : props.getStopWords());
+        Map<String, Long> freq = tokens.stream()
+                .filter(token -> token.length() > 2)
+                .filter(token -> !stop.contains(token))
+                .collect(Collectors.groupingBy(token -> token, Collectors.counting()));
+        return freq.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue(Comparator.reverseOrder()))
+                .limit(limit > 0 ? limit : Long.MAX_VALUE)
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
     private List<String> tokenize(String text) {
-        return List.of(text.toLowerCase(Locale.ROOT).split("[^a-zA-Z0-9+一-龥]+"));
+        String regex = props.getTokenSplitRegex();
+        if (regex == null || regex.isBlank()) {
+            regex = "\\s+"; // fallback to whitespace if not configured
+        }
+        return List.of(text.toLowerCase(Locale.ROOT).split(regex));
     }
 
     private String normalizeWhitespace(String text) {
@@ -87,7 +166,7 @@ public class ResumeParsingService {
             if (!trimmed.isEmpty()) {
                 distinct.add(trimmed);
             }
-            if (distinct.size() >= maxLines) {
+            if (maxLines > 0 && distinct.size() >= maxLines) {
                 break;
             }
         }

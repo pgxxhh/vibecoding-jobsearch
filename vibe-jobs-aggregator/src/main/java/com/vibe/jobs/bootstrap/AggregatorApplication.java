@@ -4,6 +4,7 @@ package com.vibe.jobs.bootstrap;
 import com.vibe.jobs.auth.config.EmailAuthProperties;
 import com.vibe.jobs.crawler.infrastructure.config.CrawlerBlueprintGenerationExecutorProperties;
 import com.vibe.jobs.resume.config.ResumeStorageProperties;
+import com.vibe.jobs.resume.config.ResumeParsingProperties;
 import com.vibe.jobs.shared.infrastructure.config.IngestionProperties;
 import com.vibe.jobs.shared.infrastructure.config.JobContentEnrichmentExecutorProperties;
 import com.vibe.jobs.shared.infrastructure.config.JobDetailEnrichmentRetryProperties;
@@ -27,7 +28,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         JobContentEnrichmentExecutorProperties.class,
         CrawlerBlueprintGenerationExecutorProperties.class,
         JobDetailEnrichmentRetryProperties.class,
-        ResumeStorageProperties.class})
+        ResumeStorageProperties.class,
+        ResumeParsingProperties.class})
 public class AggregatorApplication {
 
     private static final Logger log = LoggerFactory.getLogger(AggregatorApplication.class);

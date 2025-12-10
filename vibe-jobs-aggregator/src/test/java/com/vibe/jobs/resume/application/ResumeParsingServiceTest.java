@@ -7,7 +7,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ResumeParsingServiceTest {
 
-    private final ResumeParsingService parsingService = new ResumeParsingService();
+    private final ResumeParsingService parsingService = buildService();
+
+    private ResumeParsingService buildService() {
+        var props = new com.vibe.jobs.resume.config.ResumeParsingProperties();
+        props.setSkillSectionHeaders(java.util.List.of("skills"));
+        props.setExperienceSectionHeaders(java.util.List.of("experience", "projects"));
+        props.setSummarySectionHeaders(java.util.List.of("summary"));
+        props.setBulletPrefixes(java.util.List.of("-", "*", "•"));
+        props.setStopWords(java.util.List.of("and", "with", "the", "a"));
+        props.setTokenSplitRegex("[^\\p{L}\\p{N}+]+");
+        props.setSkillsSeparatorRegex("[,;、/|]\\s*");
+        props.setTopTokenLimit(12);
+        props.setExperiencesMaxLines(6);
+        props.setSummaryMaxChars(240);
+        props.setEnableFrequencyFallback(true);
+        return new ResumeParsingService(props);
+    }
 
     @Test
     void parseExtractsSkillsAndSummary() {

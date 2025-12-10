@@ -54,6 +54,19 @@ resume:
     prefix: ${RESUME_STORAGE_PREFIX:resumes}
     max-file-size-bytes: ${RESUME_STORAGE_MAX_BYTES:5242880}
     allowed-content-types: ${RESUME_ALLOWED_TYPES:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain}
+  parsing:
+    # section headers are configurable to avoid hardcoding
+    skill-section-headers: ${RESUME_PARSING_SKILL_HEADERS:skills,skill,技术技能,技能}
+    experience-section-headers: ${RESUME_PARSING_EXPERIENCE_HEADERS:experience,work experience,employment,projects,project experience,工作经历,项目经验,项目经历}
+    summary-section-headers: ${RESUME_PARSING_SUMMARY_HEADERS:summary,professional summary,简介,自我评价,个人简介,个人概述}
+    bullet-prefixes: ${RESUME_PARSING_BULLETS:-,*,•,·,—,–}
+    stop-words: ${RESUME_PARSING_STOP_WORDS:and,with,the,a,an,for,of,in,on,at,to,是,了,和,与,及,的}
+    token-split-regex: ${RESUME_PARSING_TOKEN_SPLIT:[^\p{L}\p{N}+]+}
+    skills-separator-regex: ${RESUME_PARSING_SKILLS_SEP:[,;、/|]\s*}
+    top-token-limit: ${RESUME_PARSING_TOP_TOKEN_LIMIT:12}
+    experiences-max-lines: ${RESUME_PARSING_EXPERIENCE_MAX_LINES:6}
+    summary-max-chars: ${RESUME_PARSING_SUMMARY_MAX_CHARS:240}
+    enable-frequency-fallback: ${RESUME_PARSING_ENABLE_FREQ_FALLBACK:true}
 
 # 职位详情增强功能配置（定时任务相关，当前功能已集成到爬虫中）
 jobs:
