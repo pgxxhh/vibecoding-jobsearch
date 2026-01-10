@@ -30,7 +30,7 @@ function SubscriptionModal({ visible, onConfirm, onCancel, params }: { visible: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
-      <Card className="relative w-full max-w-lg border-white/60 bg-white/95 p-8 shadow-brand-lg">
+      <Card className="relative w-full max-w-lg border-black/10 bg-white p-8 shadow-none">
         <button
           className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
           onClick={onCancel}
@@ -79,7 +79,7 @@ function FilterDrawer({
   if (!visible) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 backdrop-blur-sm px-4">
-      <Card className="relative w-full max-w-md border-white/60 bg-white/95 p-6 shadow-brand-lg">
+      <Card className="relative w-full max-w-md border-black/10 bg-white p-6 shadow-none">
         <button
           className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
           onClick={onClose}
@@ -146,24 +146,22 @@ function HeroSection({
   const { t } = useI18n();
 
   return (
-    <section className="relative overflow-hidden rounded-[2.75rem] border border-white/50 bg-white/80 p-8 shadow-brand-lg backdrop-blur">
-      <img src="/assets/orb-rose.svg" alt="" className="pointer-events-none absolute -left-20 top-[-40%] h-96 w-96 opacity-40" />
-      <img src="/assets/orb-purple.svg" alt="" className="pointer-events-none absolute -right-16 bottom-[-30%] h-96 w-96 opacity-30" />
-      <div className="relative grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
-          <Badge tone="brand" className="w-fit">
+    <section className="rounded-[2.5rem] border border-black/10 bg-white px-8 py-10">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-end">
+        <div className="space-y-4">
+          <Badge tone="brand" className="w-fit bg-black text-white">
             {t('hero.badge')}
           </Badge>
-          <div className="space-y-4">
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+          <div className="space-y-3">
+            <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
               {t('hero.title')}
             </h1>
             <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
           </div>
         </div>
-        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">
+        <Card className="border-black/10 bg-white p-5 shadow-none">
           <form className="flex flex-col gap-4" onSubmit={onSearch}>
-            <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Input
                 placeholder={t('search.keywordPlaceholder')}
                 value={q}
@@ -179,13 +177,13 @@ function HeroSection({
               <Button type="submit" disabled={isSearching}>
                 {isSearching ? t('search.loading') : t('actions.search')}
               </Button>
-              <Button variant="outline" type="button" onClick={onReset}>
+              <Button variant="outline" type="button" onClick={onReset} className="border-black/10 text-gray-700">
                 {t('actions.reset')}
               </Button>
-              <Button variant="ghost" type="button" onClick={onShowFilter} className="flex items-center gap-2">
+              <Button variant="ghost" type="button" onClick={onShowFilter} className="flex items-center gap-2 text-gray-700">
                 {t('filters.open')}
                 {activeFilterCount > 0 && (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-xs font-medium text-white">
                     {activeFilterCount}
                   </span>
                 )}
@@ -487,7 +485,7 @@ export default function Page() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
+        <Card className="relative border-black/10 bg-white p-6 shadow-none lg:max-h-[70vh] lg:overflow-hidden">
           <div className="flex items-center justify-between gap-3">
             {/* 已移除列表结果数量显示 */}
           </div>
@@ -517,7 +515,7 @@ export default function Page() {
           )}
           
           <div
-            className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]"
+            className="mt-4 space-y-2 overflow-y-auto pr-1 lg:max-h-[52vh]"
             ref={listRef}
             onScroll={debouncedHandleScroll}
             onTouchStart={handleTouchStart}
@@ -532,7 +530,7 @@ export default function Page() {
           >
             {isInitialLoading &&
               skeletonPlaceholders.map((_, index) => (
-                <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white/70 p-4">
+                <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white p-4 shadow-none">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="mt-3 h-3 w-1/2" />
                   <div className="mt-4 flex gap-2">
@@ -557,13 +555,13 @@ export default function Page() {
                 >
                   <JobCardNew
                     job={job}
-                    className={active ? 'border-brand-500 shadow-brand-lg ring-2 ring-brand-200' : 'hover:border-brand-200/70'}
+                    className={active ? 'border-black shadow-none ring-1 ring-black/10' : 'hover:border-black/20'}
                   />
                 </div>
               );
             })}
             {!isInitialLoading && jobs.length === 0 && (
-              <div className="flex h-40 items-center justify-center rounded-3xl border border-dashed border-black/10 bg-white/70 text-sm text-gray-400">
+              <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-black/10 bg-white text-sm text-gray-400">
                 {t('search.results', { count: 0 })}
               </div>
             )}
@@ -581,7 +579,7 @@ export default function Page() {
           </div>
         </Card>
 
-        <Card className="hidden border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
+        <Card className="hidden border-black/10 bg-white p-6 shadow-none lg:block lg:max-h-[70vh] lg:overflow-y-auto">
           <JobDetail
             job={combinedSelectedJob}
             isLoading={isDetailLoading}

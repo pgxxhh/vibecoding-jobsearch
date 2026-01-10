@@ -22,12 +22,12 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
   const normalizedTags = normalizeStringList(job.tags).slice(0, 8);
 
   return (
-    <Card className={cn('p-4 transition will-change-transform hover:shadow-brand-lg', className)}>
+    <Card className={cn('rounded-2xl border border-black/10 bg-white p-4 shadow-none transition', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
           <div className="space-y-1">
             <h3 className="text-base font-semibold leading-tight text-slate-900">
-              <Link href={job.url} target="_blank" className="hover:underline decoration-brand-600 underline-offset-4">
+              <Link href={job.url} target="_blank" className="hover:underline decoration-black underline-offset-4">
                 {job.title}
               </Link>
             </h3>

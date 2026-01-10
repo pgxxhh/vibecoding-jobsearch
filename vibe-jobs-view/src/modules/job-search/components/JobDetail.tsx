@@ -102,8 +102,8 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   if (!job) {
     return (
       <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-3 text-center">
-        <img src="/assets/orb-purple.svg" alt="" className="h-16 w-16 opacity-30" />
-        <p className="max-w-xs text-sm text-gray-400">{labels.empty}</p>
+        <div className="h-10 w-10 rounded-full border border-dashed border-black/10" aria-hidden />
+        <p className="max-w-xs text-sm text-gray-500">{labels.empty}</p>
       </div>
     );
   }
@@ -227,7 +227,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
       <Button
         variant="outline"
         onClick={() => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer')}
-        className="shadow-none"
+        className="border-black/10 text-gray-700 shadow-none"
         disabled={!job.url}
       >
         {labels.viewOriginal}

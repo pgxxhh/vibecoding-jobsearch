@@ -30,7 +30,7 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/30 bg-white/75 backdrop-blur transition">
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
         <div className="flex items-center gap-3">
           <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
@@ -45,7 +45,7 @@ export default function AppHeader() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-sm font-semibold text-white shadow-md transition hover:from-pink-400 hover:to-purple-400 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-black text-sm font-semibold text-white transition hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-black/10"
                 title={`已登录: ${user.email}`}
               >
                 <svg
@@ -63,7 +63,7 @@ export default function AppHeader() {
               </button>
               
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-black/10 bg-white py-2 shadow-sm">
                   <div className="border-b border-gray-100 px-4 py-3">
                     <p className="text-sm font-medium text-gray-900">已登录</p>
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -82,13 +82,13 @@ export default function AppHeader() {
             <>
               <Link
                 href="/login"
-                className="hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-pink-200 transition hover:from-pink-400 hover:to-purple-400 sm:inline"
+                className="hidden rounded-full border border-black/10 bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/90 sm:inline"
               >
                 登录 / 注册
               </Link>
               <Link
                 href="/login"
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-pink-500 text-pink-500 transition hover:bg-pink-50 sm:hidden"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/20 text-black transition hover:bg-black/5 sm:hidden"
                 title="登录 / 注册"
               >
                 <svg
