@@ -191,7 +191,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
             <ul className="space-y-1 text-sm leading-relaxed text-gray-700">
               {highlights.map((highlight) => (
                 <li key={highlight} className="flex items-start gap-2">
-                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-black/40" aria-hidden />
                   <span className="flex-1">{highlight}</span>
                 </li>
               ))}

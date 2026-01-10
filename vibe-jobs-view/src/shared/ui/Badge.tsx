@@ -8,7 +8,7 @@ type Props = React.HTMLAttributes<HTMLSpanElement> & {
 export default function Badge({ tone = 'default', className, children, ...rest }: Props) {
   const tones = {
     default: 'border-black/10 bg-white text-gray-700',
-    brand: 'border-brand-200/70 bg-brand-50 text-brand-700',
+    brand: 'border-black/10 bg-white text-gray-700',
     muted: 'border-black/5 bg-gray-50 text-gray-600',
   }[tone];
 

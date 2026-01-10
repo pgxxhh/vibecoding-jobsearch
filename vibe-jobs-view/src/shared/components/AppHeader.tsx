@@ -33,8 +33,9 @@ export default function AppHeader() {
     <header className="sticky top-0 z-40 border-b border-black/10 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
         <div className="flex items-center gap-3">
-          <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
-          <div className="hidden sm:flex sm:flex-col" aria-hidden="true" />
+          <Link href="/" className="text-lg font-semibold tracking-tight text-gray-900">
+            Elaine Jobs
+          </Link>
         </div>
         <div className="flex items-center gap-3">
           {loading ? (
@@ -45,7 +46,7 @@ export default function AppHeader() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-black text-sm font-semibold text-white transition hover:bg-black/90 focus:outline-none focus:ring-2 focus:ring-black/10"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/10 text-sm font-semibold text-gray-700 transition hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-black/10"
                 title={`已登录: ${user.email}`}
               >
                 <svg
@@ -82,13 +83,13 @@ export default function AppHeader() {
             <>
               <Link
                 href="/login"
-                className="hidden rounded-full border border-black/10 bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-black/90 sm:inline"
+                className="hidden rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-black/5 sm:inline"
               >
                 登录 / 注册
               </Link>
               <Link
                 href="/login"
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/20 text-black transition hover:bg-black/5 sm:hidden"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-black/20 text-gray-700 transition hover:bg-black/5 sm:hidden"
                 title="登录 / 注册"
               >
                 <svg

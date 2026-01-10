@@ -27,9 +27,9 @@ export default function Button({
     lg: 'h-12 px-5 text-base font-medium',
   }[size];
   const variants = {
-    primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-brand-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30',
-    outline: 'border border-black/10 bg-white hover:bg-black/5 text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15',
-    ghost: 'text-gray-700 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/10',
+    primary: 'bg-black text-white hover:bg-black/90 shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/10',
+    outline: 'border border-black/10 bg-white hover:bg-black/5 text-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/10',
+    ghost: 'text-gray-700 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/5',
   }[variant];
 
   return (
