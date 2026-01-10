@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Card, Badge } from '@/shared/ui';
+import { Badge } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
 import { RelativeTime } from '@/shared/components/TimeDisplay';
 import type { Job } from '@/modules/job-search/types';
@@ -22,7 +22,7 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
   const normalizedTags = normalizeStringList(job.tags).slice(0, 8);
 
   return (
-    <Card className={cn('rounded-2xl border border-black/10 bg-white p-4 shadow-none transition', className)}>
+    <div className={cn('py-4 transition hover:bg-black/5', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
           <div className="space-y-1">
@@ -51,6 +51,6 @@ export default function JobCardNew({ job, className }: { job: Job; className?: s
           className="mt-1 shrink-0 text-xs text-gray-500"
         />
       </div>
-    </Card>
+    </div>
   );
 }

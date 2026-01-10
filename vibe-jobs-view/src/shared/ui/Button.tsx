@@ -20,7 +20,7 @@ export default function Button({
   type,
   ...rest
 }: Props) {
-  const base = 'inline-flex items-center justify-center gap-2 rounded-2xl transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100';
+  const base = 'inline-flex items-center justify-center gap-2 rounded-full transition active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100';
   const sizes = {
     sm: 'h-8 px-3 text-sm',
     md: 'h-10 px-4 text-sm',

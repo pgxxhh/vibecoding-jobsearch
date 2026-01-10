@@ -5,7 +5,7 @@ import { useJobDetail } from '@/modules/job-search/hooks/useJobDetail';
 import { useJobList, type JobListFilters } from '@/modules/job-search/hooks/useJobList';
 import type { Job } from '@/modules/job-search/types';
 import { useI18n } from '@/shared/lib/i18n';
-import { Badge, Button, Card, Input, Select, Skeleton } from '@/shared/ui';
+import { Button, Card, Input, Select, Skeleton } from '@/shared/ui';
 import {
   useCallback,
   useEffect,
@@ -148,18 +148,13 @@ function HeroSection({
   return (
     <section className="rounded-[2.5rem] border border-black/10 bg-white px-8 py-10">
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-end">
-        <div className="space-y-4">
-          <Badge tone="default" className="w-fit">
-            {t('hero.badge')}
-          </Badge>
-          <div className="space-y-3">
-            <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-              {t('hero.title')}
-            </h1>
-            <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
-          </div>
+        <div className="space-y-3">
+          <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+            {t('hero.title')}
+          </h1>
+          <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
         </div>
-        <Card className="border-black/10 bg-white p-5 shadow-none">
+        <Card className="border-black/10 bg-white p-6 shadow-none">
           <form className="flex flex-col gap-4" onSubmit={onSearch}>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <Input
@@ -515,7 +510,7 @@ export default function Page() {
           )}
           
           <div
-            className="mt-4 space-y-2 overflow-y-auto pr-1 lg:max-h-[52vh]"
+            className="mt-4 divide-y divide-black/5 overflow-y-auto pr-1 lg:max-h-[52vh]"
             ref={listRef}
             onScroll={debouncedHandleScroll}
             onTouchStart={handleTouchStart}
@@ -530,7 +525,7 @@ export default function Page() {
           >
             {isInitialLoading &&
               skeletonPlaceholders.map((_, index) => (
-                <Card key={`skeleton-${index}`} className="border-dashed border-black/5 bg-white p-4 shadow-none">
+                <div key={`skeleton-${index}`} className="px-3 py-4">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="mt-3 h-3 w-1/2" />
                   <div className="mt-4 flex gap-2">
@@ -538,7 +533,7 @@ export default function Page() {
                     <Skeleton className="h-3 w-20" />
                     <Skeleton className="h-3 w-12" />
                   </div>
-                </Card>
+                </div>
               ))}
             {jobs.map((job) => {
               const active = selectedJob?.id === job.id;
@@ -555,7 +550,7 @@ export default function Page() {
                 >
                   <JobCardNew
                     job={job}
-                    className={active ? 'border-black shadow-none ring-1 ring-black/10' : 'hover:border-black/20'}
+                    className={active ? 'rounded-2xl bg-black/5 px-3' : 'px-3'}
                   />
                 </div>
               );

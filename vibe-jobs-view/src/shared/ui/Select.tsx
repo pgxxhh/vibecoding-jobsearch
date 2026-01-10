@@ -6,7 +6,7 @@ export default function Select(props: React.SelectHTMLAttributes<HTMLSelectEleme
   return (
     <select
       className={cn(
-        'h-10 w-full rounded-2xl border border-black/10 bg-white px-3 text-sm focus:outline-none focus:ring-4 focus:ring-black/10',
+        'h-10 w-full rounded-full border border-black/10 bg-white px-4 text-sm focus:outline-none focus:ring-4 focus:ring-black/10',
         className,
       )}
       {...rest}
