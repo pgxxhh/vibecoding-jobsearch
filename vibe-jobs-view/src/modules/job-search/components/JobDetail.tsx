@@ -129,7 +129,10 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   const highlights = shouldShowEnrichment ? normalizeStringList(job.highlights) : [];
 
   const shouldShowHighlightsSection = isLoading || (shouldShowEnrichment && highlights.length > 0);
-  const handleOpenPosting = () => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer');
+  const handleOpenPosting = () => {
+    if (!job.url || typeof window === 'undefined') return;
+    window.open(job.url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="space-y-6">
@@ -257,9 +260,19 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           </div>
         )}
       </div>
-      <Button variant="ghost" onClick={handleOpenPosting} className="w-fit text-sm text-gray-500" disabled={!job.url}>
-        {labels.viewOriginal}
-      </Button>
+      <div className="border-t border-slate-100 pt-4">
+        <Button
+          variant="outline"
+          onClick={handleOpenPosting}
+          className="group inline-flex justify-between border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50"
+          disabled={!job.url}
+        >
+          <span>View original job posting</span>
+          <span aria-hidden className="text-base text-slate-500 transition-transform group-hover:-translate-y-[1px] group-hover:translate-x-[1px]">
+            ↗
+          </span>
+        </Button>
+      </div>
     </div>
   );
 }
