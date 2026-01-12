@@ -144,55 +144,90 @@ function HeroSection({
   isSearching: boolean;
 }) {
   const { t } = useI18n();
+  const quickFilters = [
+    t('hero.quickFilters.engineering'),
+    t('hero.quickFilters.design'),
+    t('hero.quickFilters.product'),
+    t('hero.quickFilters.sales'),
+  ];
 
   return (
-    <section className="relative overflow-hidden rounded-[2.75rem] border border-white/50 bg-white/80 p-8 shadow-brand-lg backdrop-blur">
+    <section className="relative overflow-hidden rounded-[2.75rem] border border-white/50 bg-white/80 p-8 shadow-brand-lg backdrop-blur sm:p-10">
       <img src="/assets/orb-rose.svg" alt="" className="pointer-events-none absolute -left-20 top-[-40%] h-96 w-96 opacity-40" />
       <img src="/assets/orb-purple.svg" alt="" className="pointer-events-none absolute -right-16 bottom-[-30%] h-96 w-96 opacity-30" />
-      <div className="relative grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-5">
+      <div className="relative space-y-8">
+        <div className="space-y-4">
           <Badge tone="brand" className="w-fit">
             {t('hero.badge')}
           </Badge>
           <div className="space-y-4">
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-              {t('hero.title')}
+            <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              {t('hero.title')}{' '}
+              <span className="text-brand-600">{t('hero.titleAccent')}</span>
             </h1>
-            <p className="max-w-xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
+            <p className="max-w-2xl text-base text-gray-600 sm:text-lg">{t('hero.subtitle')}</p>
           </div>
         </div>
-        <Card className="border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm">
-          <form className="flex flex-col gap-4" onSubmit={onSearch}>
-            <div className="grid gap-3">
+        <form className="space-y-4" onSubmit={onSearch}>
+          <div className="flex flex-col gap-3 rounded-[2.5rem] border border-black/5 bg-white/90 p-3 shadow-brand-sm sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-center gap-2 rounded-2xl bg-white px-3 py-2">
+              <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M12.9 14.32a8 8 0 111.414-1.414l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387zM8 14A6 6 0 108 2a6 6 0 000 12z" />
+              </svg>
               <Input
+                className="h-11 border-0 bg-transparent px-0 text-sm focus:ring-0"
                 placeholder={t('search.keywordPlaceholder')}
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
               />
+            </div>
+            <div className="hidden h-6 w-px bg-black/10 sm:block" />
+            <div className="flex flex-1 items-center gap-2 rounded-2xl bg-white px-3 py-2">
+              <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M10 2a6 6 0 00-6 6c0 4.418 6 10 6 10s6-5.582 6-10a6 6 0 00-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z" />
+              </svg>
               <Input
+                className="h-11 border-0 bg-transparent px-0 text-sm focus:ring-0"
                 placeholder={t('search.locationPlaceholder')}
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={isSearching}>
-                {isSearching ? t('search.loading') : t('actions.search')}
-              </Button>
-              <Button variant="outline" type="button" onClick={onReset}>
-                {t('actions.reset')}
-              </Button>
-              <Button variant="ghost" type="button" onClick={onShowFilter} className="flex items-center gap-2">
-                {t('filters.open')}
-                {activeFilterCount > 0 && (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
+            <Button type="submit" size="lg" className="w-full rounded-2xl sm:w-auto sm:min-w-[140px]" disabled={isSearching}>
+              {isSearching ? t('search.loading') : t('actions.search')}
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="outline" size="sm" type="button" onClick={onShowFilter} className="rounded-full">
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M3 5a1 1 0 011-1h12a1 1 0 01.8 1.6l-4.8 6.4V16a1 1 0 01-1.447.894l-2-1A1 1 0 019 15.618v-3.618L4.2 5.6A1 1 0 013 5z" />
+                </svg>
+                {t('filters.more')}
+              </span>
+              {activeFilterCount > 0 && (
+                <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-xs font-medium text-brand-700">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={onReset} className="rounded-full">
+              {t('actions.reset')}
+            </Button>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <span className="font-medium text-gray-500">{t('hero.quickFilters.title')}</span>
+              {quickFilters.map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className="rounded-full border border-black/5 bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-brand-xs transition hover:border-brand-200/70 hover:text-gray-800"
+                >
+                  {filter}
+                </button>
+              ))}
             </div>
-          </form>
-        </Card>
+          </div>
+        </form>
       </div>
     </section>
   );
@@ -250,6 +285,8 @@ export default function Page() {
       retry: t('actions.retry'),
       refreshing: t('jobDetail.refreshing'),
       viewOriginal: t('jobDetail.viewOriginal'),
+      quickApply: t('actions.quickApply'),
+      saveJob: t('actions.saveJob'),
       enrichmentPending: t('jobDetail.enrichmentPending'),
       enrichmentFailed: t('jobDetail.enrichmentFailed'),
     }),
@@ -487,9 +524,12 @@ export default function Page() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-        <Card className="border-white/60 bg-white/90 p-6 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden relative">
-          <div className="flex items-center justify-between gap-3">
-            {/* 已移除列表结果数量显示 */}
+        <Card className="relative border-black/5 bg-white/90 p-5 shadow-brand-lg backdrop-blur-sm lg:max-h-[70vh] lg:overflow-hidden">
+          <div className="flex items-center justify-between border-b border-black/5 pb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+            <span>{t('search.results', { count: jobs.length })}</span>
+            <button type="button" className="text-brand-600 transition hover:text-brand-700">
+              {t('search.sortNewest')}
+            </button>
           </div>
           
           {/* 下拉刷新指示器 */}
@@ -517,7 +557,7 @@ export default function Page() {
           )}
           
           <div
-            className="mt-4 space-y-3 overflow-y-auto pr-1 lg:max-h-[52vh]"
+            className="mt-4 space-y-4 overflow-y-auto pr-1 lg:max-h-[52vh]"
             ref={listRef}
             onScroll={debouncedHandleScroll}
             onTouchStart={handleTouchStart}
@@ -574,14 +614,14 @@ export default function Page() {
               </div>
             )}
             {!hasMore && jobs.length > 0 && (
-              <div className="text-center text-gray-400 mt-4">没有更多数据了</div>
+              <div className="mt-4 text-center text-gray-400">没有更多数据了</div>
             )}
             {/* Intersection Observer 目标元素 */}
             <div ref={loadMoreRef} className="h-1 w-full" />
           </div>
         </Card>
 
-        <Card className="hidden border-white/60 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
+        <Card className="hidden border-black/5 bg-white/95 p-6 shadow-brand-lg backdrop-blur-sm lg:block lg:max-h-[70vh] lg:overflow-y-auto">
           <JobDetail
             job={combinedSelectedJob}
             isLoading={isDetailLoading}

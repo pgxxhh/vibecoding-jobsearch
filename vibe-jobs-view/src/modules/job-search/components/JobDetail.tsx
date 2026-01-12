@@ -15,6 +15,8 @@ type Labels = {
   retry: string;
   refreshing: string;
   viewOriginal: string;
+  quickApply: string;
+  saveJob: string;
   enrichmentPending: string;
   enrichmentFailed: string;
 };
@@ -127,19 +129,50 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
   const highlights = shouldShowEnrichment ? normalizeStringList(job.highlights) : [];
 
   const shouldShowHighlightsSection = isLoading || (shouldShowEnrichment && highlights.length > 0);
+  const handleOpenPosting = () => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer');
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {job.level && (
+            <Badge tone="brand" className="uppercase tracking-wide">
+              {job.level}
+            </Badge>
+          )}
+        </div>
         <h2 className="text-2xl font-semibold text-slate-900">{job.title}</h2>
-        <div className="text-sm text-gray-600">
-          {job.company} · {job.location}
-          {job.level ? ` · ${job.level}` : ''}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+          <span className="inline-flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-600">
+              {job.company?.charAt(0) ?? 'C'}
+            </span>
+            {job.company}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 2a6 6 0 00-6 6c0 4.418 6 10 6 10s6-5.582 6-10a6 6 0 00-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+            {job.location}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v2a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 00-1-1H6zm10 8H4a2 2 0 00-2 2v2a2 2 0 002 2h12a2 2 0 002-2v-2a2 2 0 00-2-2z" />
+            </svg>
+            <TimeDisplay utcTime={job.postedAt} format="DATETIME" placeholder="--" />
+          </span>
+          {isRefreshing && !isLoading && <span className="text-xs text-gray-400">{labels.refreshing}</span>}
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <TimeDisplay utcTime={job.postedAt} format="DATETIME" placeholder="--" />
-          {isRefreshing && !isLoading && <span>{labels.refreshing}</span>}
+        {/*
+        <div className="flex flex-wrap gap-3">
+          <Button size="lg" onClick={handleOpenPosting} disabled={!job.url} className="flex-1 sm:flex-none">
+            {labels.quickApply}
+          </Button>
+          <Button variant="outline" size="lg" type="button" className="flex-1 sm:flex-none">
+            {labels.saveJob}
+          </Button>
         </div>
+        */}
       </div>
       {(shouldShowEnrichment || isLoading) && (
         <div className="space-y-2">
@@ -224,12 +257,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           </div>
         )}
       </div>
-      <Button
-        variant="outline"
-        onClick={() => job.url && typeof window !== 'undefined' && window.open(job.url, '_blank', 'noopener,noreferrer')}
-        className="shadow-none"
-        disabled={!job.url}
-      >
+      <Button variant="ghost" onClick={handleOpenPosting} className="w-fit text-sm text-gray-500" disabled={!job.url}>
         {labels.viewOriginal}
       </Button>
     </div>
