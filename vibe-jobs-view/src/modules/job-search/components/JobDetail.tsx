@@ -163,6 +163,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
           </span>
           {isRefreshing && !isLoading && <span className="text-xs text-gray-400">{labels.refreshing}</span>}
         </div>
+        {/*
         <div className="flex flex-wrap gap-3">
           <Button size="lg" onClick={handleOpenPosting} disabled={!job.url} className="flex-1 sm:flex-none">
             {labels.quickApply}
@@ -171,6 +172,7 @@ export default function JobDetail({ job, isLoading, isError, isRefreshing, onRet
             {labels.saveJob}
           </Button>
         </div>
+        */}
       </div>
       {(shouldShowEnrichment || isLoading) && (
         <div className="space-y-2">
