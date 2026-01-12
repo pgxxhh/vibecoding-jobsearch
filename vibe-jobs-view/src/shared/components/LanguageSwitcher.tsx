@@ -7,10 +7,10 @@ export default function LanguageSwitcher() {
   const { language, setLanguage, t } = useI18n();
 
   return (
-    <label className="flex items-center gap-2 text-sm text-gray-500">
+    <label className="flex items-center gap-2 text-sm text-gray-600">
       <span className="sr-only">{t('header.languageSwitcherLabel')}</span>
       <Select
-        className="w-[140px]"
+        className="h-9 w-[120px] rounded-full border-black/10 bg-white/90 text-xs text-gray-700"
         value={language}
         onChange={(event) => setLanguage(event.target.value as 'zh' | 'en')}
         aria-label={t('header.languageSwitcherLabel')}

@@ -3,12 +3,19 @@
 import LanguageSwitcher from '@/shared/components/LanguageSwitcher';
 import Link from 'next/link';
 import { useAuth } from '@/modules/auth/hooks/useAuth';
+import { useI18n } from '@/shared/lib/i18n';
 import { useState, useRef, useEffect } from 'react';
 
 export default function AppHeader() {
+  const { t } = useI18n();
   const { user, loading, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navItems = [
+    t('header.nav.findJobs'),
+    t('header.nav.companies'),
+    t('header.nav.salaries'),
+  ];
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -30,22 +37,46 @@ export default function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/30 bg-white/75 backdrop-blur transition">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-4">
+    <header className="sticky top-0 z-40 border-b border-white/40 bg-white/80 backdrop-blur transition">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-6 py-3">
         <div className="flex items-center gap-3">
-          <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-auto" />
-          <div className="hidden sm:flex sm:flex-col" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <img src="/assets/logo/vibe-jobs-logo.svg" alt="Elaine Jobs" className="h-10 w-10 rounded-2xl" />
+            <span className="text-base font-semibold text-slate-900">Elaine Jobs</span>
+          </div>
+          <nav className="ml-6 hidden items-center gap-6 text-sm font-medium text-gray-500 md:flex">
+            {navItems.map((item) => (
+              <span key={item} className="cursor-default transition hover:text-gray-800">
+                {item}
+              </span>
+            ))}
+          </nav>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-gray-500 transition hover:bg-gray-50 md:inline-flex"
+            aria-label="Notifications"
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M10 2a6 6 0 00-6 6v3.586L2.293 13.293a1 1 0 00.707 1.707h14a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6z" />
+              <path d="M8 16a2 2 0 004 0H8z" />
+            </svg>
+          </button>
           {loading ? (
             // Loading state
-            <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
+            <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200"></div>
           ) : user ? (
             // Logged in state - show user menu
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-sm font-semibold text-white shadow-md transition hover:from-pink-400 hover:to-purple-400 focus:outline-none focus:ring-2 focus:ring-pink-200"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-brand-600 to-purple-500 text-sm font-semibold text-white shadow-md transition hover:from-brand-500 hover:to-purple-400 focus:outline-none focus:ring-2 focus:ring-brand-200"
                 title={`已登录: ${user.email}`}
               >
                 <svg
@@ -63,7 +94,7 @@ export default function AppHeader() {
               </button>
               
               {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-gray-200 bg-white py-2 shadow-lg">
                   <div className="border-b border-gray-100 px-4 py-3">
                     <p className="text-sm font-medium text-gray-900">已登录</p>
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -82,14 +113,14 @@ export default function AppHeader() {
             <>
               <Link
                 href="/login"
-                className="hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-pink-200 transition hover:from-pink-400 hover:to-purple-400 sm:inline"
+                className="hidden rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 sm:inline"
               >
-                登录 / 注册
+                {t('header.signIn')}
               </Link>
               <Link
                 href="/login"
-                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-pink-500 text-pink-500 transition hover:bg-pink-50 sm:hidden"
-                title="登录 / 注册"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 text-gray-600 transition hover:bg-gray-50 sm:hidden"
+                title={t('header.signIn')}
               >
                 <svg
                   className="h-4 w-4"
