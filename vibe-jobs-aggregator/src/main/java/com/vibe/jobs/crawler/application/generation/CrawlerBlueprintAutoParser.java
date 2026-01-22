@@ -536,11 +536,11 @@ public class CrawlerBlueprintAutoParser {
                     String[] pair = part.split("=");
                     if (pair.length == 2) {
                         String key = pair[0].toLowerCase(Locale.ROOT);
-                        if (key.contains("page") || key.contains("p")) {
+                        if (isPageParameter(key)) {
                             return PagingStrategy.query(pair[0], 1, 1, null);
                         }
-                        if (key.contains("offset")) {
-                            return PagingStrategy.offset(pair[0], 0, 1, null);
+                        if (isOffsetParameter(key)) {
+                            return PagingStrategy.offset(pair[0], 1, 1, null);
                         }
                     }
                 }
@@ -549,6 +549,27 @@ public class CrawlerBlueprintAutoParser {
             log.info("Failed to parse paging URL: {}", e.getMessage());
         }
         return PagingStrategy.disabled();
+    }
+
+    private boolean isPageParameter(String key) {
+        if (key == null) {
+            return false;
+        }
+        String normalized = key.toLowerCase(Locale.ROOT);
+        return normalized.contains("page") || normalized.equals("p");
+    }
+
+    private boolean isOffsetParameter(String key) {
+        if (key == null) {
+            return false;
+        }
+        String normalized = key.toLowerCase(Locale.ROOT);
+        return normalized.contains("offset")
+                || normalized.contains("startrow")
+                || normalized.contains("rowstart")
+                || normalized.contains("startindex")
+                || normalized.equals("start")
+                || normalized.equals("from");
     }
 
     private String baseUrl(String entryUrl) {

@@ -1,5 +1,6 @@
 package com.vibe.jobs.crawler.application.generation;
 
+import com.vibe.jobs.crawler.domain.PagingStrategy;
 import com.vibe.jobs.crawler.domain.ParserProfile;
 import org.junit.jupiter.api.Test;
 
@@ -71,5 +72,8 @@ class CrawlerBlueprintAutoParserTest {
         assertThat(profile.fields().get("title").selector()).isEqualTo("tr.data-row > td.colTitle > span.jobTitle > a.jobTitle-link");
         assertThat(profile.fields().get("url").selector()).isEqualTo("tr.data-row > td.colTitle > span.jobTitle > a.jobTitle-link");
         assertThat(profile.fields().get("company").constant()).isEqualTo("SAP");
+
+        assertThat(result.pagingStrategy().mode()).isEqualTo(PagingStrategy.Mode.OFFSET);
+        assertThat(result.pagingStrategy().parameter()).isEqualTo("startrow");
     }
 }
