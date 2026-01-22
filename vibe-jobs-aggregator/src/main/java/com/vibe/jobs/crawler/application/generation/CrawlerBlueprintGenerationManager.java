@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.options.WaitUntilState;
 import com.vibe.jobs.crawler.domain.CrawlerBlueprintDraft;
 import com.vibe.jobs.crawler.domain.CrawlerBlueprintDraftRepository;
@@ -180,7 +181,10 @@ public class CrawlerBlueprintGenerationManager {
             report.put("metrics", validation.metrics());
             report.put("warnings", validation.warnings());
             report.put("sampleData", validation.samples());
-            report.put("snapshot", Map.of("url", snapshot.get("finalUrl")));
+            report.put("snapshot", Map.of(
+                    "url", snapshot.get("finalUrl"),
+                    "screenshot", snapshot.get("screenshot")
+            ));
 
             String reportJson = writeJson(report);
 
@@ -188,7 +192,9 @@ public class CrawlerBlueprintGenerationManager {
                     .withDraftResult(configJson, reportJson, clock.instant(), operator);
             draftRepository.save(updatedDraft);
 
-            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), snapshot, validation.samples());
+            Map<String, Object> slimSnapshot = new LinkedHashMap<>(snapshot);
+            slimSnapshot.remove("screenshot");
+            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), slimSnapshot, validation.samples());
             taskRepository.save(succeeded);
             log.info("Blueprint generation succeeded for {}", blueprintCode);
         } catch (Exception ex) {
@@ -217,9 +223,7 @@ public class CrawlerBlueprintGenerationManager {
 
     private String fetchHtml(String entryUrl, String keywords, Map<String, Object> snapshot) throws Exception {
         return browserSessionManager.withPage(page -> {
-            Page.NavigateOptions navigateOptions = new Page.NavigateOptions();
-            navigateOptions.setWaitUntil(WaitUntilState.NETWORKIDLE);
-            page.navigate(entryUrl, navigateOptions);
+            navigateWithFallback(page, entryUrl);
             waitForSettled(page);
             if (keywords != null && !keywords.isBlank()) {
                 applySearch(page, keywords);
@@ -230,6 +234,24 @@ public class CrawlerBlueprintGenerationManager {
             snapshot.put("screenshot", Base64.getEncoder().encodeToString(screenshot));
             return page.content();
         });
+    }
+
+    private void navigateWithFallback(Page page, String entryUrl) {
+        Page.NavigateOptions strictOptions = new Page.NavigateOptions();
+        strictOptions.setWaitUntil(WaitUntilState.NETWORKIDLE);
+        strictOptions.setTimeout(30000);
+        try {
+            page.navigate(entryUrl, strictOptions);
+            return;
+        } catch (PlaywrightException ex) {
+            log.info("NETWORKIDLE navigation timed out for {} ({}); retrying with DOMCONTENTLOADED", entryUrl, ex.getMessage());
+        }
+
+        // Enterprise portals (e.g., SAP Career) keep long-lived network calls, so fall back to a looser wait state.
+        Page.NavigateOptions fallbackOptions = new Page.NavigateOptions();
+        fallbackOptions.setWaitUntil(WaitUntilState.DOMCONTENTLOADED);
+        fallbackOptions.setTimeout(30000);
+        page.navigate(entryUrl, fallbackOptions);
     }
 
     private void applySearch(Page page, String keywords) {

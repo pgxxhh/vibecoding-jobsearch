@@ -30,11 +30,13 @@ class JobIngestionFilterTest {
         properties.setRecentDays(30);
         queryService = mock(DataSourceQueryService.class);
         filter = new JobIngestionFilter(properties, queryService);
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
     }
 
     @Test
     void shouldUseCachedCompanyListWhenCacheIsValid() {
         when(queryService.getNormalizedCompanyNames()).thenReturn(Set.of("acme"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         FetchedJob job = createJob("Acme");
 
@@ -51,6 +53,7 @@ class JobIngestionFilterTest {
         when(queryService.getNormalizedCompanyNames())
                 .thenReturn(Set.of("acme"))
                 .thenReturn(Set.of("globex"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         filter.apply(List.of(createJob("Acme")));
 
@@ -67,6 +70,7 @@ class JobIngestionFilterTest {
         when(queryService.getNormalizedCompanyNames())
                 .thenReturn(Set.of("acme"))
                 .thenReturn(Set.of("globex"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         filter.apply(List.of(createJob("Acme")));
 
@@ -76,6 +80,24 @@ class JobIngestionFilterTest {
 
         assertThat(refreshed).hasSize(1);
         verify(queryService, times(2)).getNormalizedCompanyNames();
+    }
+
+    @Test
+    void allowsCrawlerSourcesWhenCompanyMissingFromWhitelist() {
+        when(queryService.getNormalizedCompanyNames()).thenReturn(Set.of("acme"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
+
+        Job job = Job.builder()
+                .source("crawler:sapcareers")
+                .externalId("sap-1")
+                .title("SAP Project Lead")
+                .company("sap")
+                .postedAt(Instant.now())
+                .build();
+
+        List<FetchedJob> jobs = filter.apply(List.of(FetchedJob.of(job, "")));
+
+        assertThat(jobs).hasSize(1);
     }
 
     private FetchedJob createJob(String company) {
@@ -97,4 +119,3 @@ class JobIngestionFilterTest {
         reference.set(instant);
     }
 }
-
