@@ -114,13 +114,7 @@ public class ParserField {
                         .orElse(null);
 
                 if (rawValue != null && "href".equals(attribute)) {
-                    if (!rawValue.startsWith("http://") && !rawValue.startsWith("https://")) {
-                        String resolvedBaseUrl = !baseUrl.isBlank() ? baseUrl : extractBaseUrl(element);
-                        if (resolvedBaseUrl != null) {
-                            String separator = resolvedBaseUrl.endsWith("/") || rawValue.startsWith("/") ? "" : "/";
-                            yield resolvedBaseUrl + separator + (rawValue.startsWith("/") ? rawValue.substring(1) : rawValue);
-                        }
-                    }
+                    rawValue = normalizeUrl(rawValue, element);
                 }
                 yield rawValue;
             }
@@ -148,6 +142,23 @@ public class ParserField {
                 yield textValue;
             }
         };
+    }
+
+    private String normalizeUrl(String rawValue, Element element) {
+        if (rawValue.startsWith("http://") || rawValue.startsWith("https://")) {
+            return rawValue;
+        }
+        String resolvedBaseUrl = !baseUrl.isBlank() ? baseUrl : extractBaseUrl(element);
+        if (resolvedBaseUrl == null || resolvedBaseUrl.isBlank()) {
+            return rawValue;
+        }
+        boolean baseEndsWithSlash = resolvedBaseUrl.endsWith("/");
+        boolean valueStartsWithSlash = rawValue.startsWith("/");
+        StringBuilder builder = new StringBuilder();
+        builder.append(baseEndsWithSlash ? resolvedBaseUrl.substring(0, resolvedBaseUrl.length() - 1) : resolvedBaseUrl);
+        builder.append("/");
+        builder.append(valueStartsWithSlash ? rawValue.substring(1) : rawValue);
+        return builder.toString();
     }
 
     private List<Element> select(Element element) {

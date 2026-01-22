@@ -84,6 +84,7 @@ public class CrawlerBlueprintAutoParser {
             throw new IllegalStateException("Unable to determine repeating job element");
         }
         String listSelector = safeCssSelector(listElement)
+                .map(this::simplifySelector)
                 .orElseThrow(() -> new IllegalStateException("Unable to build CSS selector for job list element"));
 
         Map<String, ParserField> fields = buildFields(listElement, entryUrl);
@@ -111,7 +112,7 @@ public class CrawlerBlueprintAutoParser {
         Map<String, ParserField> fields = new LinkedHashMap<>();
         Element anchor = listElement.selectFirst("a[href]");
         if (anchor != null) {
-            String relativeAnchor = relativeSelector(listElement, anchor);
+            String relativeAnchor = cleanFieldSelector(relativeSelector(listElement, anchor));
             fields.put("title", new ParserField(
                     "title",
                     ParserFieldType.TEXT,
@@ -147,7 +148,7 @@ public class CrawlerBlueprintAutoParser {
             fields.put("company", new ParserField(
                     "company",
                     ParserFieldType.TEXT,
-                    relativeSelector(listElement, company),
+                    cleanFieldSelector(relativeSelector(listElement, company)),
                     null,
                     null,
                     null,
@@ -167,7 +168,7 @@ public class CrawlerBlueprintAutoParser {
             fields.put("location", new ParserField(
                     "location",
                     ParserFieldType.TEXT,
-                    relativeSelector(listElement, location),
+                    cleanFieldSelector(relativeSelector(listElement, location)),
                     null,
                     null,
                     null,
@@ -196,7 +197,7 @@ public class CrawlerBlueprintAutoParser {
             fields.put("url", new ParserField(
                     "url",
                     ParserFieldType.ATTRIBUTE,
-                    relativeSelector(listElement, anchor),
+                    cleanFieldSelector(relativeSelector(listElement, anchor)),
                     "href",
                     null,
                     null,
@@ -207,6 +208,32 @@ public class CrawlerBlueprintAutoParser {
         }
 
         return fields;
+    }
+
+    private String simplifySelector(String selector) {
+        if (selector == null) {
+            return "";
+        }
+        String simplified = selector.trim();
+        simplified = simplified.replaceFirst("^html[^>]*>\\s*", "");
+        simplified = simplified.replaceFirst("^body[^>]*>\\s*", "");
+        return simplified.isBlank() ? selector : simplified;
+    }
+
+    private String cleanFieldSelector(String selector) {
+        if (selector == null || selector.isBlank()) {
+            return selector;
+        }
+        String cleaned = selector;
+        cleaned = cleaned.replaceFirst("^html[^>]*>\\s*", "");
+        cleaned = cleaned.replaceFirst("^body[^>]*>\\s*", "");
+        cleaned = cleaned.replaceAll("tr\\.data-row:nth-child\\(\\d+\\)", "tr.data-row");
+        cleaned = cleaned.replaceAll(":nth-child\\(\\d+\\)", "");
+        cleaned = cleaned.replaceAll(":first-child", "");
+        cleaned = cleaned.replaceAll(":last-child", "");
+        cleaned = cleaned.replaceAll(":nth-of-type\\(\\d+\\)", "");
+        cleaned = cleaned.replaceAll(":first-of-type", "");
+        return cleaned.trim();
     }
 
     private Optional<String> inferCompanyConstant(Element listElement, String entryUrl) {

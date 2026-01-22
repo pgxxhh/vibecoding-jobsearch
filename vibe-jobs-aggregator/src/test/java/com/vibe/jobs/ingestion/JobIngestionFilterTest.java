@@ -30,11 +30,13 @@ class JobIngestionFilterTest {
         properties.setRecentDays(30);
         queryService = mock(DataSourceQueryService.class);
         filter = new JobIngestionFilter(properties, queryService);
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
     }
 
     @Test
     void shouldUseCachedCompanyListWhenCacheIsValid() {
         when(queryService.getNormalizedCompanyNames()).thenReturn(Set.of("acme"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         FetchedJob job = createJob("Acme");
 
@@ -51,6 +53,7 @@ class JobIngestionFilterTest {
         when(queryService.getNormalizedCompanyNames())
                 .thenReturn(Set.of("acme"))
                 .thenReturn(Set.of("globex"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         filter.apply(List.of(createJob("Acme")));
 
@@ -67,6 +70,7 @@ class JobIngestionFilterTest {
         when(queryService.getNormalizedCompanyNames())
                 .thenReturn(Set.of("acme"))
                 .thenReturn(Set.of("globex"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         filter.apply(List.of(createJob("Acme")));
 
@@ -81,6 +85,7 @@ class JobIngestionFilterTest {
     @Test
     void allowsCrawlerSourcesWhenCompanyMissingFromWhitelist() {
         when(queryService.getNormalizedCompanyNames()).thenReturn(Set.of("acme"));
+        when(queryService.getNormalizedCompaniesBySource()).thenReturn(java.util.Map.of());
 
         Job job = Job.builder()
                 .source("crawler:sapcareers")

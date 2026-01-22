@@ -4,7 +4,10 @@ import com.vibe.jobs.datasource.domain.JobDataSource;
 import com.vibe.jobs.datasource.domain.JobDataSourceRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -53,5 +56,29 @@ public class DataSourceQueryService {
                     .forEach(names::add);
         }
         return names;
+    }
+
+    public Map<String, Set<String>> getNormalizedCompaniesBySource() {
+        Map<String, Set<String>> mapping = new HashMap<>();
+        for (JobDataSource source : repository.findAllEnabled()) {
+            if (source.getCompanies().isEmpty()) {
+                continue;
+            }
+            Set<String> companies = new HashSet<>();
+            for (JobDataSource.DataSourceCompany company : source.getCompanies()) {
+                if (company == null || !company.enabled()) {
+                    continue;
+                }
+                String name = company.displayName().isBlank() ? company.reference() : company.displayName();
+                if (name == null || name.isBlank()) {
+                    continue;
+                }
+                companies.add(name.trim().toLowerCase());
+            }
+            if (!companies.isEmpty()) {
+                mapping.put(source.getCode().trim().toLowerCase(), companies);
+            }
+        }
+        return mapping;
     }
 }
