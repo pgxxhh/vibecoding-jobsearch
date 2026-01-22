@@ -78,6 +78,23 @@ class JobIngestionFilterTest {
         verify(queryService, times(2)).getNormalizedCompanyNames();
     }
 
+    @Test
+    void allowsCrawlerSourcesWhenCompanyMissingFromWhitelist() {
+        when(queryService.getNormalizedCompanyNames()).thenReturn(Set.of("acme"));
+
+        Job job = Job.builder()
+                .source("crawler:sapcareers")
+                .externalId("sap-1")
+                .title("SAP Project Lead")
+                .company("sap")
+                .postedAt(Instant.now())
+                .build();
+
+        List<FetchedJob> jobs = filter.apply(List.of(FetchedJob.of(job, "")));
+
+        assertThat(jobs).hasSize(1);
+    }
+
     private FetchedJob createJob(String company) {
         Job job = Job.builder()
                 .source("source")
@@ -97,4 +114,3 @@ class JobIngestionFilterTest {
         reference.set(instant);
     }
 }
-

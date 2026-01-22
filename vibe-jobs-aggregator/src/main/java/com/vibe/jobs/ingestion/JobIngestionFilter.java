@@ -51,13 +51,27 @@ public class JobIngestionFilter {
         if (job == null) return false;
         String company = job.getCompany();
         if (company == null) return false;
+
+        String normalized = company.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return false;
+        }
         
         // 如果没有启用的公司，则跳过公司过滤
         if (enabledCompanies.isEmpty()) {
             return true;
         }
         
-        return enabledCompanies.contains(company.trim().toLowerCase(Locale.ROOT));
+        if (enabledCompanies.contains(normalized)) {
+            return true;
+        }
+        
+        String source = job.getSource() == null ? "" : job.getSource().trim().toLowerCase(Locale.ROOT);
+        if (!source.isBlank() && source.startsWith("crawler:")) {
+            return true;
+        }
+        
+        return false;
     }
 
     private boolean isRecent(Job job, Instant cutoff) {
