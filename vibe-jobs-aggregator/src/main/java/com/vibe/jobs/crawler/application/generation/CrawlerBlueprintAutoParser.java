@@ -43,7 +43,33 @@ public class CrawlerBlueprintAutoParser {
             "locale",
             "language",
             "share",
-            "social"
+            "social",
+            "pagination",
+            "pager"
+    );
+    private static final Set<String> PAGINATION_TEXT_KEYWORDS = Set.of(
+            "next",
+            "previous",
+            "prev",
+            "first",
+            "last",
+            "older",
+            "newer",
+            "more",
+            "less",
+            "weiter",
+            "zuruck",
+            "suivant",
+            "precedent",
+            "nachste",
+            "vorherige",
+            "siguiente",
+            "anterior",
+            "weiterlesen",
+            "\u4e0a\u4e00\u9875",
+            "\u4e0b\u4e00\u9875",
+            "\u9996\u9875",
+            "\u672b\u9875"
     );
 
     public AutoParseResult parse(String entryUrl, String html) {
@@ -173,7 +199,7 @@ public class CrawlerBlueprintAutoParser {
         Map<String, Element> samples = new LinkedHashMap<>();
         for (Element anchor : anchors) {
             Element candidate = anchor;
-            for (int depth = 0; depth < 4 && candidate != null; depth++) {
+            for (int depth = 0; depth < 6 && candidate != null; depth++) {
                 if (candidate.tagName().equalsIgnoreCase("a")) {
                     candidate = candidate.parent();
                     continue;
@@ -216,6 +242,9 @@ public class CrawlerBlueprintAutoParser {
         if (containsDisqualifyingContext(element)) {
             return false;
         }
+        if (looksLikePagination(element)) {
+            return false;
+        }
         int anchorCount = element.select("a[href]").size();
         return anchorCount >= 2;
     }
@@ -229,15 +258,66 @@ public class CrawlerBlueprintAutoParser {
                 return true;
             }
             String className = current.className().toLowerCase(Locale.ROOT);
-            if (!className.isBlank()) {
-                for (String keyword : DISQUALIFYING_CLASS_KEYWORDS) {
-                    if (className.contains(keyword)) {
-                        return true;
-                    }
-                }
+            if (!className.isBlank() && containsKeyword(className, DISQUALIFYING_CLASS_KEYWORDS)) {
+                return true;
+            }
+            String id = current.id() == null ? "" : current.id().toLowerCase(Locale.ROOT);
+            if (!id.isBlank() && containsKeyword(id, DISQUALIFYING_CLASS_KEYWORDS)) {
+                return true;
             }
             current = current.parent();
             depth++;
+        }
+        return false;
+    }
+
+    private boolean looksLikePagination(Element element) {
+        Elements anchors = element.select("a[href]");
+        if (anchors.size() < 2) {
+            return false;
+        }
+        int paginationLinks = 0;
+        for (Element anchor : anchors) {
+            if (isPaginationLink(anchor)) {
+                paginationLinks++;
+            }
+        }
+        if (paginationLinks == 0) {
+            return false;
+        }
+        double ratio = (double) paginationLinks / anchors.size();
+        return ratio >= 0.6;
+    }
+
+    private boolean isPaginationLink(Element anchor) {
+        String text = anchor.text() == null ? "" : anchor.text().trim().toLowerCase(Locale.ROOT);
+        if (!text.isBlank()) {
+            if (PAGINATION_TEXT_KEYWORDS.contains(text)) {
+                return true;
+            }
+            if (text.length() <= 4 && text.chars().allMatch(Character::isDigit)) {
+                return true;
+            }
+            if (text.length() <= 3 && text.chars().allMatch(ch -> "\u00ab\u00bb<>".indexOf(ch) >= 0)) {
+                return true;
+            }
+        }
+        String ariaLabel = anchor.attr("aria-label").trim().toLowerCase(Locale.ROOT);
+        if (!ariaLabel.isBlank() && PAGINATION_TEXT_KEYWORDS.contains(ariaLabel)) {
+            return true;
+        }
+        String className = anchor.className().toLowerCase(Locale.ROOT);
+        return containsKeyword(className, Set.of("pagination", "pager"));
+    }
+
+    private boolean containsKeyword(String value, Set<String> keywords) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (keyword != null && !keyword.isBlank() && value.contains(keyword)) {
+                return true;
+            }
         }
         return false;
     }
