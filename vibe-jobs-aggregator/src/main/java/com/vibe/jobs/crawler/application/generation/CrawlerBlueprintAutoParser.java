@@ -33,6 +33,19 @@ public class CrawlerBlueprintAutoParser {
 
     private static final Logger log = LoggerFactory.getLogger(CrawlerBlueprintAutoParser.class);
 
+    private static final Set<String> DISQUALIFYING_TAGS = Set.of("nav", "header", "footer", "aside");
+    private static final Set<String> DISQUALIFYING_CLASS_KEYWORDS = Set.of(
+            "breadcrumb",
+            "header",
+            "footer",
+            "nav",
+            "menu",
+            "locale",
+            "language",
+            "share",
+            "social"
+    );
+
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
         if (document.body() == null) {
@@ -200,16 +213,33 @@ public class CrawlerBlueprintAutoParser {
         if (element == null) {
             return false;
         }
-        String tag = element.tagName();
-        if (tag.equalsIgnoreCase("nav") || tag.equalsIgnoreCase("header") || tag.equalsIgnoreCase("footer")) {
-            return false;
-        }
-        String className = element.className().toLowerCase(Locale.ROOT);
-        if (className.contains("breadcrumb") || className.contains("header") || className.contains("footer")) {
+        if (containsDisqualifyingContext(element)) {
             return false;
         }
         int anchorCount = element.select("a[href]").size();
         return anchorCount >= 2;
+    }
+
+    private boolean containsDisqualifyingContext(Element element) {
+        Element current = element;
+        int depth = 0;
+        while (current != null && depth < 6) {
+            String tag = current.tagName().toLowerCase(Locale.ROOT);
+            if (DISQUALIFYING_TAGS.contains(tag)) {
+                return true;
+            }
+            String className = current.className().toLowerCase(Locale.ROOT);
+            if (!className.isBlank()) {
+                for (String keyword : DISQUALIFYING_CLASS_KEYWORDS) {
+                    if (className.contains(keyword)) {
+                        return true;
+                    }
+                }
+            }
+            current = current.parent();
+            depth++;
+        }
+        return false;
     }
 
     private Element findFirst(Element root, List<String> selectors) {
