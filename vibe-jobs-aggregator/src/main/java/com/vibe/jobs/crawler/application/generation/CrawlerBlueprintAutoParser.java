@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Component
 public class CrawlerBlueprintAutoParser {
@@ -176,6 +177,21 @@ public class CrawlerBlueprintAutoParser {
             ));
         }
 
+        if (!fields.containsKey("company")) {
+            inferCompanyConstant(listElement, entryUrl)
+                    .ifPresent(constant -> fields.put("company", new ParserField(
+                            "company",
+                            ParserFieldType.CONSTANT,
+                            "",
+                            null,
+                            constant,
+                            null,
+                            ",",
+                            false,
+                            null
+                    )));
+        }
+
         if (!fields.containsKey("url") && anchor != null) {
             fields.put("url", new ParserField(
                     "url",
@@ -191,6 +207,115 @@ public class CrawlerBlueprintAutoParser {
         }
 
         return fields;
+    }
+
+    private Optional<String> inferCompanyConstant(Element listElement, String entryUrl) {
+        Document document = listElement == null ? null : listElement.ownerDocument();
+        String candidate = extractMetaCompany(document);
+        if (candidate.isBlank()) {
+            candidate = extractTitleCompany(document);
+        }
+        if (candidate.isBlank()) {
+            candidate = extractHostCompany(entryUrl);
+        }
+        String normalized = normalizeCompany(candidate);
+        return normalized.isBlank() ? Optional.empty() : Optional.of(normalized);
+    }
+
+    private String extractMetaCompany(Document document) {
+        if (document == null) {
+            return "";
+        }
+        Element meta = document.selectFirst("meta[property=og:site_name], meta[name=application-name], meta[name=site_name], meta[name=og:site_name]");
+        if (meta == null) {
+            return "";
+        }
+        return meta.attr("content").trim();
+    }
+
+    private String extractTitleCompany(Document document) {
+        if (document == null) {
+            return "";
+        }
+        String title = document.title() == null ? "" : document.title().trim();
+        if (title.isBlank()) {
+            return "";
+        }
+        String lowered = title.toLowerCase(Locale.ROOT);
+        int idx = firstKeywordIndex(lowered, List.of(" jobs", " careers", " openings"));
+        if (idx > 0) {
+            return title.substring(0, idx).trim();
+        }
+        return title;
+    }
+
+    private int firstKeywordIndex(String text, List<String> keywords) {
+        int min = Integer.MAX_VALUE;
+        for (String keyword : keywords) {
+            int idx = text.indexOf(keyword);
+            if (idx >= 0 && idx < min) {
+                min = idx;
+            }
+        }
+        return min == Integer.MAX_VALUE ? -1 : min;
+    }
+
+    private String extractHostCompany(String entryUrl) {
+        if (entryUrl == null || entryUrl.isBlank()) {
+            return "";
+        }
+        try {
+            URI uri = new URI(entryUrl);
+            String host = Optional.ofNullable(uri.getHost()).orElse("");
+            if (host.isBlank()) {
+                return "";
+            }
+            String[] parts = host.split("\\.");
+            if (parts.length == 0) {
+                return "";
+            }
+            List<String> blacklist = List.of("jobs", "job", "careers", "career", "www", "app", "apply");
+            for (String part : parts) {
+                String cleaned = part.trim().toLowerCase(Locale.ROOT);
+                if (!cleaned.isBlank() && !blacklist.contains(cleaned)) {
+                    return cleaned;
+                }
+            }
+            return parts[0];
+        } catch (URISyntaxException e) {
+            return "";
+        }
+    }
+
+    private String normalizeCompany(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String trimmed = raw.trim();
+        if (trimmed.isBlank()) {
+            return "";
+        }
+        String cleaned = Pattern.compile("[^a-zA-Z0-9\\s]").matcher(trimmed).replaceAll(" ").trim();
+        if (cleaned.isBlank()) {
+            cleaned = trimmed;
+        }
+        String[] tokens = cleaned.split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (String token : tokens) {
+            if (token.isBlank()) {
+                continue;
+            }
+            String normalized = token.length() <= 3
+                    ? token.toUpperCase(Locale.ROOT)
+                    : token.substring(0, 1).toUpperCase(Locale.ROOT) + token.substring(1).toLowerCase(Locale.ROOT);
+            if (!normalized.isBlank()) {
+                if (builder.length() > 0) {
+                    builder.append(' ');
+                }
+                builder.append(normalized);
+            }
+        }
+        return builder.toString().trim();
     }
 
     private Element findBestListElement(Document document) {

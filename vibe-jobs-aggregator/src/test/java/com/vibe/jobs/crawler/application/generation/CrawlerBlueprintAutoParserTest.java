@@ -67,8 +67,9 @@ class CrawlerBlueprintAutoParserTest {
         ParserProfile profile = result.profile();
 
         assertThat(profile.listSelector()).contains("table.searchResults");
-        assertThat(profile.fields()).containsKeys("title", "url");
+        assertThat(profile.fields()).containsKeys("title", "url", "company");
         assertThat(profile.fields().get("title").selector()).contains("jobTitle-link");
         assertThat(profile.fields().get("url").selector()).contains("jobTitle-link");
+        assertThat(profile.fields().get("company").constant()).isEqualTo("SAP");
     }
 }
