@@ -181,7 +181,10 @@ public class CrawlerBlueprintGenerationManager {
             report.put("metrics", validation.metrics());
             report.put("warnings", validation.warnings());
             report.put("sampleData", validation.samples());
-            report.put("snapshot", Map.of("url", snapshot.get("finalUrl")));
+            report.put("snapshot", Map.of(
+                    "url", snapshot.get("finalUrl"),
+                    "screenshot", snapshot.get("screenshot")
+            ));
 
             String reportJson = writeJson(report);
 
@@ -189,7 +192,9 @@ public class CrawlerBlueprintGenerationManager {
                     .withDraftResult(configJson, reportJson, clock.instant(), operator);
             draftRepository.save(updatedDraft);
 
-            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), snapshot, validation.samples());
+            Map<String, Object> slimSnapshot = new LinkedHashMap<>(snapshot);
+            slimSnapshot.remove("screenshot");
+            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), slimSnapshot, validation.samples());
             taskRepository.save(succeeded);
             log.info("Blueprint generation succeeded for {}", blueprintCode);
         } catch (Exception ex) {
