@@ -147,28 +147,14 @@ public class CrawlerBlueprintGenerationManager {
 
     private void runGenerationTask(Long taskId) {
         try {
-            CrawlerBlueprintGenerationTask task = taskRepository.findById(taskId)
-                    .orElseThrow(() -> new IllegalStateException("Generation task not found: " + taskId));
-            String blueprintCode = task.blueprintCode();
-            CrawlerBlueprintDraft draft = draftRepository.findByCode(blueprintCode)
-                    .orElseThrow(() -> new IllegalStateException("Blueprint draft missing: " + blueprintCode));
-            CrawlerBlueprintGenerationTask runningTask = taskRepository.save(task.markRunning(clock.instant()));
+            GenerationContext context = prepareContext(taskId);
+            PageSnapshot pageSnapshot = capturePageSnapshot(context.entryUrl(), context.keywords());
 
-            Map<String, Object> payload = runningTask.inputPayload();
-            String entryUrl = Objects.toString(payload.get(KEY_ENTRY_URL), draft.entryUrl());
-            String keywords = Objects.toString(payload.get(KEY_SEARCH_KEYWORDS), "");
-            String name = Objects.toString(payload.get(KEY_NAME), draft.name());
-            String operator = Objects.toString(payload.get(KEY_OPERATOR), draft.generatedBy());
-
-            Map<String, Object> snapshot = new LinkedHashMap<>();
-            String pageHtml = fetchHtml(entryUrl, keywords, snapshot);
-            snapshot.put("entryUrl", entryUrl);
-
-            CrawlerBlueprintAutoParser.AutoParseResult parsed = autoParser.parse(entryUrl, pageHtml);
-            CrawlerBlueprintValidator.ValidationResult validation = validator.validate(parsed.profile(), pageHtml);
+            CrawlerBlueprintAutoParser.AutoParseResult parsed = autoParser.parse(context.entryUrl(), pageSnapshot.html());
+            CrawlerBlueprintValidator.ValidationResult validation = validator.validate(parsed.profile(), pageSnapshot.html());
 
             String configJson = configFactory.buildConfigJson(
-                    entryUrl,
+                    context.entryUrl(),
                     parsed.profile(),
                     parsed.pagingStrategy(),
                     parsed.automation(),
@@ -176,31 +162,68 @@ public class CrawlerBlueprintGenerationManager {
                     parsed.metadata()
             );
 
-            Map<String, Object> report = new LinkedHashMap<>();
-            report.put("success", validation.success());
-            report.put("metrics", validation.metrics());
-            report.put("warnings", validation.warnings());
-            report.put("sampleData", validation.samples());
-            report.put("snapshot", Map.of(
-                    "url", snapshot.get("finalUrl"),
-                    "screenshot", snapshot.get("screenshot")
-            ));
+            String reportJson = buildReportJson(validation, pageSnapshot.snapshot());
 
-            String reportJson = writeJson(report);
-
-            CrawlerBlueprintDraft updatedDraft = draft.refreshForGeneration(entryUrl, name, operator)
-                    .withDraftResult(configJson, reportJson, clock.instant(), operator);
-            draftRepository.save(updatedDraft);
-
-            Map<String, Object> slimSnapshot = new LinkedHashMap<>(snapshot);
-            slimSnapshot.remove("screenshot");
-            CrawlerBlueprintGenerationTask succeeded = runningTask.markSucceeded(clock.instant(), slimSnapshot, validation.samples());
-            taskRepository.save(succeeded);
-            log.info("Blueprint generation succeeded for {}", blueprintCode);
+            persistSuccess(context, configJson, reportJson, pageSnapshot.snapshot(), validation.samples());
+            log.info("Blueprint generation succeeded for {}", context.runningTask().blueprintCode());
         } catch (Exception ex) {
             log.warn("Blueprint generation failed for task {}: {}", taskId, ex.getMessage(), ex);
             handleFailure(taskId, ex);
         }
+    }
+
+    private GenerationContext prepareContext(Long taskId) {
+        CrawlerBlueprintGenerationTask task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalStateException("Generation task not found: " + taskId));
+        String blueprintCode = task.blueprintCode();
+        CrawlerBlueprintDraft draft = draftRepository.findByCode(blueprintCode)
+                .orElseThrow(() -> new IllegalStateException("Blueprint draft missing: " + blueprintCode));
+        CrawlerBlueprintGenerationTask runningTask = taskRepository.save(task.markRunning(clock.instant()));
+
+        Map<String, Object> payload = runningTask.inputPayload();
+        String entryUrl = Objects.toString(payload.get(KEY_ENTRY_URL), draft.entryUrl());
+        String keywords = Objects.toString(payload.get(KEY_SEARCH_KEYWORDS), "");
+        String name = Objects.toString(payload.get(KEY_NAME), draft.name());
+        String operator = Objects.toString(payload.get(KEY_OPERATOR), draft.generatedBy());
+        return new GenerationContext(runningTask, draft, entryUrl, keywords, name, operator);
+    }
+
+    private PageSnapshot capturePageSnapshot(String entryUrl, String keywords) throws Exception {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        String pageHtml = fetchHtml(entryUrl, keywords, snapshot);
+        snapshot.put("entryUrl", entryUrl);
+        return new PageSnapshot(pageHtml, snapshot);
+    }
+
+    private String buildReportJson(CrawlerBlueprintValidator.ValidationResult validation,
+                                   Map<String, Object> snapshot) {
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("success", validation.success());
+        report.put("metrics", validation.metrics());
+        report.put("warnings", validation.warnings());
+        report.put("sampleData", validation.samples());
+        report.put("snapshot", Map.of(
+                "url", snapshot.get("finalUrl"),
+                "screenshot", snapshot.get("screenshot")
+        ));
+        return writeJson(report);
+    }
+
+    private void persistSuccess(GenerationContext context,
+                                String configJson,
+                                String reportJson,
+                                Map<String, Object> snapshot,
+                                List<Map<String, Object>> samples) {
+        CrawlerBlueprintDraft updatedDraft = context.draft()
+                .refreshForGeneration(context.entryUrl(), context.name(), context.operator())
+                .withDraftResult(configJson, reportJson, clock.instant(), context.operator());
+        draftRepository.save(updatedDraft);
+
+        Map<String, Object> slimSnapshot = new LinkedHashMap<>(snapshot);
+        slimSnapshot.remove("screenshot");
+        CrawlerBlueprintGenerationTask succeeded = context.runningTask()
+                .markSucceeded(clock.instant(), slimSnapshot, samples);
+        taskRepository.save(succeeded);
     }
 
     private void handleFailure(Long taskId, Exception ex) {
@@ -305,6 +328,17 @@ public class CrawlerBlueprintGenerationManager {
         } catch (JsonProcessingException e) {
             return null;
         }
+    }
+
+    private record GenerationContext(CrawlerBlueprintGenerationTask runningTask,
+                                     CrawlerBlueprintDraft draft,
+                                     String entryUrl,
+                                     String keywords,
+                                     String name,
+                                     String operator) {
+    }
+
+    private record PageSnapshot(String html, Map<String, Object> snapshot) {
     }
 
     public record GenerationLaunchResult(CrawlerBlueprintDraft draft,
