@@ -72,6 +72,21 @@ public class CrawlerBlueprintAutoParser {
             "\u9996\u9875",
             "\u672b\u9875"
     );
+    private static final List<String> COMPANY_FIELD_SELECTORS = List.of(
+            "[class*=company]",
+            "[class*=employer]",
+            "[data-company]",
+            "span:matches((?i)company)",
+            "p:matches((?i)company)",
+            "div:matches((?i)company)"
+    );
+    private static final List<String> LOCATION_FIELD_SELECTORS = List.of(
+            "[class*=location]",
+            "[class*=city]",
+            "span:matches((?i)location)",
+            "p:matches((?i)location)",
+            "div:matches((?i)location)"
+    );
 
     public AutoParseResult parse(String entryUrl, String html) {
         Document document = Jsoup.parse(html == null ? "" : html);
@@ -110,104 +125,72 @@ public class CrawlerBlueprintAutoParser {
 
     private Map<String, ParserField> buildFields(Element listElement, String entryUrl) {
         Map<String, ParserField> fields = new LinkedHashMap<>();
-        Element anchor = listElement.selectFirst("a[href]");
-        if (anchor != null) {
-            String relativeAnchor = cleanFieldSelector(relativeSelector(listElement, anchor));
-            fields.put("title", new ParserField(
-                    "title",
-                    ParserFieldType.TEXT,
-                    relativeAnchor,
-                    null,
-                    null,
-                    null,
-                    ",",
-                    true,
-                    null
-            ));
-            fields.put("url", new ParserField(
-                    "url",
-                    ParserFieldType.ATTRIBUTE,
-                    relativeAnchor,
-                    "href",
-                    null,
-                    null,
-                    ",",
-                    true,
-                    baseUrl(entryUrl)
-            ));
-        }
-
-        Element company = findFirst(listElement, List.of(
-                "[class*=company]",
-                "[class*=employer]",
-                "[data-company]",
-                "span:matches((?i)company)",
-                "p:matches((?i)company)",
-                "div:matches((?i)company)"));
-        if (company != null) {
-            fields.put("company", new ParserField(
-                    "company",
-                    ParserFieldType.TEXT,
-                    cleanFieldSelector(relativeSelector(listElement, company)),
-                    null,
-                    null,
-                    null,
-                    ",",
-                    false,
-                    null
-            ));
-        }
-
-        Element location = findFirst(listElement, List.of(
-                "[class*=location]",
-                "[class*=city]",
-                "span:matches((?i)location)",
-                "p:matches((?i)location)",
-                "div:matches((?i)location)"));
-        if (location != null) {
-            fields.put("location", new ParserField(
-                    "location",
-                    ParserFieldType.TEXT,
-                    cleanFieldSelector(relativeSelector(listElement, location)),
-                    null,
-                    null,
-                    null,
-                    ",",
-                    false,
-                    null
-            ));
-        }
-
-        if (!fields.containsKey("company")) {
-            inferCompanyConstant(listElement, entryUrl)
-                    .ifPresent(constant -> fields.put("company", new ParserField(
-                            "company",
-                            ParserFieldType.CONSTANT,
-                            "",
-                            null,
-                            constant,
-                            null,
-                            ",",
-                            false,
-                            null
-                    )));
-        }
-
-        if (!fields.containsKey("url") && anchor != null) {
-            fields.put("url", new ParserField(
-                    "url",
-                    ParserFieldType.ATTRIBUTE,
-                    cleanFieldSelector(relativeSelector(listElement, anchor)),
-                    "href",
-                    null,
-                    null,
-                    ",",
-                    true,
-                    baseUrl(entryUrl)
-            ));
-        }
-
+        addAnchorFields(listElement, entryUrl, fields);
+        addOptionalField(listElement, fields, "company", ParserFieldType.TEXT, COMPANY_FIELD_SELECTORS);
+        addOptionalField(listElement, fields, "location", ParserFieldType.TEXT, LOCATION_FIELD_SELECTORS);
+        addCompanyConstantIfMissing(listElement, entryUrl, fields);
         return fields;
+    }
+
+    private void addAnchorFields(Element listElement, String entryUrl, Map<String, ParserField> fields) {
+        Element anchor = listElement.selectFirst("a[href]");
+        if (anchor == null) {
+            return;
+        }
+        String relativeAnchor = cleanFieldSelector(relativeSelector(listElement, anchor));
+        fields.put("title", newField("title", ParserFieldType.TEXT, relativeAnchor, null, null, true, null));
+        fields.put("url", newField("url", ParserFieldType.ATTRIBUTE, relativeAnchor, "href", null, true, baseUrl(entryUrl)));
+    }
+
+    private void addOptionalField(Element listElement,
+                                  Map<String, ParserField> fields,
+                                  String fieldName,
+                                  ParserFieldType type,
+                                  List<String> selectors) {
+        Element candidate = findFirst(listElement, selectors);
+        if (candidate == null) {
+            return;
+        }
+        String relative = cleanFieldSelector(relativeSelector(listElement, candidate));
+        fields.put(fieldName, newField(fieldName, type, relative, null, null, false, null));
+    }
+
+    private void addCompanyConstantIfMissing(Element listElement,
+                                             String entryUrl,
+                                             Map<String, ParserField> fields) {
+        if (fields.containsKey("company")) {
+            return;
+        }
+        inferCompanyConstant(listElement, entryUrl)
+                .ifPresent(constant -> fields.put("company", newField(
+                        "company",
+                        ParserFieldType.CONSTANT,
+                        "",
+                        null,
+                        constant,
+                        false,
+                        null
+                )));
+    }
+
+    private ParserField newField(String name,
+                                 ParserFieldType type,
+                                 String selector,
+                                 String attribute,
+                                 String constant,
+                                 boolean required,
+                                 String baseUrl) {
+        return new ParserField(
+                name,
+                type,
+                selector,
+                attribute,
+                constant,
+                null,
+                ",",
+                required,
+                baseUrl
+        );
     }
 
     private String simplifySelector(String selector) {

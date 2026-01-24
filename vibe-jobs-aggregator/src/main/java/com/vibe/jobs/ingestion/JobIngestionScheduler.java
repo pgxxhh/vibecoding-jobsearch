@@ -139,30 +139,35 @@ public class JobIngestionScheduler {
             }
         }
 
-        CompletableFuture<?>[] tasks = unlimited.stream()
-                .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executorManager.getExecutor()))
-                .toArray(CompletableFuture[]::new);
-
-        if (tasks.length > 0) {
-            CompletableFuture<Void> combined = CompletableFuture.allOf(tasks);
-            long timeoutMs = Math.max(1_000L, ingestionProperties.getConcurrentSourceTimeoutMs());
-            try {
-                combined.get(timeoutMs, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException ex) {
-                log.error("Timed out waiting for {} concurrent ingestion tasks after {} ms; cancelling remaining tasks", tasks.length, timeoutMs);
-                for (CompletableFuture<?> task : tasks) {
-                    task.cancel(true);
-                }
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Interrupted while waiting for concurrent ingestion tasks", ex);
-            } catch (ExecutionException ex) {
-                throw new RuntimeException("Concurrent ingestion task failed", ex.getCause());
-            }
-        }
+        runConcurrentSources(unlimited, pageSize);
 
         for (SourceRegistry.ConfiguredSource source : limited) {
             processSource(source, pageSize);
+        }
+    }
+
+    private void runConcurrentSources(List<SourceRegistry.ConfiguredSource> sources, int pageSize) {
+        if (sources.isEmpty()) {
+            return;
+        }
+        CompletableFuture<?>[] tasks = sources.stream()
+                .map(source -> CompletableFuture.runAsync(() -> processSource(source, pageSize), executorManager.getExecutor()))
+                .toArray(CompletableFuture[]::new);
+
+        CompletableFuture<Void> combined = CompletableFuture.allOf(tasks);
+        long timeoutMs = Math.max(1_000L, ingestionProperties.getConcurrentSourceTimeoutMs());
+        try {
+            combined.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            log.error("Timed out waiting for {} concurrent ingestion tasks after {} ms; cancelling remaining tasks", tasks.length, timeoutMs);
+            for (CompletableFuture<?> task : tasks) {
+                task.cancel(true);
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for concurrent ingestion tasks", ex);
+        } catch (ExecutionException ex) {
+            throw new RuntimeException("Concurrent ingestion task failed", ex.getCause());
         }
     }
 
@@ -200,22 +205,17 @@ public class JobIngestionScheduler {
         int page = 1;
         Set<String> seenPageSignatures = new HashSet<>();
         while (true) {
-            List<FetchedJob> items = sourceClient.fetchPage(page, pageSize);
-            if (items == null || items.isEmpty()) {
+            List<FetchedJob> normalized = normalizeJobs(sourceClient.fetchPage(page, pageSize));
+            if (normalized.isEmpty()) {
                 break;
             }
-            List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
-            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            String pageSignature = computePageSignature(roleFiltered);
-            List<FetchedJob> cursorFiltered = filterByCursor(roleFiltered, cursor);
+            String pageSignature = computePageSignature(normalized);
+            List<FetchedJob> cursorFiltered = filterByCursor(normalized, cursor);
             if (cursorFiltered.isEmpty()) {
                 log.info("No new jobs beyond cursor for source {} ({}) on page {}", sourceName, companyName, page);
                 break;
             }
-            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
-                log.warn("Detected repeated page signature for source {} ({}) on page {} - stopping to prevent infinite loop", sourceName, companyName, page);
+            if (shouldStopDueToRepeatedPage(seenPageSignatures, pageSignature, configuredSource, page, null)) {
                 break;
             }
             JobIngestionResult result = storeJobs(cursorFiltered);
@@ -262,21 +262,16 @@ public class JobIngestionScheduler {
         int page = 1;
         Set<String> seenPageSignatures = new HashSet<>();
         while (!allQuotasMet(remaining)) {
-            List<FetchedJob> items = client.fetchPage(page, pageSize);
-            if (items == null || items.isEmpty()) {
+            List<FetchedJob> normalized = normalizeJobs(client.fetchPage(page, pageSize));
+            if (normalized.isEmpty()) {
                 break;
             }
-            List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
-            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            String pageSignature = computePageSignature(roleFiltered);
-            JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, null, page, cursorCache);
-            if (roleFiltered.isEmpty() || result.persisted() == 0) {
+            String pageSignature = computePageSignature(normalized);
+            JobIngestionResult result = matchAndStore(normalized, configuredSource, remaining, null, page, cursorCache);
+            if (normalized.isEmpty() || result.persisted() == 0) {
                 log.info("No category-matched jobs for source {} ({}) on page {}", sourceName, companyName, page);
             }
-            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
-                log.warn("Detected repeated page signature for source {} ({}) on page {} - stopping to prevent infinite loop", sourceName, companyName, page);
+            if (shouldStopDueToRepeatedPage(seenPageSignatures, pageSignature, configuredSource, page, "category-flow")) {
                 break;
             }
             if (!result.advanced()) {
@@ -297,21 +292,17 @@ public class JobIngestionScheduler {
         int page = 1;
         Set<String> seenPageSignatures = new HashSet<>();
         while (remaining.getOrDefault(category, 0) > 0) {
-            List<FetchedJob> items = client.fetchPage(page, pageSize, category.facets());
-            if (items == null || items.isEmpty()) {
+            List<FetchedJob> normalized = normalizeJobs(client.fetchPage(page, pageSize, category.facets()));
+            if (normalized.isEmpty()) {
                 break;
             }
-            List<FetchedJob> filtered = jobFilter.apply(items);
-            List<FetchedJob> locationEnhanced = locationEnhancementService.enhanceLocationFields(filtered);
-            List<FetchedJob> locationFiltered = locationFilterService.filterJobs(locationEnhanced);
-            List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
-            String pageSignature = computePageSignature(roleFiltered);
-            JobIngestionResult result = matchAndStore(roleFiltered, configuredSource, remaining, category, page, cursorCache);
-            if (roleFiltered.isEmpty() || result.persisted() == 0) {
+            String pageSignature = computePageSignature(normalized);
+            JobIngestionResult result = matchAndStore(normalized, configuredSource, remaining, category, page, cursorCache);
+            if (normalized.isEmpty() || result.persisted() == 0) {
                 log.info("No jobs matched category {} for source {} ({}) on page {} with facets", category.name(), sourceName, companyName, page);
             }
-            if (!pageSignature.isEmpty() && !seenPageSignatures.add(pageSignature)) {
-                log.warn("Detected repeated page signature for category {} from source {} ({}) on page {} - stopping to prevent infinite loop", category.name(), sourceName, companyName, page);
+            if (shouldStopDueToRepeatedPage(seenPageSignatures, pageSignature, configuredSource, page,
+                    "category=" + (category.name() == null ? "" : category.name()))) {
                 break;
             }
             if (allQuotasMet(remaining)) {
@@ -408,6 +399,37 @@ public class JobIngestionScheduler {
             }
         }
         return new JobIngestionResult(totalPersisted, lastJob, advanced);
+    }
+
+    private List<FetchedJob> normalizeJobs(List<FetchedJob> jobs) {
+        if (jobs == null || jobs.isEmpty()) {
+            return List.of();
+        }
+        List<FetchedJob> filtered = jobFilter.apply(jobs);
+        if (filtered == null || filtered.isEmpty()) {
+            return List.of();
+        }
+        List<FetchedJob> enhanced = locationEnhancementService.enhanceLocationFields(filtered);
+        List<FetchedJob> locationFiltered = locationFilterService.filterJobs(enhanced);
+        List<FetchedJob> roleFiltered = roleFilterService.filter(locationFiltered);
+        return roleFiltered == null ? List.of() : List.copyOf(roleFiltered);
+    }
+
+    private boolean shouldStopDueToRepeatedPage(Set<String> seenPageSignatures,
+                                                String pageSignature,
+                                                SourceRegistry.ConfiguredSource source,
+                                                int page,
+                                                String context) {
+        if (pageSignature == null || pageSignature.isBlank()) {
+            return false;
+        }
+        if (!seenPageSignatures.add(pageSignature)) {
+            String suffix = (context == null || context.isBlank()) ? "" : " (" + context + ")";
+            log.warn("Detected repeated page signature for source {} ({}) on page {}{} - stopping to prevent infinite loop",
+                    source.client().sourceName(), source.company(), page, suffix);
+            return true;
+        }
+        return false;
     }
 
     private String computePageSignature(List<FetchedJob> jobs) {
