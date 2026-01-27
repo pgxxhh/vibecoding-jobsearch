@@ -32,7 +32,7 @@ public class LocationFilterService {
         }
         
         List<FetchedJob> filteredJobs = jobs.stream()
-                .filter(job -> filter.matches(job.job().getLocation()))
+                .filter(job -> JobFilterMatcher.matchesLocation(job.job().getLocation(), filter))
                 .collect(Collectors.toList());
         
         int originalSize = jobs.size();
@@ -51,7 +51,7 @@ public class LocationFilterService {
      */
     public boolean matchesLocationFilter(String location) {
         IngestionProperties.LocationFilter filter = properties.getLocationFilter();
-        return filter.matches(location);
+        return JobFilterMatcher.matchesLocation(location, filter);
     }
     
     /**

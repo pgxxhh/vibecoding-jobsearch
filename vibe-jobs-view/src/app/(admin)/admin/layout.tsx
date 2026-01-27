@@ -125,6 +125,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <nav className="space-y-2">
                   <NavLink href="/admin" label="📊 概览" />
                   <NavLink href="/admin/ingestion-settings" label="⚙️ 采集调度" />
+                  <NavLink href="/admin/company-discovery" label="🏢 公司发现" />
                   <NavLink href="/admin/data-sources" label="🔗 数据源管理" />
                   <NavLink href="/admin/crawler-blueprints" label="🕷️ 爬虫蓝图" />
                 </nav>

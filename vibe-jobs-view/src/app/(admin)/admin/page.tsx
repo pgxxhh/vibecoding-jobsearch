@@ -24,6 +24,20 @@ export default function AdminHomePage() {
         </Link>
 
         <Link
+          href="/admin/company-discovery"
+          className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md hover:border-brand-300 transition-all"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-10 w-10 rounded-xl bg-brand-100 flex items-center justify-center text-brand-600">
+              🏢
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-brand-700 transition">公司发现</h3>
+          </div>
+          <p className="text-sm text-gray-600">配置公司发现调度并查看最新验证结果。</p>
+          <div className="mt-4 text-xs text-brand-600 font-medium">点击管理 →</div>
+        </Link>
+
+        <Link
           href="/admin/data-sources"
           className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md hover:border-brand-300 transition-all"
         >
