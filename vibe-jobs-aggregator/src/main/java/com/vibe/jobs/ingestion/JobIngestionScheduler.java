@@ -15,6 +15,7 @@ import com.vibe.jobs.ingestion.infrastructure.sourceclient.FetchedJob;
 import com.vibe.jobs.ingestion.infrastructure.sourceclient.SourceClient;
 import com.vibe.jobs.ingestion.infrastructure.sourceclient.WorkdaySourceClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
@@ -64,7 +65,7 @@ public class JobIngestionScheduler {
                                  RoleFilterService roleFilterService,
                                  LocationEnhancementService locationEnhancementService,
                                  IngestionExecutorManager executorManager,
-                                 TaskScheduler taskScheduler,
+                                 @Qualifier("ingestionTaskScheduler") TaskScheduler taskScheduler,
                                  IngestionSettingsService settingsService,
                                  IngestionCursorService ingestionCursorService) {
         this.ingestionProperties = ingestionProperties;

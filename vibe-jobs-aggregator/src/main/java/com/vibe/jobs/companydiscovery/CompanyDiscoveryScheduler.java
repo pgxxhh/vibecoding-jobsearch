@@ -6,6 +6,7 @@ import com.vibe.jobs.admin.domain.event.CompanyDiscoverySettingsUpdatedEvent;
 import com.vibe.jobs.companydiscovery.application.CompanyDiscoveryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
@@ -28,7 +29,7 @@ public class CompanyDiscoveryScheduler {
 
     public CompanyDiscoveryScheduler(CompanyDiscoverySettingsService settingsService,
                                      CompanyDiscoveryService discoveryService,
-                                     TaskScheduler companyDiscoveryTaskScheduler) {
+                                     @Qualifier("companyDiscoveryTaskScheduler") TaskScheduler companyDiscoveryTaskScheduler) {
         this.settingsService = settingsService;
         this.discoveryService = discoveryService;
         this.taskScheduler = companyDiscoveryTaskScheduler;
