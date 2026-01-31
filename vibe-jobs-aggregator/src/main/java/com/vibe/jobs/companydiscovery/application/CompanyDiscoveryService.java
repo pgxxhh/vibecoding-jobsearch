@@ -88,8 +88,11 @@ public class CompanyDiscoveryService {
                     break;
                 }
                 List<CompanyCandidate> discovered = discoverCandidates(settings, source.getType(), remainingBudget);
-                remainingBudget -= discovered.size();
-                for (CompanyCandidate candidate : discovered) {
+                int candidatesToProcess = Math.min(discovered.size(), remainingBudget);
+                remainingBudget -= candidatesToProcess;
+                
+                for (int i = 0; i < candidatesToProcess; i++) {
+                    CompanyCandidate candidate = discovered.get(i);
                     totalCandidates++;
                     CompanyDiscoveryResultStatus status;
                     String reason = null;
