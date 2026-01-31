@@ -88,9 +88,9 @@ public class CompanyDiscoveryService {
                     break;
                 }
                 List<CompanyCandidate> discovered = discoverCandidates(settings, source.getType(), remainingBudget);
+                remainingBudget -= discovered.size();
                 for (CompanyCandidate candidate : discovered) {
                     totalCandidates++;
-                    remainingBudget--;
                     CompanyDiscoveryResultStatus status;
                     String reason = null;
 
