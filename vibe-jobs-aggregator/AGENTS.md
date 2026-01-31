@@ -15,6 +15,7 @@ Backend contexts live in `src/main/java/com/vibe/jobs/<context>/{domain,applicat
 - Migrations must reside in `src/main/resources/db/migrations`.
 - Naming: `V<increment>_<description>_<ddl|dml>.sql`.
 - Ensure idempotency and include `create_time`, `update_time`, `deleted default false` for new tables.
+- Avoid standalone indexes on soft-delete booleans (such as `deleted`). Always build composite indexes that match real predicates (e.g., `(status, deleted)` or `(run_id, deleted)`) to prevent low-selectivity index maintenance.
 
 ## Testing & Clean Up
 - Backend tests sit in `src/test/java` as `*Test`.

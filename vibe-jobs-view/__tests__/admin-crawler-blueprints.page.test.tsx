@@ -10,7 +10,7 @@ import {
   useCrawlerBlueprintDetail,
   useCrawlerBlueprints,
 } from '@/modules/admin/hooks/useCrawlerBlueprints';
-import type { CrawlerBlueprintDetail } from '@/modules/admin/types';
+import type { CrawlerBlueprintDetail, CrawlerBlueprintSummary } from '@/modules/admin/types';
 import type {
   useCrawlerBlueprintDetail as UseCrawlerBlueprintDetailFn,
   useCrawlerBlueprints as UseCrawlerBlueprintsFn,
@@ -47,57 +47,38 @@ type DetailHookReturn = ReturnType<UseCrawlerBlueprintDetailFn>;
 const mockUseCrawlerBlueprints = useCrawlerBlueprints as unknown as jest.MockedFunction<UseCrawlerBlueprintsFn>;
 const mockUseCrawlerBlueprintDetail = useCrawlerBlueprintDetail as unknown as jest.MockedFunction<UseCrawlerBlueprintDetailFn>;
 
-const baseDetail: CrawlerBlueprintDetail = {
+const baseSummary: CrawlerBlueprintSummary = {
   code: 'jd-tech',
   name: '京东技术岗位',
   enabled: true,
-  description: '京东技术岗位 JD 爬虫',
   entryUrl: 'https://careers.jd.com/jobs',
-  parserTemplateCode: 'jd-parser',
-  concurrencyLimit: 4,
-  lastRunStatus: 'SUCCESS',
-  lastRunFinishedAt: '2024-05-01T12:00:00Z',
+  status: 'SUCCESS',
   createdAt: '2024-04-01T08:00:00Z',
   updatedAt: '2024-05-01T12:00:00Z',
-  metrics: {
-    totalRuns: 12,
-    averageDurationMs: 180000,
-    successRate: 0.92,
-    lastRunDurationMs: 120000,
-  },
-  latestRuns: [
+};
+
+const baseDetail: CrawlerBlueprintDetail = {
+  summary: baseSummary,
+  draftConfig: null,
+  lastTestReport: { status: 'SUCCESS', summary: 'All checkpoints passed' },
+  recentTasks: [
     {
-      id: 'run-1',
-      status: 'SUCCESS',
+      id: 1,
+      blueprintCode: 'jd-tech',
+      status: 'SUCCEEDED',
       startedAt: '2024-05-01T11:58:00Z',
       finishedAt: '2024-05-01T12:00:00Z',
-      successCount: 120,
-      failureCount: 3,
-      message: 'Completed',
-    },
-  ],
-  testReports: [
-    {
-      id: 'test-1',
-      status: 'SUCCESS',
-      createdAt: '2024-04-30T09:00:00Z',
-      summary: 'All checkpoints passed',
-      details: { snapshots: 4 },
-    },
-  ],
-  activeTask: null,
-  flow: [
-    {
-      step: '登录',
-      description: '执行登录流程',
-      status: 'SUCCESS',
+      errorMessage: null,
+      browserSnapshot: null,
+      sampleData: [],
+      inputPayload: { entryUrl: 'https://careers.jd.com/jobs' },
     },
   ],
 };
 
 function setupBlueprintHook(overrides?: Partial<BlueprintsHookReturn>) {
-  const list: BlueprintsHookReturn['list'] = {
-    data: [baseDetail],
+    const list: BlueprintsHookReturn['list'] = {
+      data: [baseSummary],
     isLoading: false,
     isError: false,
     error: null,
@@ -167,9 +148,9 @@ describe('Crawler blueprint admin pages', () => {
       <CrawlerBlueprintDetailPage params={{ code: 'jd-tech' }} />,
     );
 
-    expect(markup).toContain('累计运行');
-    expect(markup).toContain('run-1');
-    expect(markup).toContain('测试报告');
+    expect(markup).toContain('最近生成任务');
+    expect(markup).toContain('任务 #1');
+    expect(markup).toContain('最近测试报告');
   });
 
   it('renders creation wizard first step', () => {

@@ -24,6 +24,7 @@ Backend: `cd vibe-jobs-aggregator && mvn clean verify`; use `mvn spring-boot:run
 
 ## Documentation, Commits & PRs
 Do not create stray Markdown—data-source changes belong in `docs/DATA-SOURCES.md`, other notes live in `docs/`. Technical solution design docs must live under a `docs` directory: backend-only work goes into `vibe-jobs-aggregator/docs`, frontend-only work goes into `vibe-jobs-view/docs`, and cross-cutting work goes into the root `docs`. When UX or API contexts shift, update the relevant README and rules files. Commits use imperative or Conventional Commit subjects with wrapped bodies. Pull requests must describe the problem, approach, linked issues, required env vars, and UI evidence when applicable. Run `mvn clean verify`, `pnpm lint`, and `pnpm test` before requesting review.
+- Author new technical design docs by copying `docs/ai-playbooks/technical-design-template.md` so every plan consistently covers background, architecture, data, testing, and release details.
 
 ## Compliance Rules
 - If a required test cannot run, note it explicitly in the final response with the command and the blocking reason (dependency, environment limitation, or missing config).
