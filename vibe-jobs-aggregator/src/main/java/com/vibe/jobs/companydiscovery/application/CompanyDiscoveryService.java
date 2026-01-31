@@ -79,11 +79,20 @@ public class CompanyDiscoveryService {
 
         int totalCandidates = 0;
         int totalValid = 0;
+        int remainingBudget = settings.maxCandidatesPerRun();
 
         try {
             for (JobDataSource source : resolveSources(settings)) {
-                List<CompanyCandidate> discovered = discoverCandidates(settings, source.getType());
-                for (CompanyCandidate candidate : discovered) {
+                if (remainingBudget <= 0) {
+                    log.debug("Budget exhausted; stopping discovery");
+                    break;
+                }
+                List<CompanyCandidate> discovered = discoverCandidates(settings, source.getType(), remainingBudget);
+                int candidatesToProcess = Math.min(discovered.size(), remainingBudget);
+                remainingBudget -= candidatesToProcess;
+                
+                for (int i = 0; i < candidatesToProcess; i++) {
+                    CompanyCandidate candidate = discovered.get(i);
                     totalCandidates++;
                     CompanyDiscoveryResultStatus status;
                     String reason = null;
@@ -179,7 +188,7 @@ public class CompanyDiscoveryService {
                 .toList();
     }
 
-    private List<CompanyCandidate> discoverCandidates(CompanyDiscoverySettingsSnapshot settings, String dataSourceType) {
+    private List<CompanyCandidate> discoverCandidates(CompanyDiscoverySettingsSnapshot settings, String dataSourceType, int maxCandidates) {
         List<CompanyCandidate> candidates = new ArrayList<>();
         Map<String, com.vibe.jobs.shared.infrastructure.config.CompanyDiscoveryProperties.ProviderSettings> providerSettings = settings.providers();
 
@@ -197,7 +206,7 @@ public class CompanyDiscoveryService {
             CompanyDiscoveryProviderPort.CompanyDiscoveryRequest request =
                     new CompanyDiscoveryProviderPort.CompanyDiscoveryRequest(
                             dataSourceType,
-                            settings.maxCandidatesPerRun(),
+                            maxCandidates,
                             baseUrl,
                             seedCompanies
                     );
@@ -209,7 +218,7 @@ public class CompanyDiscoveryService {
         return candidates.stream()
                 .filter(candidate -> candidate.reference() != null && !candidate.reference().isBlank())
                 .filter(candidate -> seen.add(candidate.reference().trim().toLowerCase(Locale.ROOT)))
-                .limit(settings.maxCandidatesPerRun())
+                .limit(maxCandidates)
                 .toList();
     }
 
