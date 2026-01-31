@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS company_discovery_settings (
     create_time TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     update_time TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    UNIQUE KEY uk_company_discovery_settings_key (setting_key),
-    INDEX idx_company_discovery_settings_deleted (deleted)
+    UNIQUE KEY uk_company_discovery_settings_key (setting_key)
 );
 
 -- Company discovery run log
@@ -26,8 +25,7 @@ CREATE TABLE IF NOT EXISTS company_discovery_run (
     update_time TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
     INDEX idx_company_discovery_run_started (started_at),
-    INDEX idx_company_discovery_run_status (status),
-    INDEX idx_company_discovery_run_deleted (deleted)
+    INDEX idx_company_discovery_run_status_deleted (status, deleted)
 );
 
 -- Company discovery results
@@ -43,8 +41,7 @@ CREATE TABLE IF NOT EXISTS company_discovery_result (
     create_time TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     update_time TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    INDEX idx_company_discovery_result_run (run_id),
+    INDEX idx_company_discovery_result_run_deleted (run_id, deleted),
     INDEX idx_company_discovery_result_code (data_source_code),
-    INDEX idx_company_discovery_result_status (status),
-    INDEX idx_company_discovery_result_deleted (deleted)
+    INDEX idx_company_discovery_result_status_deleted (status, deleted)
 );
